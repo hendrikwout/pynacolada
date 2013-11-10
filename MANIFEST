@@ -8,10 +8,10 @@ TODO
 VERSION
 setup.py
 ubuntubuild.sh
-examples/laf2009010100_out.nc
 examples/pynatest.py
 examples/pynatestlist.py
 examples/readtime.py
+examples/testana.py
 pynacolada/__init__.py
 pynacolada/ncdfconv.py
 pynacolada/ncdfextract.py
