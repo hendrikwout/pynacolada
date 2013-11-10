@@ -4,3 +4,6 @@
 # process procedures
 from netcdf import *
 from pynacolada import *
+from ncdfconv import *
+from ncdfproc import *
+from ncdfextract import *

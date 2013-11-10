@@ -4,19 +4,11 @@ import numpy as np
 from netcdf import netcdf_file
 import sys 
 from operator import mul
-from ncdftools import nccopydimension
 from Scientific.IO import NetCDF
 
-def nctypecode(dtype):
-    # purose: netcdf-typecode from array-dtype
-    if ((dtype == np.dtype('float32')) or (np.dtype == 'float32')):
-        return 'f'
-    elif ((dtype == np.dtype('float64')) or (np.dtype == 'float64')):
-        return 'd'
-    elif ((dtype == np.dtype('int32')) or (np.dtype == 'int32')):
-        return 'i'
-    elif ((dtype == np.dtype('int64')) or (np.dtype == 'int64')):
-        return 'l'
+from ncdfextract import nctypecode
+from ncdfproc import nccopydimension,nccopyattrvar
+
 
 class SomeError(Exception):
      def __init__(self, value):
@@ -504,6 +496,7 @@ def pcl(func,dnamsel,datin,datout,appenddim = False, predim = None,maxmembytes =
                                     if ednams in nctemplate.variables:
                                         datout[iddout]['file'].createVariable(ednams,nctemplate.variables[ednams].typecode(),(ednams,))
                                         datout[iddout]['file'].variables[ednams][:] = np.array(nctemplate.variables[ednams][:])[vsdin[idatin]['dsel'][idnams]]
+                                        nccopyattrvar(nctemplate,datout[iddout]['file'],varin=ednams,)
                                     dimensionfound = True
                             else:
 
