@@ -1,0 +1,22 @@
+Format: 1.8
+Date: Sun, 10 Nov 2013 14:44:09 +0100
+Source: pynacolada
+Binary: python-pynacolada
+Architecture: all
+Version: 0.0.3-1
+Distribution: unstable
+Urgency: low
+Maintainer: H. Wouters <hendrikwout@gmail.com>
+Changed-By: H. Wouters <hendrikwout@gmail.com>
+Description: 
+ python-pynacolada - Process netcdf data.
+Changes: 
+ pynacolada (0.0.3-1) unstable; urgency=low
+ .
+   * source package automatically created by stdeb 0.6.0+git
+Checksums-Sha1: 
+ 5df542f045f068d843392c8558426d3d814504ca 21722 python-pynacolada_0.0.3-1_all.deb
+Checksums-Sha256: 
+ ace5c574f5eac4add9f9df681005733742424df79eccaa973497ad6e7a602d43 21722 python-pynacolada_0.0.3-1_all.deb
+Files: 
+ e814153dd7a367cd8f68484cc3a273b0 21722 python optional python-pynacolada_0.0.3-1_all.deb

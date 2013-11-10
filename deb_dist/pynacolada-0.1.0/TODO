@@ -1,0 +1,10 @@
+
+# todo 
+# - support for variable endianess (now little endian)
+# - specify your own order of output dimensions (an not based on the first input files)
+
+# low priority:
+# - allow both file name list and coordinate selection in it
+# - rewrite rwicecubeps to have a more comprehensive sorting way (define its sorting behaviour from the calling routine)
+
+# - only add dimension if dim > 1
