@@ -1,4 +1,6 @@
-
+make it python3 compatible (hopefully) by providing brackets for the 'print' statements
+remove unnecessary print statements
+add a more extensive example with netcdf data from COSMO-CLM (examples/testana.py). This is also added to the README.md
 
 
 VERSION 0.2.0: minor revision - zo nov 10 17:20:52 CET 2013

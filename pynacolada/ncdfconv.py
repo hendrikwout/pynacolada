@@ -4,7 +4,6 @@ from matplotlib.dates import *
 
 # get corresponding format for netcdf file
 def ncgetformat(fmt):    
-    # print fmt
     if fmt == float64: #double
         return 'd'
     elif fmt == float32:
@@ -16,7 +15,7 @@ def ncgetformat(fmt):
     elif fmt == datetime:
         return 'd' 
     else:
-        print ' WARNING: format '+fmt+' could not be discovered! Assuming that it is double.'
+        print (' WARNING: format '+fmt+' could not be discovered! Assuming that it is double.')
         return 'd'
 
 def csv2netcdf(infile,outfile,sep=None,nalist = [''],formatlist=[],refdat = datetime(2000,1,1),tunits = 'hours',customnames=[]):
@@ -58,7 +57,6 @@ def csv2netcdf(infile,outfile,sep=None,nalist = [''],formatlist=[],refdat = date
                 tunits +' since '+ datetime.strftime(refdat,'%Y-%m-%d %H:%M:%S'))
 
     for icn,ecn in enumerate(colnames):
-        #print formatlist[icn]
         outfile.createVariable(ecn,ncgetformat(formatlist[icn][0]),('time',))
     for iline,eline in enumerate(infile):
         currline = eline.replace('\n','').split(sep)
@@ -100,7 +98,6 @@ def csv2netcdf(infile,outfile,sep=None,nalist = [''],formatlist=[],refdat = date
                 if uzformatlist[icn][1] == 'HMint':
                     sec = (int(currval/100.)*60. + (currval - int(currval/100.)*100.))*60.
                 dt = dt + timedelta(seconds = sec)
-        # print(dt)
 
         # output to netcdf
         outfile.variables['datetime'][iline] = date2num(dt)
@@ -111,7 +108,6 @@ def csv2netcdf(infile,outfile,sep=None,nalist = [''],formatlist=[],refdat = date
         if tunits == 'days':
             outfile.variables['time'][iline] = \
                     (dt-refdat).total_seconds()/3600./24.
-            # print(outfile.variables['time'][iline])
         if tunits == 'seconds':
             outfile.variables['time'][iline] = \
                     (dt-refdat).total_seconds()
@@ -154,7 +150,6 @@ def ncwritedatetime(ncfile,dt,tunits = None, refdat = None):
         if tunits == 'days':
             ncfile.variables['time'][idt] = \
                     (edt-refdat).total_seconds()/3600./24.
-            # print(ncfile.variables['time'][idt])
         if tunits == 'seconds':
             ncfile.variables['time'][idt] = \
                     (edt-refdat).total_seconds()

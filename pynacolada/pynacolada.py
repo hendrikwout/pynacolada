@@ -62,13 +62,9 @@ def rwicecube(filestream,shp,refiter,dimiter,dimpos,refnoiter,dimnoiter,icecube,
 
     for irefnoiter,erefnoiter in enumerate(refnoiter):
         lennoiter = lennoiter*len(dimnoiter[irefnoiter])
-        # print 'lendimnoter', irefnoiter, len(dimnoiter[irefnoiter])
 
-    # print 'refiter', refiter,shp
     fpos = 0
     # e.g. fpos = (9)+ 20*(10) + 50*50*20*(5)
-    # print 'dimpos',dimpos
-    # print 'dimiter',dimiter, mode
     for idimpos,edimpos in enumerate(dimpos):
         curadd = np.mod(dimiter[idimpos][np.mod(edimpos,len(dimiter[idimpos]))],shp[refiter[idimpos]])
         #e.g. if edimpos == (5): curadd = 50*50*20*(5)
@@ -90,7 +86,6 @@ def rwicecube(filestream,shp,refiter,dimiter,dimpos,refnoiter,dimnoiter,icecube,
         icecube = np.reshape(icecube,(lennoiter,))
 
     dimnoiterpos = [0]*len(dimnoiter)
-    # print icecube,dimnoiterpos
     j = 0
     while j < lennoiter:
         fposicecube = fpos
@@ -153,7 +148,6 @@ def readicecubeps(fstream,shp,refiter,dimiter,dimiterpos,refnoiter,dimnoiter,vty
             shpred = list(shp[1:])
             for ifn,efn in enumerate(fstream):
                 tfile = open(fstream[ifn],'r')
-                # print tfile,shpred,refiterred,dimiter,dimiterpos,refnoitersortred,dimnoitersortred
                 icecube[ifn] =rwicecube(tfile,shpred,refiterred,dimiter,dimiterpos,refnoitersortred,dimnoitersortred,None,vtype,vsize,voffset,rwchsize,'read') 
                 tfile.close() 
         elif 0 in refiter:
@@ -201,7 +195,6 @@ def pcl(func,dnamsel,datin,datout,appenddim = False, predim = None,maxmembytes =
             vsdin[idatin]['dnams'] = []
             for idim in range(len(nctemp.variables[datin[idatin]['varname']].dimensions)):
                 edim = nctemp.variables[datin[idatin]['varname']].dimensions[idim]
-                print idim, edim
                 if 'daliases' in datin[idatin]:
                     if edim in datin[idatin]['daliases']:
                         edim = datin[idatin]['daliases'][edim]
@@ -212,7 +205,6 @@ def pcl(func,dnamsel,datin,datout,appenddim = False, predim = None,maxmembytes =
                 # we expand the first dimension
                 vsdin[idatin]['dims'] = [len(datin[idatin]['file'])]+list(nctemp.variables[datin[idatin]['varname']].shape[1:])
 
-                # print 'expanding',idatin,str(vsdin[idatin]),' __ ',vsdin[idatin]['dims']
             else: 
                 # we add a new dimension # warning! uncatched problems can occur when predim0 already exists
                 if predim == None:
@@ -223,7 +215,6 @@ def pcl(func,dnamsel,datin,datout,appenddim = False, predim = None,maxmembytes =
                         idimextra = idimextra + 1
                 vsdin[idatin]['dnams'].insert(0,predim)
                 vsdin[idatin]['dims'] = [len(datin[idatin]['file'])]+list(nctemp.variables[datin[idatin]['varname']].shape[:])
-                # print 'adding dimension',idatin,str(vsdin[idatin]),' __ ',vsdin[idatin]['dims']
         else:
             # we assume a netcdf file
             if str(type(datin[idatin]['file']))[7:17]  == 'NetCDFFile':
@@ -253,7 +244,6 @@ def pcl(func,dnamsel,datin,datout,appenddim = False, predim = None,maxmembytes =
         if 'dsel' in datin[idatin]:
             # cropped dimensions
             for edcrop in datin[idatin]['dsel']:
-                print vsdin[idatin]['dnams']
                 if edcrop in vsdin[idatin]['dnams']:
                     vsdin[idatin]['dsel'][vsdin[idatin]['dnams'].index(edcrop)] = list(datin[idatin]['dsel'][edcrop]) 
                 else:
@@ -297,11 +287,8 @@ def pcl(func,dnamsel,datin,datout,appenddim = False, predim = None,maxmembytes =
                 # In dnamsstd, ednam should be just after the dimensions preceding ednams in dnams  
                 # # actually, we also want that, in dnamsstd, ednam should be just before the dimensions succeeding ednams in dnams. Sometimes, this is not possible at the same time. But it will be the case if that is possible when applying one of the criteria
                 idx = 0
-                # print 'dnamsstd: ', evsdin,dnamsstd
                 for idnam2,ednam2 in enumerate(dnamsstd):
-                    # print ednam,ednam2,idnam2,evsdin['dnams'][0:idnam2+1]
                     if ednam2 in evsdin['dnams'][0:(idnam+1)]:
-                        # print idx
                         idx =  max(idx  ,dnamsstd.index(ednam2) + 1)
     
                 dnamsstd.insert(idx  ,ednam)
@@ -330,7 +317,6 @@ def pcl(func,dnamsel,datin,datout,appenddim = False, predim = None,maxmembytes =
                         else:
                             dimsstd[dnamsstd.index(ednam)] = max(dimsstd[dnamsstd.index(ednam)],vsdin[ivsdin]['dims'][idnam])
     
-    # print 'Preliminary output dimensions: ', zip(dnamsstd,dimsstd)
     
     idnam = 0
     # add the missing dimensions selected for the function
@@ -427,11 +413,8 @@ def pcl(func,dnamsel,datin,datout,appenddim = False, predim = None,maxmembytes =
                 adimfuncin[ivsdin].append(list(evsdin['dsel'][vsdin[ivsdin]['refdstd'].index(erefdfuncstd)]))
             else:
                 adimfuncin[ivsdin].append(range(evsdin['dims'][vsdin[ivsdin]['refdstd'].index(erefdfuncstd)]))
-            #print 'alendfuncin[ivsdin]',alendfuncin[ivsdin]
             alendfuncin[ivsdin] = alendfuncin[ivsdin]*len(adimfuncin[ivsdin][irefdfuncstd])
     
-            # print ivsdin,irefdfuncstd,len(adimfuncin[ivsdin][irefdfuncstd])
-    # print alendfuncin
     # 'probe' function output dimensions
     dummydat = []
     for ivsdin,evsdin in enumerate(vsdin):
@@ -461,7 +444,6 @@ def pcl(func,dnamsel,datin,datout,appenddim = False, predim = None,maxmembytes =
             # overwrite dimensions with the function output dimensions
             for irefdfuncout,erefdfuncout in enumerate(arefdfuncout[iddout]):
                 vsdout[iddout]['dims'][erefdfuncout] = ddout[iddout].shape[irefdfuncout]
-         # print "yy",iddout,dimsstd,vsdout[iddout]['dims']
     
         if vsdout[iddout]['dtype'] == None:
             # output netcdf variable does not exist... creating
@@ -487,7 +469,6 @@ def pcl(func,dnamsel,datin,datout,appenddim = False, predim = None,maxmembytes =
                         else:
                             raise SomeError("Input file "+ str(datin[idatin]) + " ("+str(idatin)+")  could not be recognized.")
                         if ednams in nctemplate.dimensions:
-                                # print datin[idatin]['file'],datout[iddout]['file'], ednams
                             # dselmarker
 
                             if vsdin[idatin]['dsel'][idnams] != False: # type(edim).__name__ == 'list':
@@ -501,7 +482,6 @@ def pcl(func,dnamsel,datin,datout,appenddim = False, predim = None,maxmembytes =
                             else:
 
                                 if (vsdout[iddout]['dims'][idnams] == nctemplate.dimensions[ednams]):
-                                    # print datin[idatin]['file'],datout[iddout]['file'], ednams
                                     nccopydimension(nctemplate,datout[iddout]['file'], ednams) 
                                     dimensionfound = True
 
@@ -526,16 +506,12 @@ def pcl(func,dnamsel,datin,datout,appenddim = False, predim = None,maxmembytes =
                     dnams.append(vsdout[iddout]['dnams'][idim])
                     # else, make a new alternative dimension with a similar name
                     dnamidx = -1
-                    # print 'test',dnams[idim], datout[iddout]['file'].dimensions
                     while (dnams[idim] in datout[iddout]['file'].dimensions):
                         dnamidx = dnamidx + 1
                         dnams[idim] = str(vsdout[iddout]['dnams'][idim])+'_'+str(dnamidx)
-                    # print dnams[idim],vsdout[iddout]['dims'][idim]
                     datout[iddout]['file'].createDimension(dnams[idim],vsdout[iddout]['dims'][idim])
             vsdout[iddout]['dnams'] = dnams
 
-            # print vsdout[iddout]['dnams'] 
-            # print vsdout[iddout]['dims'] 
 
             datout[iddout]['file'].createVariable(datout[iddout]['varname'],vsdout[iddout]['dtype'][1],tuple(vsdout[iddout]['dnams']))
             # we should check this at the time the dimensions are not created
@@ -588,7 +564,6 @@ def pcl(func,dnamsel,datin,datout,appenddim = False, predim = None,maxmembytes =
             alendfuncout[ivsdout] = alendfuncout[ivsdout]*len(adimfuncout[ivsdout][irefdfuncstd])
 
 
-    #print 'adimfuncout', adimfuncout
     
     # arefsin: references of the standard dimensions to the data stream dimensions
     
@@ -706,7 +681,7 @@ def pcl(func,dnamsel,datin,datout,appenddim = False, predim = None,maxmembytes =
     
     
     if membytes > maxmembytes:
-        print 'Warning, used memory ('+str(membytes)+') exceeds maximum memory ('+str(maxmembytes)+').'
+        print ('Warning, used memory ('+str(membytes)+') exceeds maximum memory ('+str(maxmembytes)+').')
     else:
     
         # a temporary copy of alennoiter*
@@ -737,7 +712,6 @@ def pcl(func,dnamsel,datin,datout,appenddim = False, predim = None,maxmembytes =
                 for ivsdout,evsdout in enumerate(vsdout):
                     tmpmembytes = tmpmembytes + alendnoiterout_tmp[ivsdout] * vsdout[ivsdout]['itemsize']
     
-                #print 'tmpmembytes', tmpmembytes, membytes
                 # if used memory still below threshold, we add it to the current dimension to the icecubes
                 if tmpmembytes <= maxmembytes:
                     refdnoiterstd.insert(0,idnam)
@@ -763,7 +737,6 @@ def pcl(func,dnamsel,datin,datout,appenddim = False, predim = None,maxmembytes =
                     for ivsdout,evsdout in enumerate(vsdout):
                         membytes = membytes + alendnoiterout[ivsdout] * vsdout[ivsdout]['itemsize']
     
-                    #print 'membytes',membytes
                     cont = True
                     # if used memory still below threshold, we add it to the current dimension to the icecubes
     
@@ -830,7 +803,6 @@ def pcl(func,dnamsel,datin,datout,appenddim = False, predim = None,maxmembytes =
         dimitermax.append(1)
         for ivsdin,evsdin in enumerate(vsdin):
             dimitermax[iref] = max(dimitermax[iref],len(adimiterin[ivsdin][iref]))
-            #print dimitermax[iref], adimiterin[ivsdin][iref]
         for ivsdout,evsdout in enumerate(vsdout):
             dimitermax[iref] = max(dimitermax[iref],len(adimiterout[ivsdout][iref]))
     
@@ -840,11 +812,8 @@ def pcl(func,dnamsel,datin,datout,appenddim = False, predim = None,maxmembytes =
         while ((idim in arefdnoiterin[ivsdin]) & (idim >= 0) & (vsdin[ivsdin]['dsel'][idim] == False) & ((str(type(datin[ivsdin]['file']))[7:11]  != 'list') | (idim != 0))):
             # The inner dimensions just have to be referenced so not in correct order.  We know that they will be read in the correct order in the end
             rwchunksizein[ivsdin] = rwchunksizein[ivsdin]*vsdin[ivsdin]['dims'][idim]
-            # print ivsdin, idim,arefdnoiterin[ivsdin],vsdin[ivsdin]['dims'][idim]
-            # print rwchunksizein[ivsdin],str(type(datin[ivsdin]['file']))[7:11]  == 'list'
             idim = idim - 1
     
-    # print 'rwchunksizein', rwchunksizein
 
     rwchunksizeout = [1]*len(vsdout)
     for ivsdout,evsdout in enumerate(vsdout):
@@ -878,14 +847,12 @@ def pcl(func,dnamsel,datin,datout,appenddim = False, predim = None,maxmembytes =
         for ivsdin,evsdin in enumerate(vsdin):
             dimnoapplymax[iref] = max(dimnoapplymax[iref],len(adimnoapplyin[ivsdin][iref]))
         for ivsdout,evsdout in enumerate(vsdout):
-            # print 'adimnoapplyout',adimnoapplyout
             dimnoapplymax[iref] = max(dimnoapplymax[iref],len(adimnoapplyout[ivsdout][iref]))
     if dimnoapplymax == []:
         dimnoapplymax = [1]
     
     lennoapplymax = reduce(mul,dimnoapplymax)
     
-    #print dimitermax
     lenitermax = reduce(mul,dimitermax)
     dimiterpos = [0]*len(dimitermax)
     sys.stdout.write(str(0)+'/'+str(lenitermax))
@@ -976,11 +943,8 @@ def pcl(func,dnamsel,datin,datout,appenddim = False, predim = None,maxmembytes =
         
         for idimsout in range(len(dataicecubeout)):
             dataicecubeout[idimsout].shape = [len(e) for e in adimnoiterout[idimsout]]
-            #print dataicecubeout[idimsout].shape
     
         for ivsdout in range(len(vsdout)):
-            # print dataicecubeout[ivsdout].shape,vsdout[ivsdout]
-            # print 'ivsdout', ivsdout
             writeicecubeps(\
                 vsdout[ivsdout]['fp'],
                 vsdout[ivsdout]['dims'],\
@@ -1015,23 +979,7 @@ def pcl(func,dnamsel,datin,datout,appenddim = False, predim = None,maxmembytes =
             vsdin[ivsdin]['fp'].close()
     for ivsdout,evsdout in enumerate(vsdout):
         vsdout[ivsdout]['fp'].close()
-    print
+    print(' ')
 
 import pylab as pl
-# fin.close()
-# fout = NetCDF.NetCDFFile(fnout,'r')
-# fout = netcdf.netcdf_file(fnout,'r')
-# fout.fp.seek(vsdout[0]['voffset'])
-# test = np.fromfile(fout.fp,dtype=vsdout[0]['dtype'],count=reduce(mul,vsdout[0]['dims']))
-# test.shape = (40,340)
-# fig = pl.figure()
-# pl.imshow(test)
-# fig.show()
-# 
-# fig = pl.figure()
-# testdata.shape = vsdout[0]['dims']
-# pl.imshow(testdata[0,:,:,0,1])
-# fig.show()
-# 
-# fout.close()
 
