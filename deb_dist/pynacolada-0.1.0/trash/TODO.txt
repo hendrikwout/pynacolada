@@ -1,4 +1,0 @@
-
-1. log debug level
-2. multiple input files
-3. multiple output files???

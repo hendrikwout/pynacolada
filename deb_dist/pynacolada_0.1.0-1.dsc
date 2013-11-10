@@ -9,11 +9,11 @@ Build-Depends: python-all (>= 2.6.6-3), debhelper (>= 7)
 Package-List: 
  python-pynacolada deb python optional
 Checksums-Sha1: 
- 2fa18081daa20f0866e436f26e48b6f5757f8a79 258526 pynacolada_0.1.0.orig.tar.gz
- 6147363533289f454306fb7c8efc68914e1e3e77 1131 pynacolada_0.1.0-1.debian.tar.gz
+ 36dd5330a442ecc5ea6251efb7979941ad5bfcf0 258071 pynacolada_0.1.0.orig.tar.gz
+ ce41d3dca4caab9fc64f1bf2809e61c82ee25dbb 1171 pynacolada_0.1.0-1.debian.tar.gz
 Checksums-Sha256: 
- 66ba52dd3b50221018ba2ea82c87d55fe0c8b13a303c7ee7e05fb0879f2f9eae 258526 pynacolada_0.1.0.orig.tar.gz
- decf62e0dedcf1fda31094f12b2addb3743a830bfb6edd40ad3a4115dce10a2e 1131 pynacolada_0.1.0-1.debian.tar.gz
+ 54bab4061781f57dc6a178863af88517d4462fe6fb7a5ad78377e42a1a08c54a 258071 pynacolada_0.1.0.orig.tar.gz
+ 1a880e91f7874aa01b6fa34aac1ec4018f58c9c2caeb5e51012a29548e21dfd6 1171 pynacolada_0.1.0-1.debian.tar.gz
 Files: 
- d43a6e3d4589638e336ecee19fce3fff 258526 pynacolada_0.1.0.orig.tar.gz
- abab0667631f7f5cde632c259881216d 1131 pynacolada_0.1.0-1.debian.tar.gz
+ 19295b2508dc26a5ee3402388544c09d 258071 pynacolada_0.1.0.orig.tar.gz
+ 646384689e0270a85dfaf06068ade705 1171 pynacolada_0.1.0-1.debian.tar.gz

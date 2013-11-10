@@ -1,3 +1,9 @@
+
+
+
+VERSION 0.2.0: minor revision - zo nov 10 17:20:52 CET 2013
+
+adding additional handy procedures for doing basic NetCDF operations from deprecated ncdftools package so that pynacolada becomes independent of it.
 moving README.txt to README.md (github standard)
 
 

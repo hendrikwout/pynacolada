@@ -1,5 +1,5 @@
 Format: 1.8
-Date: Sun, 10 Nov 2013 15:42:52 +0100
+Date: Sun, 10 Nov 2013 17:17:30 +0100
 Source: pynacolada
 Binary: python-pynacolada
 Architecture: all
@@ -15,8 +15,8 @@ Changes:
  .
    * source package automatically created by stdeb 0.6.0+git
 Checksums-Sha1: 
- b6ff04cc1daea1079db62112588134b4f7aab57c 21744 python-pynacolada_0.1.0-1_all.deb
+ 645a16dfb7e8f6678876e292d1f30cdfeb0b1d8d 25398 python-pynacolada_0.1.0-1_all.deb
 Checksums-Sha256: 
- 5c399af74ecef8d692a71772ce2262e3cde0e861c13cb5b1af06e97e8863c476 21744 python-pynacolada_0.1.0-1_all.deb
+ c74dca82ec973182d28b882dc989d1b439c8460d6ec9856e94744e79086b8ed3 25398 python-pynacolada_0.1.0-1_all.deb
 Files: 
- 4f1a101e16faf57df51ff791a57cabaf 21744 python optional python-pynacolada_0.1.0-1_all.deb
+ ca0de8aed876a24fbb67f1d536e17bdc 25398 python optional python-pynacolada_0.1.0-1_all.deb
