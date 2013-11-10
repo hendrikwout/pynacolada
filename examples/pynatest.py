@@ -1,6 +1,4 @@
 #!/usr/bin/env python
-# 2013-11-08: Below, you find  just a code snippet from the first tests.. Examples will be added very soon
-
 
 # Example 1: calculate the mean scalar wind speed of the first 10 layers
 import pynacolada as pcl
