@@ -72,7 +72,7 @@ setup(
     packages=['${PACKAGENAME}'],
     url='http://www.nowebsite.com',
     license='LICENSE.txt',
-    description='Process netcdf data.',
+    description='easy and customized Processing huge amounts of gridded Climate Data.',
     long_description=open('README.md').read(),
 )
 

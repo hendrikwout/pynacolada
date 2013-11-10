@@ -3,7 +3,7 @@
 # - provide the code with more explanation
 # - make a cdo-like command line interface (please let me know if you or someone else wants to contribute to this)
 # - add more examples and documentation for all procedures
-# - support and test other endianesses (for now, only 'little endian' is tested)
+# - support and test endianesses (for now, only 'little endian' is tested)
 # - specify your own order of output dimensions (an not based on the first input files)
 
 # low priority:
