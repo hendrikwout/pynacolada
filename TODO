@@ -1,6 +1,8 @@
 
 # todo 
-# - provide the code with more explanation
+# - look after dependencies (e.g. on numpy, sciproc, Scientific.IO.NetCDF etc.) 
+# - provide a debian repository
+# - provide the code with more extensive explanation
 # - make a cdo-like command line interface (please let me know if you or someone else wants to contribute to this)
 # - add more examples and documentation for all procedures
 # - support and test endianesses (for now, only 'little endian' is tested)
@@ -8,6 +10,6 @@
 
 # low priority:
 # - allow both file name list and coordinate selection in it
-# - rewrite rwicecubeps to have a more comprehensive sorting way (define its sorting behaviour from the calling routine)
+# - rewrite/restructure rwicecubeps to have a more comprehensive sorting way (define its sorting behaviour from the calling routine)
 
 # - only add dimension if dim > 1

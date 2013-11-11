@@ -1,4 +1,4 @@
-
+some readability changes in the examples.
 
 
 VERSION 0.2.1: sub revision - zo nov 10 21:47:04 CET 2013
