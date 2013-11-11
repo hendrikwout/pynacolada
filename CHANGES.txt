@@ -1,3 +1,13 @@
+
+
+
+VERSION 0.2.3: sub revision - ma nov 11 22:19:44 CET 2013
+
+update description of the package in README.md
+
+
+VERSION 0.2.2: sub revision - ma nov 11 21:31:46 CET 2013
+
 some readability changes in the examples.
 
 

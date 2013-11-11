@@ -3,13 +3,13 @@ from distutils.core import setup
 
 setup(
     name='pynacolada',
-    version='0.2.1',
+    version='0.2.3',
     author='H. Wouters',
     author_email='hendrikwout@gmail.com',
     packages=['pynacolada'],
     url='http://www.nowebsite.com',
     license='LICENSE.txt',
-    description='Process netcdf data.',
+    description='easy and customized Processing huge amounts of gridded Climate Data.',
     long_description=open('README.md').read(),
 )
 
