@@ -1,4 +1,4 @@
-
+rename pcl to pcd to be more consistent to the package name and its purpose.
 
 
 VERSION 0.2.3: sub revision - ma nov 11 22:19:44 CET 2013

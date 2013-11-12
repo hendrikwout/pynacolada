@@ -1,4 +1,4 @@
-import pynacolada as pcl
+import pynacolada as pcd
 from Scientific.IO import NetCDF
 import os
 import numpy as np
@@ -18,7 +18,7 @@ datout = [[fout,'T'],]
 # selection of function dimension input
 func = lambda x, y: (np.array([np.mean(x,axis=0)],dtype=np.float32) ,) # *(1.+np.zeros(x.shape))
 dnamsel = ['time',]
-pcl.pcl(func,dnamsel,datin,datout,predim = 'time')
+pcd.pcd(func,dnamsel,datin,datout,predim = 'time')
 
 fout.close()
 

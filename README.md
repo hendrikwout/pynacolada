@@ -27,14 +27,14 @@ The power of tools lies in their examples. Typical usage of the package, in part
 looks like this::
 
 
-    import pynacolada as pcl
+    import pynacolada as pcd
     import numpy as np
     import datetime as dt
     import sciproc as sp
     from time import sleep
     from Scientific.IO import NetCDF
     
-    # purpose: A short tutorial of using pynacolada.pcl().  The example should work with COSMO-CLM data output.
+    # purpose: A short tutorial of using pynacolada.pcd().  The example should work with COSMO-CLM data output.
     # author: Hendrik Wouters <hendrik.wouters@ees.kuleuven.be>
     
     print('example 1: calculate the mean temperature of entire vertical columns (per    \
@@ -58,7 +58,7 @@ looks like this::
     
     func = lambda x: np.array([np.mean(x)])
     dnamsel = ['level',]
-    pcl.pcl(func,dnamsel,datin,datout)
+    pcd.pcd(func,dnamsel,datin,datout)
     
     fout.close()
     fin.close()
@@ -89,7 +89,7 @@ looks like this::
     dnamsel = ['level',]
     # here is the appenddim option -> it results in only one call of the function,     \
       instead of 38025- times!
-    pcl.pcl(func,dnamsel,datin,datout,appenddim=True)
+    pcd.pcd(func,dnamsel,datin,datout,appenddim=True)
     
     fout.close()
     fin.close()
@@ -115,7 +115,7 @@ looks like this::
                'varname': 'T'}]
     func = lambda x: np.array([np.mean(x,axis=0 )])
     dnamsel = ['level',]
-    pcl.pcl(func,dnamsel,datin,datout,appenddim=True)
+    pcd.pcd(func,dnamsel,datin,datout,appenddim=True)
     
     fout.close()
     fin.close()
@@ -130,7 +130,7 @@ looks like this::
                'dsel': {'level' : range(30,40,1)}, \
     # The U and V wind speed components are not exactly on the same grid so have other
     # (but similar) coordinates ! Therefore, we need to define dimension aliases (thus
-    # preventing pcl from generating a huge dataset)!
+    # preventing pcd from generating a huge dataset)!
                'daliases': { 'srlat':'rlat', 'srlon':'rlon' },\
               },\
     # a second variable input definition
@@ -149,7 +149,7 @@ looks like this::
                'varname': 'u'}]
     func = lambda U,V: np.array([np.mean(np.sqrt(U**2+V**2),axis=0 )])
     dnamsel = ['level',]
-    pcl.pcl(func,dnamsel,datin,datout,appenddim=True)
+    pcd.pcd(func,dnamsel,datin,datout,appenddim=True)
     # Note also that the calculation is not entirely correct because the U and V
     # locations are shifted by 1/2-gridcell!
     
@@ -184,13 +184,13 @@ looks like this::
                'varname': 'u'}]
     
     # we write the datetimes to the netcdf file (we could do it also afterwards 
-    # after the pcl.pcl()-call)
-    pcl.ncwritedatetime(fout,dts,tunits='days', refdat=dt.datetime(2002,1,1))
+    # after the pcd.pcd()-call)
+    pcd.ncwritedatetime(fout,dts,tunits='days', refdat=dt.datetime(2002,1,1))
     
     # function definition:
     func = lambda U,V: np.array([np.mean(np.sqrt(U**2+V**2),axis=0 )])
     dnamsel = ['level',]
-    pcl.pcl(func,dnamsel,datin,datout,appenddim=True)
+    pcd.pcd(func,dnamsel,datin,datout,appenddim=True)
     
     fout.close(); print 'output data written to:',fnout
     # and enjoy watching your data with ncview!

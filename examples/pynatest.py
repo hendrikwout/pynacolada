@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 # Example 1: calculate the mean scalar wind speed of the first 10 layers
-import pynacolada as pcl
+import pynacolada as pcd
 from Scientific.IO import NetCDF
 import numpy as np
 
@@ -31,5 +31,5 @@ datout = [{'file': fout, \
 # function definition:
 func = lambda U,V: np.array([np.mean(np.sqrt(U**2+V**2),axis=0 )])
 dnamsel = ['level',]
-pcl.pcl(func,dnamsel,datin,datout,appenddim=True)
+pcd.pcd(func,dnamsel,datin,datout,appenddim=True)
 print 'output data written to:',fnout

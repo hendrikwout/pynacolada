@@ -173,7 +173,7 @@ def readicecubeps(fstream,shp,refiter,dimiter,dimiterpos,refnoiter,dimnoiter,vty
 
 # we kunnen eens proberen om een variabele aan te maken met een vooraf gespecifieerde dimensie!
 
-def pcl(func,dnamsel,datin,datout,appenddim = False, predim = None,maxmembytes = 10000000):
+def pcd(func,dnamsel,datin,datout,appenddim = False, predim = None,maxmembytes = 10000000):
     """ process binary data in order of specified dimensions
       func: the function to be used
     dnamsel: the dimensions on which the function needs to apply
