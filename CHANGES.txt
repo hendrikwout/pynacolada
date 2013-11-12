@@ -1,3 +1,8 @@
+
+
+
+VERSION 0.2.4: sub revision - di nov 12 10:26:08 CET 2013
+
 rename pcl to pcd to be more consistent to the package name and its purpose.
 
 
