@@ -5,23 +5,22 @@ PynaColaDa
 
 Software package for easy and customized Processing huge amounts of gridded Climate Data.
 
-
-Imagine that your tons of terrabytes of data can be processed  in space or
-time (or combination) with only a few readable(!) lines of code. On the one
-hand, we would obviously fall back to tools like cdo or ncl for such tasks.
-However, we are stuck to the limited data analysis options that these provide.
-On the other hand, scientific software packages like Matlab, R and IDL (and
-also Python of course!) provide very customized climate data analysis tools,
-yet they have severe memory restrictions due to the limited RAM in computers.
-They also don't allow a quick moviewize visualzation of such large data sets,
-simply because they cannot the entire 'terrabytes' into memory at once. The
+Imagine that your tons of terrabytes of data can be processed in space or time
+(or combination) with only a few readable(!) lines of code. On the one hand, we
+would obviously fall back to tools like cdo or ncl for such tasks. However, we
+are stuck to the limited data analysis options that these provide. On the other
+hand, scientific software packages like Matlab, R and IDL (and also Python of
+course!) provide very customizable climate data analysis tools, yet they have
+severe memory restrictions due to the limited RAM in computers. They also don't
+allow a quick moviewize visualization of such large data sets, simply because
+they cannot load all those 'terrabytes' into memory at once. The
 PynaColaDa-tool now provides the best of both worlds: it allows to perform any
-arbitrary pre-defined or user-defined function analysis on a massively HUGE
-dataset very easily, with great performance (from the numpy/matlib library),
-and WITHOUT the memory restrictions! As it both directly 'read from' and
-'writes to' NetCDF files (probably other binary formats might be supported in
-the future as well), it allows to easily scroll through your analysis data
-sets, like with ncview.
+arbitrary pre-defined or user-defined custom function analysis on a massively
+HUGE dataset very easily, with great performance (from the numpy/matlib
+library), and WITHOUT the memory restrictions! As it both directly 'reads from'
+and 'writes to' NetCDF format, it allows to easily scroll through your analysis
+data sets, i.e. with ncview.
+
 
 The power of tools lies in their examples. Typical usage of the package, in particular ncmultifunc,
 looks like this::
@@ -193,7 +192,7 @@ looks like this::
     pcd.pcd(func,dnamsel,datin,datout,appenddim=True)
     
     fout.close(); print 'output data written to:',fnout
-    # and enjoy watching your data with ncview!
+    print('and enjoy watching your processed data with ncview!')
 
 
 

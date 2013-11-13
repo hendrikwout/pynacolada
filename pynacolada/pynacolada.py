@@ -139,13 +139,18 @@ def readicecubeps(fstream,shp,refiter,dimiter,dimiterpos,refnoiter,dimnoiter,vty
 
     refnoitersort,trns,dimnoitersort = zip(*sorted(zip(refnoiter,range(len(refnoiter)),dimnoiter),key=itemgetter(0,1)))
 
+    # print 'shp',shp,refnoitersort,[len(e) for e in dimnoitersort],refiter
     if str(type(fstream))[7:11] == 'list':
+	# this statement assumes that the first dimension of the datastream represents the 'listing' of the files
         if refnoitersort[0] == 0:
-            icecube = np.zeros([len(fstream)]+list(dimnoitersort[1:]))
+            # print([len(fstream)]+list([len(e) for e in dimnoitersort[1:]]))
+            icecube = np.zeros([len(fstream)]+list([len(e) for e in dimnoitersort[1:]]))
+#            icecube = np.zeros([len(fstream)]+list(dimnoitersort[1:]))
             refiterred = list(refiter); refiterred = [e -1 for e in refiterred]
             refnoitersortred = list(refnoitersort[1:]); refnoitersortred = [e - 1 for e in refnoitersortred]
             dimnoitersortred = list(dimnoitersort[1:])
             shpred = list(shp[1:])
+     #        print 'shpred',shpred,refnoitersortred,[len(e) for e in dimnoitersortred],refiterred
             for ifn,efn in enumerate(fstream):
                 tfile = open(fstream[ifn],'r')
                 icecube[ifn] =rwicecube(tfile,shpred,refiterred,dimiter,dimiterpos,refnoitersortred,dimnoitersortred,None,vtype,vsize,voffset,rwchsize,'read') 
@@ -200,6 +205,8 @@ def pcd(func,dnamsel,datin,datout,appenddim = False, predim = None,maxmembytes =
                         edim = datin[idatin]['daliases'][edim]
 
                 vsdin[idatin]['dnams'].append(str(edim))
+
+	    print '1dnams', idatin,vsdin[idatin]['dnams']
             # this statement could be a problem when defining daliases!!!
             if ((nctemp.variables[datin[idatin]['varname']].shape[0] == 1) & ((predim == None) | (nctemp.variables[datin[idatin]['varname']].dimensions[0] == predim))):
                 # we expand the first dimension
@@ -215,6 +222,8 @@ def pcd(func,dnamsel,datin,datout,appenddim = False, predim = None,maxmembytes =
                         idimextra = idimextra + 1
                 vsdin[idatin]['dnams'].insert(0,predim)
                 vsdin[idatin]['dims'] = [len(datin[idatin]['file'])]+list(nctemp.variables[datin[idatin]['varname']].shape[:])
+	    print '2dnams', idatin,vsdin[idatin]['dnams']
+		
         else:
             # we assume a netcdf file
             if str(type(datin[idatin]['file']))[7:17]  == 'NetCDFFile':
@@ -247,7 +256,7 @@ def pcd(func,dnamsel,datin,datout,appenddim = False, predim = None,maxmembytes =
                 if edcrop in vsdin[idatin]['dnams']:
                     vsdin[idatin]['dsel'][vsdin[idatin]['dnams'].index(edcrop)] = list(datin[idatin]['dsel'][edcrop]) 
                 else:
-                    raise SomeError("dimension '"+ str(edcrop) + "' not in netcdf file '"+ncfn+"'.")
+                   print("Warning, dimension '"+ str(edcrop) + "' not in netcdf variable '"+ncfn+ "("+datin[idatin]['varname']+")'.")
         nctemp.close()
     
     # obtain definitions of the variable stream output
@@ -328,8 +337,9 @@ def pcd(func,dnamsel,datin,datout,appenddim = False, predim = None,maxmembytes =
         else:
             idnam = dnamsstd.index(ednam)+1
     
+    print "dimsstd", dimsstd
     
-    # adimsstd: list the specific output dimensions
+    # dimsstd: list the specific output dimensions
     # if function dimension: data output dimension should be the same as the function output dimension, but this should be checked afterwards.
     # if not function dimension:
     # # look what's the output dimension like. If the dimension is not in the output variable, we add a dummy 1-dimension
@@ -345,6 +355,10 @@ def pcd(func,dnamsel,datin,datout,appenddim = False, predim = None,maxmembytes =
     # add the standard output dimensions that are missing in each seperate input variable  as a dummy 1-dimension
     for ivsdin,evsdin in enumerate(vsdin):
         idnam = 0
+	# the dimension of the list should always the first dimension! This is assumed in the rwicecube (see statement 'if refnoitersort[0] == 0:')
+        if type(datin[idatin]['file']).__name__  == 'list':
+            idnam = 1
+
         for idnamsstd,ednamsstd in enumerate(dnamsstd):
             if ednamsstd not in vsdin[ivsdin]['dnams']:
                 vsdin[ivsdin]['dnams'].insert(idnam,ednamsstd)
@@ -585,6 +599,7 @@ def pcd(func,dnamsel,datin,datout,appenddim = False, predim = None,maxmembytes =
         for irefdstd,erefdstd in enumerate(vsdout[ivsdout]['refdstd']):
             arefsout[ivsdout][erefdstd] = irefdstd
     
+    print "dnamsstd", dnamsstd
     if appenddim == True:
         membytes = 0
         # dsellen = len(dnamsel)
@@ -752,6 +767,11 @@ def pcd(func,dnamsel,datin,datout,appenddim = False, predim = None,maxmembytes =
     # arefdnoiterin: references of the icecube dimensions to the data input stream dimensions
     # # vsdin[ivsdin]['refdstd']: references of data stream dimensions (vsdin[..]['dnams'] to the standard dimensions (dnamsstd) 
     # dnamselnoiter: references
+
+    print 'dims in:',vsdin[ivsdin]['dims']
+    print 'dnams in:',vsdin[ivsdin]['dnams']
+    print 'dims out:',vsdout[ivsdin]['dims']
+    print 'dnams out:',vsdout[ivsdin]['dnams']
     
     # guess from residual dimensions that are not in refnoiterin
     refditerstd = []
@@ -813,6 +833,7 @@ def pcd(func,dnamsel,datin,datout,appenddim = False, predim = None,maxmembytes =
             # The inner dimensions just have to be referenced so not in correct order.  We know that they will be read in the correct order in the end
             rwchunksizein[ivsdin] = rwchunksizein[ivsdin]*vsdin[ivsdin]['dims'][idim]
             idim = idim - 1
+    print "rwchunksizeout", rwchunksizein
     
 
     rwchunksizeout = [1]*len(vsdout)
@@ -822,6 +843,7 @@ def pcd(func,dnamsel,datin,datout,appenddim = False, predim = None,maxmembytes =
             # The inner dimensions just have to be referenced so not in correct order.  We know that they will be read in the correct order in the end
             rwchunksizeout[ivsdout] = rwchunksizeout[ivsdout]*vsdout[ivsdout]['dims'][idim]
             idim = idim - 1
+    print "rwchunksizein",rwchunksizeout
     
     adimnoapplyout = []
     for ivsdout,evsdout in enumerate(vsdout):
