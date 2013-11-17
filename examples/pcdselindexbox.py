@@ -11,8 +11,27 @@ from Scientific.IO import NetCDF
 
 # on the contrary, this functionality now works with pynacolada.pcd():  they are no restrictions on the grid type.
 
+# example 1: crop the domain for the variable 'T'
 fin = NetCDF.NetCDFFile('/home/hendrik/data/belgium_aq/rcm/aq09/stage1/int2lm/laf2009010100_urb_ahf.nc','r')
 fout = NetCDF.NetCDFFile('/home/hendrik/data/belgium_aq/rcm/aq09/stage1/int2lm/laf2009010100_urb_ahf_sel.nc','w')
+
+func = lambda x: x[20:90,30:100]
+dnamsel = ['rlon','rlat']
+evar='T'
+
+print ('processing variable: ',evar)
+datin =  [{'file':fin,'varname':evar,}]
+datout = [{'file':fout,'varname':evar},]
+pcd.pcd(func,dnamsel,datin,datout,appenddim=True)
+
+fout.close();print('output file written to:',fout )
+fin.close()
+# Unfortunatly, It not superfast. The reason is that the 'preperations' in pcd needs to be redone
+# for each variable.
+
+# example 2: crop the domain to all variables that involve the lat-lon grid, and just copy any other variable
+fin = NetCDF.NetCDFFile('/home/hendrik/data/belgium_aq/rcm/aq09/stage1/int2lm/laf2009010100_urb_ahf.nc','r')
+fout = NetCDF.NetCDFFile('/home/hendrik/data/belgium_aq/rcm/aq09/stage1/int2lm/laf2009010100_urb_ahf_sel2.nc','w')
 
 func = lambda x: x[20:90,30:100]
 dnamsel = [['rlon','srlon'],['rlat','srlat']]
