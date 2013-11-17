@@ -15,14 +15,30 @@ fin = NetCDF.NetCDFFile('/home/hendrik/data/belgium_aq/rcm/aq09/stage1/int2lm/la
 fout = NetCDF.NetCDFFile('/home/hendrik/data/belgium_aq/rcm/aq09/stage1/int2lm/laf2009010100_urb_ahf_sel.nc','w')
 
 func = lambda x: x[20:90,30:100]
-dnamsel = ['rlon','rlat']
+dnamsel = [['rlon','srlon'],['rlat','srlat']]
 for evar in fin.variables:
     # apply the domain selection on all variables that involve these dimensions
-    if ( ('rlat' in fin.variables[evar].dimensions) & \
-        ('rlon' in fin.variables[evar].dimensions)):
+    procvar = True
+    for ednamsel in dnamsel:
+        found = False
+        if type(ednamsel).__name__ == 'list':
+            for eednamsel in ednamsel:
+                if eednamsel in fin.variables[evar].dimensions:
+                    found = True
+        elif ednamsel in fin.variables[evar].dimensions:
+            found = True
+        if found == False:
+            procvar = False
+
+    if procvar:
+        print ('processing variable: ',evar)
         datin =  [{'file':fin,'varname':evar,}]
         datout = [{'file':fout,'varname':evar},]
         pcd.pcd(func,dnamsel,datin,datout,appenddim=True)
+    else:
+        if evar not in fin.dimensions:
+            print ('copying variable: ',evar)
+            pcd.nccopyvariable(fin,fout,evar,copyvalues=True)
 
 fout.close();print('output file written to:',fout )
 fin.close()

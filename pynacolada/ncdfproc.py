@@ -104,7 +104,8 @@ def nccopyvariable(ncin,ncout,varin,varout=None,copyvalues=False,copyattr=True):
             #     if attr not in ['assignValue', 'getValue', 'typecode']:
             #         setattr(ncout.variables[varoutdef],attr,getattr(ncin.variables[varin],attr))
     if copyvalues == True:
-        pcd2.pcd(lambda x: array(x),[],[{'file':ncin,'varname':varin}],[{'file':ncout,'varname':varoutdef}],appenddim=True)
+        if ncin.variables[varin].dimensions != tuple():
+            pcd2.pcd(lambda x: x,[],[{'file':ncin,'varname':varin}],[{'file':ncout,'varname':varoutdef}],appenddim=True)
         # # this would lead to memory problems
         #ncout.variables[varoutdef][:] = ncin.variables[varin][:]
 

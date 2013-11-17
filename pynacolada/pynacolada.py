@@ -211,7 +211,32 @@ def pcd(func,dnamsel,datin,datout,appenddim = False, maxmembytes = 10000000):
 
     maxmembytes: the maximum amount of bytes that is allowed for the buffers to be read/written from/to the input/output data streams. 
     """
-    print datin
+
+    # track the dimensions to be selected when multiples are given
+    dnamseldef = []
+    for ednamsel in dnamsel:
+        if ((type(ednamsel).__name__ == 'tuple') | (type(ednamsel).__name__ == 'list')):
+            dnamseldef.append(ednamsel[0])
+            for idatin,edatin in reversed(list(enumerate(datin))):
+                ncfn = None
+                if type(datin[idatin]['file']).__name__ == 'list':
+                    ncfn =  datin[idatin]['file'][0]
+                # we assume a netcdf file
+                elif type(datin[idatin]['file']).__name__  == 'NetCDFFile':
+                    # obtain file name from open netcdf!! very nasty!!!
+                    ncfn =  str(datin[idatin]['file'])[19:(str(datin[idatin]['file']).index("'",19))]
+                # we assume a file name
+                elif type(datin[idatin]['file']).__name__ == 'str':
+                    ncfn = datin[idatin]['file']
+                nctemp = netcdf_file(ncfn,'r')
+
+                for edim in nctemp.variables[datin[idatin]['varname']].dimensions:
+                    if edim in ednamsel:
+                        dnamseldef[-1] = str(edim)
+                nctemp.close()
+        else:
+            dnamseldef.append(ednamsel)
+
     # obtain definitions of the variable stream input
     vsdin = [] # input variable stream definitions
     for idatin,edatin in enumerate(datin):
@@ -343,7 +368,7 @@ def pcd(func,dnamsel,datin,datout,appenddim = False, maxmembytes = 10000000):
                         idx =  max(idx  ,dnamsstd.index(ednam2) + 1)
     
                 dnamsstd.insert(idx  ,ednam)
-                if ednam not in dnamsel:
+                if ednam not in dnamseldef:
                     # dselmarker
                     if vsdin[ivsdin]['dsel'][idnam] != False: # type(edim).__name__ == 'list':
                         dimsstd.insert(idx  ,int(len(vsdin[ivsdin]['dsel'][idnam]))) 
@@ -374,9 +399,9 @@ def pcd(func,dnamsel,datin,datout,appenddim = False, maxmembytes = 10000000):
     # TODO: the position of this dimension needs to be accordence to the
     #       dimension-order suggested by the input(output?) netcdf files!  
 
-    for idnamsel,ednamsel in enumerate(dnamsel):
-        if ednamsel not in dnamsstd:
-            dnamsstd.insert(idnam,ednamsel)
+    for idnamseldef,ednamseldef in enumerate(dnamseldef):
+        if ednamseldef not in dnamsstd:
+            dnamsstd.insert(idnam,ednamseldef)
             dimsstd.insert(idnam,None) # to be defined from the function
             idnam = idnam +1 
         else:
@@ -392,8 +417,8 @@ def pcd(func,dnamsel,datin,datout,appenddim = False, maxmembytes = 10000000):
     
     # get references to the standard output dimensions on which the function is applied
     refdfuncstd = []
-    for idnamsel,ednamsel in enumerate(dnamsel):
-        refdfuncstd.append(dnamsstd.index(ednamsel))
+    for idnamseldef,ednamseldef in enumerate(dnamseldef):
+        refdfuncstd.append(dnamsstd.index(ednamseldef))
     
     # all standard output dimensions (cfr. dimsstd, dnamsstd) are now collected...
     # add the standard output dimensions that are missing in each seperate input variable  as a dummy 1-dimension
@@ -443,16 +468,16 @@ def pcd(func,dnamsel,datin,datout,appenddim = False, maxmembytes = 10000000):
     arefdfuncout = []
     for ivsdout,evsdout in enumerate(vsdout):
         arefdfuncout.append([])
-        for idnamsel,ednamsel in enumerate(dnamsel):
-            arefdfuncout[ivsdout].append(vsdout[ivsdout]['dnams'].index(ednamsel))
+        for idnamseldef,ednamseldef in enumerate(dnamseldef):
+            arefdfuncout[ivsdout].append(vsdout[ivsdout]['dnams'].index(ednamseldef))
             # is arefdfuncout[ivsdout][irefdfuncout] == vsdout[ivsdout]['refdstd'].index(erefdfuncstd) ???
     
     # arefdfuncin: references of the function dimensions to the data input stream dimensions
     arefdfuncin = []
     for ivsdin,evsdin in enumerate(vsdin):
         arefdfuncin.append([])
-        for idnamsel,ednamsel in enumerate(dnamsel):
-            arefdfuncin[ivsdin].append(vsdin[ivsdin]['dnams'].index(ednamsel))
+        for idnamseldef,ednamseldef in enumerate(dnamseldef):
+            arefdfuncin[ivsdin].append(vsdin[ivsdin]['dnams'].index(ednamseldef))
 
     adimfuncin = []
     alendfuncin = []
@@ -631,7 +656,7 @@ def pcd(func,dnamsel,datin,datout,appenddim = False, maxmembytes = 10000000):
     #print ("dnamsstd", dnamsstd)
     if appenddim == True:
         membytes = 0
-        # dsellen = len(dnamsel)
+        # dsellen = len(dnamseldef)
         # a temporary copy of alenfunc*
         alendfuncin_tmp = list(alendfuncin)
         alendfuncout_tmp = list(alendfuncout)
@@ -768,7 +793,7 @@ def pcd(func,dnamsel,datin,datout,appenddim = False, maxmembytes = 10000000):
                         arefdnoiterout[ivsdout].insert(0, arefsout[ivsdout][idnam])
                         adimnoiterout[ivsdout].insert(0,range(vsdout[ivsdout]['dims'][arefsout[ivsdout][idnam]]))
                         alendnoiterout[ivsdout] = alendnoiterout[ivsdout] *vsdout[ivsdout]['dims'][arefsout[ivsdout][idnam]]
-                    #dnamselnoiter.insert(0,dnamsstd[idnam])
+                    #dnamseldefnoiter.insert(0,dnamsstd[idnam])
     
                     # recalculate the amount of bytes
                     membytes = 0
@@ -792,7 +817,7 @@ def pcd(func,dnamsel,datin,datout,appenddim = False, maxmembytes = 10000000):
     # arefdfuncin: references of the function dimensions to the data input stream dimensions
     # arefdnoiterin: references of the icecube dimensions to the data input stream dimensions
     # # vsdin[ivsdin]['refdstd']: references of data stream dimensions (vsdin[..]['dnams'] to the standard dimensions (dnamsstd) 
-    # dnamselnoiter: references
+    # dnamseldefnoiter: references
 
     # print ('dims in:',vsdin[ivsdin]['dims'])
     # print ('dnams in:',vsdin[ivsdin]['dnams'])

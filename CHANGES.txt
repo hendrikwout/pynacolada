@@ -1,4 +1,4 @@
-
+ignore the copyvalues option when a variable doesn't contain any values.
 
 
 VERSION 0.2.10: sub revision - zo nov 17 15:06:04 CET 2013

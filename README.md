@@ -16,7 +16,7 @@ allow a quick moviewize visualization of such large data sets, simply because
 they cannot load all those 'terrabytes' into memory at once. The
 PynaColaDa-tool now provides the best of both worlds: it allows to perform any
 arbitrary pre-defined or user-defined custom function/analysis on a massively
-HUGE dataset very easily, with great performance (from the numpy/matlib
+HUGE dataset very easily, with great performance (interfacing with the numpy
 library), and WITHOUT the memory restrictions! As it both directly 'reads from'
 and 'writes to' NetCDF format, it allows to easily scroll through your data
 analysis, i.e. with ncview.
