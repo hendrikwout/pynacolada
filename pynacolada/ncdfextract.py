@@ -1,22 +1,21 @@
 import datetime as dt
 import numpy as np
 
-def nctypecode(dtype):
-    # purose: netcdf-typecode from array-dtype
-    if ((dtype == np.dtype('float32')) or (np.dtype == 'float32')):
+def ncgettypecode(dtype):
+    ''' purpose: netcdf-typecode from array-dtype
+    '''
+    if ((dtype == np.dtype('float32')) or (dtype == 'float32')):
         return 'f'
-    elif ((dtype == np.dtype('float64')) or (np.dtype == 'float64')):
+    elif ((dtype == np.dtype('float64')) or (dtype == 'float64')):
         return 'd'
-    elif ((dtype == np.dtype('int32')) or (np.dtype == 'int32')):
+    elif ((dtype == np.dtype('int32')) or (dtype == 'int32')):
         return 'i'
-    elif ((dtype == np.dtype('int64')) or (np.dtype == 'int64')):
+    elif ((dtype == np.dtype('int64')) or (dtype == 'int64')):
         return 'l'
 
 def ncgetdatetime(ncin):
     ''' extract datetimes from the 'time' coordinate in ncin
-       
         ncin: input netcdf file
-       
         returns an array of datetimes
     '''
     tunits = getattr(ncin.variables['time'],'units').split()

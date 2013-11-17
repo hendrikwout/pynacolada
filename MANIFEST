@@ -9,6 +9,8 @@ VERSION
 setup.py
 ubuntubuild.sh
 examples/examplepcd.py
+examples/pcdfunctionexamples.py
+examples/pcdselindexbox.py
 examples/pynatest.py
 examples/pynatestlist.py
 examples/readtime.py
@@ -17,4 +19,5 @@ pynacolada/ncdfconv.py
 pynacolada/ncdfextract.py
 pynacolada/ncdfproc.py
 pynacolada/netcdf.py
+pynacolada/pynacolada-orig.py
 pynacolada/pynacolada.py

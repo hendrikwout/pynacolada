@@ -1,13 +1,9 @@
-from sciproc import multifunc, procdf
-from numpy import *
-
-# from sciproc import *
-import inspect
-from operator import itemgetter
 from numpy import *
 
 def nccopydimension (ncin,ncout,dimension,copyvalues=True):
-    """Copy a dimension. By default. The variable named after the dimension is also copied """
+    """Copy a dimension from one NetCDF file to another
+
+       By default. The variable named after the dimension is also copied """
     if (dimension in ncin.dimensions) & (dimension not in ncout.dimensions):
         ncout.createDimension(dimension,ncin.dimensions[dimension])
         if (dimension in ncin.variables) & (dimension not in ncout.variables):
@@ -29,16 +25,6 @@ def nccopydimension (ncin,ncout,dimension,copyvalues=True):
         # a netcdf reference or list which will be treated in a 'smart' way to apply the function
     # copynonrel: make a simply copy of netcdf variables that are not relevant to the function
 
-def nctypecode(array):
-    if array.dtype == dtype('float32'):
-        return 'f'
-    elif array.dtype == dtype('float64'):
-        return 'd'
-    elif array.dtype == dtype('int32'):
-        return 'i'
-    elif array.dtype == dtype('int64'):
-        return 'l'
-
 def ncshowattrfile(ncin):
     for attr in dir(ncin):
         atvalue = getattr(ncin,attr)
@@ -46,6 +32,7 @@ def ncshowattrfile(ncin):
             print(attr,atvalue,type(atvalue))
 
 def nccopyattrfile(ncin,ncout):
+    ''' copy all attributes from one NetCDF file to another '''
     for attr in dir(ncin):
         atvalue = getattr(ncin,attr)
         # unfortunately, 'setattr' cannot set array/list-type attributes
@@ -54,6 +41,7 @@ def nccopyattrfile(ncin,ncout):
             setattr(ncout,attr,atvalue)
 
 def nccopyattrvar(ncin,ncout,varin=None,varout=None):
+    ''' copy all attributes from one NetCDF variable to another '''
     if varin == None:
         # copy attributes of all variables
         selvar = []
@@ -86,7 +74,7 @@ def nccopyattrvar(ncin,ncout,varin=None,varout=None):
                         print('Warning: something went wrong when transferring attributes')
 
 def nccopyvariable(ncin,ncout,varin,varout=None,copyvalues=False,copyattr=True):
-    ''' create a new netcdf variable with the same dimensions and attributes as the original variable
+    ''' create a new netcdf variable with the same dimensions and attributes as the original variable. Optionally, the values itself can be copied as well
         ncin: input netcdf file
         ncout output netcdf file
         varin: input variable

@@ -1,11 +1,14 @@
-from operator import itemgetter,mul
+import os
+from operator import itemgetter
 import numpy as np
 from netcdf import netcdf_file
 import sys 
+from operator import mul
 from Scientific.IO import NetCDF
 
-from ncdfextract import ncgettypecode
+from ncdfextract import nctypecode
 from ncdfproc import nccopydimension,nccopyattrvar
+
 
 class SomeError(Exception):
      def __init__(self, value):
@@ -51,8 +54,11 @@ def rwicecube(filestream,shp,refiter,dimiter,dimpos,refnoiter,dimnoiter,icecube,
     #      dimpos = (5,10,9)
     
     # extend so that structured arrays are read at once
+    
+
 
     lennoiter = long(1)
+
 
     for irefnoiter,erefnoiter in enumerate(refnoiter):
         lennoiter = lennoiter*len(dimnoiter[irefnoiter])
@@ -172,52 +178,23 @@ def readicecubeps(fstream,shp,refiter,dimiter,dimiterpos,refnoiter,dimnoiter,vty
 
 # we kunnen eens proberen om een variabele aan te maken met een vooraf gespecifieerde dimensie!
 
-def pcd(func,dnamsel,datin,datout,appenddim = False, maxmembytes = 10000000):
-    """ purpose (see also README.md): process binary NetCDF data streams
-    func: the function/analysis to be applied on the data input streams
-          specified below. The arguments  of func correspond to the respective
-          data input streams. The output needs to be a numpy.array(), or a list
-          of numpy.array() of which each item corresponds to the data output
-          streams specified below.
-
-    dnamsel: the dimensions on which the function needs to be applied. The
-             function will be repeated along the other dimensions
-
-    datin: list of data input variables/streams e.g. 
-           [{'file':ncfile,'varname':'T',...},{'file':ncfile2,'varname':'P',...}]
-        possible dictionary keywords hereby:
-        - 'file': <pointer to Scientific.IO.NetCDF.NetCDFFile('filename','r')>, or a list of filenames that represent NetCDF files all with exactly the same (NetCDF) data structure
-        - 'varname': NetCDF variable
-        - 'daliases' (optional): aliases for dimensions to 'align' dimensions
-                                 for different data input variables
-        - 'predim' (optional): when 'file' is a filename list,. 'predim' will
-                               be the name of the dimension that represents the
-                               filelist. When not specified, the outer
-                               dimension of the netcdf files will be expanded
-                               only if it appears to have a length of 1. In all
-                               other cases, the name predim<0,1/2/3>... will be
-                               taken as extra dimensions.  
-        - 'dsel': select a subset of the data by specifying dimension indices, 
-                for example {'level' : range(0,5,1), 'lat' : range(50,60,1),
-                'lon' : range(70,80,1)} will select a subspace of the first 5
-                levels, and a inner horizontal domain.  
-
-    datout: list of data output data variables/streams, in a similar fashion
-            as datin
-
-    appenddim: append dnamsel with the inner dimensions of the data input
-               streams when possible. This will generally lead to an increased
-               performance. This option needs be supported by the func.
-
-    maxmembytes: the maximum amount of bytes that is allowed for the buffers to be read/written from/to the input/output data streams. 
+def pcd(func,dnamsel,datin,datout,appenddim = False, predim = None,maxmembytes = 10000000):
+    """ process binary data in order of specified dimensions
+      func: the function to be used
+    dnamsel: the dimensions on which the function needs to apply
+    datin: list of input [file,variable]-pairs
+    datin: list of output [file,variable]-pairs
+    
+      Warning! for now output variables will be re-opened in write mode!
     """
+    
     # obtain definitions of the variable stream input
     vsdin = [] # input variable stream definitions
     for idatin,edatin in enumerate(datin):
         # read in scipy.netcdf mode to obtain varariable offsets
         
         vsdin.append(dict())
-        if type(datin[idatin]['file']).__name__ == 'list':
+        if str(type(datin[idatin]['file']))[7:11] == 'list':
             ncfn =  datin[idatin]['file'][0]
             nctemp = netcdf_file(ncfn,'r')
             vsdin[idatin]['dnams'] = []
@@ -229,13 +206,10 @@ def pcd(func,dnamsel,datin,datout,appenddim = False, maxmembytes = 10000000):
 
                 vsdin[idatin]['dnams'].append(str(edim))
 
-	    #print '1dnams', idatin,vsdin[idatin]['dnams']
-            # this statement could be a problem when defining daliases for the file-list dimension?!!!
-            predim = None
-            if 'predim' in datin[idatin]:
-                predim = datin[idatin]['predim']
+	    print '1dnams', idatin,vsdin[idatin]['dnams']
+            # this statement could be a problem when defining daliases!!!
             if ((nctemp.variables[datin[idatin]['varname']].shape[0] == 1) & ((predim == None) | (nctemp.variables[datin[idatin]['varname']].dimensions[0] == predim))):
-                # we expand the first dimension (which only has length 1 per file)
+                # we expand the first dimension
                 vsdin[idatin]['dims'] = [len(datin[idatin]['file'])]+list(nctemp.variables[datin[idatin]['varname']].shape[1:])
 
             else: 
@@ -248,15 +222,15 @@ def pcd(func,dnamsel,datin,datout,appenddim = False, maxmembytes = 10000000):
                         idimextra = idimextra + 1
                 vsdin[idatin]['dnams'].insert(0,predim)
                 vsdin[idatin]['dims'] = [len(datin[idatin]['file'])]+list(nctemp.variables[datin[idatin]['varname']].shape[:])
-	    #print '2dnams', idatin,vsdin[idatin]['dnams']
+	    print '2dnams', idatin,vsdin[idatin]['dnams']
 		
         else:
             # we assume a netcdf file
-            if type(datin[idatin]['file']).__name__  == 'NetCDFFile':
+            if str(type(datin[idatin]['file']))[7:17]  == 'NetCDFFile':
                 # obtain file name from open netcdf!! very nasty!!!
                 ncfn =  str(datin[idatin]['file'])[19:(str(datin[idatin]['file']).index("'",19))]
             # we assume a file name
-            elif type(datin[idatin]['file']).__name__ == 'str':
+            elif str(type(datin[idatin]['file']))[7:10] == 'str':
                 ncfn = datin[idatin]['file']
             else:
                 raise SomeError("Input file "+ str(datin[idatin]) + " ("+str(idatin)+")  could not be recognized.")
@@ -322,7 +296,6 @@ def pcd(func,dnamsel,datin,datout,appenddim = False, maxmembytes = 10000000):
                 # In dnamsstd, ednam should be just after the dimensions preceding ednams in dnams  
                 # # actually, we also want that, in dnamsstd, ednam should be just before the dimensions succeeding ednams in dnams. Sometimes, this is not possible at the same time. But it will be the case if that is possible when applying one of the criteria
                 idx = 0
-                # implement this also below, I mean that 
                 for idnam2,ednam2 in enumerate(dnamsstd):
                     if ednam2 in evsdin['dnams'][0:(idnam+1)]:
                         idx =  max(idx  ,dnamsstd.index(ednam2) + 1)
@@ -353,27 +326,27 @@ def pcd(func,dnamsel,datin,datout,appenddim = False, maxmembytes = 10000000):
                         else:
                             dimsstd[dnamsstd.index(ednam)] = max(dimsstd[dnamsstd.index(ednam)],vsdin[ivsdin]['dims'][idnam])
     
-    # add the missing dimensions selected for the function. 
-    idnam = 0
     
-    # TODO: the position of this dimension needs to be accordence to the
-    #       dimension-order suggested by the input(output?) netcdf files!  
+    idnam = 0
 
-    for idnamsel,ednamsel in enumerate(dnamsel):
+    idnam = len(dnamsstd)
+    # add the missing dimensions selected for the function
+    for idnamsel,ednamsel in reversed(list(enumerate(dnamsel))):
         if ednamsel not in dnamsstd:
             dnamsstd.insert(idnam,ednamsel)
             dimsstd.insert(idnam,None) # to be defined from the function
-            idnam = idnam +1 
+            idnam = idnam # moet dit ook hier niet boven geimplementeerd worden?
         else:
             idnam = dnamsstd.index(ednam)+1
     
-    #print ("dimsstd", dimsstd)
+    print "dimsstd", dimsstd
     
     # dimsstd: list the specific output dimensions
     # if function dimension: data output dimension should be the same as the function output dimension, but this should be checked afterwards.
     # if not function dimension:
     # # look what's the output dimension like. If the dimension is not in the output variable, we add a dummy 1-dimension
     # we need to create/list adimsstd also before!! And then append them with the missing dimensions, as dummy 1-dimensions. If that is not sufficient, we will just get an error message.
+    
     
     # get references to the standard output dimensions on which the function is applied
     refdfuncstd = []
@@ -398,6 +371,7 @@ def pcd(func,dnamsel,datin,datout,appenddim = False, maxmembytes = 10000000):
             else:
                 idnam = vsdin[ivsdin]['dnams'].index(ednamsstd) + 1
     
+    
     # do the same for the data output variables
     
     # # vsdin[ivsdin]['refdstd']: references of data stream dimensions (vsdin[..]['dnams'] to the standard dimensions (dnamsstd) 
@@ -411,6 +385,8 @@ def pcd(func,dnamsel,datin,datout,appenddim = False, maxmembytes = 10000000):
             vsdout[ivsdout]['dnams'] = dnamsstd
     
     # adimfuncin: the input dimensions of the function based on the refdfuncstd
+    
+    
     # adimfuncin: the dimensions of the function input
     # adimfuncin = np.zeros((len(vsdin),len(refdfuncstd)),dtype='int32') - 1
     
@@ -438,6 +414,8 @@ def pcd(func,dnamsel,datin,datout,appenddim = False, maxmembytes = 10000000):
         arefdfuncin.append([])
         for idnamsel,ednamsel in enumerate(dnamsel):
             arefdfuncin[ivsdin].append(vsdin[ivsdin]['dnams'].index(ednamsel))
+    
+        
 
     adimfuncin = []
     alendfuncin = []
@@ -486,7 +464,7 @@ def pcd(func,dnamsel,datin,datout,appenddim = False, maxmembytes = 10000000):
         if vsdout[iddout]['dtype'] == None:
             # output netcdf variable does not exist... creating
             # why does this needs to be little endian????
-            vsdout[iddout]['dtype'] = '>'+ncgettypecode(ddout[iddout].dtype)
+            vsdout[iddout]['dtype'] = '>'+nctypecode(ddout[iddout].dtype)
     
             # try to copy dimension from data input
             for idnams,ednams in enumerate(vsdout[iddout]['dnams']):
@@ -496,12 +474,12 @@ def pcd(func,dnamsel,datin,datout,appenddim = False, maxmembytes = 10000000):
                     while ((not dimensionfound) & (idatin < (len(datin) ))):
                         templopen = False
                         # try to copy the dimension from the input data
-                        if type(datin[idatin]['file']).__name__  == 'NetCDFFile':
+                        if str(type(datin[idatin]['file']))[7:17]  == 'NetCDFFile':
                             nctemplate = datin[idatin]['file']
-                        elif type(datin[idatin]['file']).__name__  == 'str':
+                        elif str(type(datin[idatin]['file']))[7:10]  == 'str':
                             nctemplate = NetCDF.NetCDFFile(datin[idatin]['file'],'r')
                             templopen = True
-                        elif type(datin[idatin]['file']).__name__  == 'list':
+                        elif str(type(datin[idatin]['file']))[7:11]  == 'list':
                             nctemplate = NetCDF.NetCDFFile(datin[idatin]['file'][0],'r')
                             templopen = True
                         else:
@@ -522,6 +500,7 @@ def pcd(func,dnamsel,datin,datout,appenddim = False, maxmembytes = 10000000):
                                 if (vsdout[iddout]['dims'][idnams] == nctemplate.dimensions[ednams]):
                                     nccopydimension(nctemplate,datout[iddout]['file'], ednams) 
                                     dimensionfound = True
+
 
                         if templopen:
                             nctemplate.close()
@@ -549,20 +528,22 @@ def pcd(func,dnamsel,datin,datout,appenddim = False, maxmembytes = 10000000):
                     datout[iddout]['file'].createDimension(dnams[idim],vsdout[iddout]['dims'][idim])
             vsdout[iddout]['dnams'] = dnams
 
+
             datout[iddout]['file'].createVariable(datout[iddout]['varname'],vsdout[iddout]['dtype'][1],tuple(vsdout[iddout]['dnams']))
             # we should check this at the time the dimensions are not created
             if (vsdout[iddout]['dims'] != list(datout[iddout]['file'].variables[datout[iddout]['varname']].shape)):
                 raise SomeError("dimensions of output file ( "+str(vsdout[iddout]['dims'])+"; "+ str(vsdout[iddout]['dnams'])+") do not correspond with intended output dimension "+str(datout[iddout]['file'].variables[datout[iddout]['varname']].shape)+"; "+str(datout[iddout]['file'].variables[datout[iddout]['varname']].dimensions))
     
+    
     for idatin,edatin in enumerate(datin):
-        if type(datin[idatin]['file']).__name__  == 'NetCDFFile':
+        if str(type(datin[idatin]['file']))[7:17]  == 'NetCDFFile':
             # obtain file pointer!! very nasty!!
             ncfn =  str(datin[idatin]['file'])[19:(str(datin[idatin]['file']).index("'",19))]
             vsdin[idatin]['fp'] = open(ncfn,'r')
-        elif type(datin[idatin]['file']).__name__  == 'str':
+        elif str(type(datin[idatin]['file']))[7:10]  == 'str':
             ncfn = datin[idatin]['file']
             vsdin[idatin]['fp'] = open(ncfn,'r')
-        elif type(datin[idatin]['file']).__name__  == 'list':
+        elif str(type(datin[idatin]['file']))[7:11]  == 'list':
             # !!!!!if series/list of file names, then the file poniters will open when at read-time
             ncfn = datin[idatin]['file']
             vsdin[idatin]['fp'] = datin[idatin]['file']
@@ -582,6 +563,9 @@ def pcd(func,dnamsel,datin,datout,appenddim = False, maxmembytes = 10000000):
         nctemp.close()
     
     # # next: check whether the output variable dimensions (if already present) are not too large, otherwise raise error. + Construct final output dimension specs
+    
+
+
     adimfuncout = [[None]*len(refdfuncstd)]*(len(vsdout))
     alendfuncout = []
     for ivsdout,evsdout in enumerate(vsdout):
@@ -594,8 +578,11 @@ def pcd(func,dnamsel,datin,datout,appenddim = False, maxmembytes = 10000000):
             else:
                 adimfuncout[ivsdout][irefdfuncstd] = range(evsdout['dims'][vsdout[ivsdout]['refdstd'].index(erefdfuncstd)])
             alendfuncout[ivsdout] = alendfuncout[ivsdout]*len(adimfuncout[ivsdout][irefdfuncstd])
+
+
     
     # arefsin: references of the standard dimensions to the data stream dimensions
+    
     arefsin = []
     for ivsdin,evsdin in enumerate(vsdin):
         arefsin.append([None]*len(vsdin[ivsdin]['refdstd']))
@@ -605,6 +592,7 @@ def pcd(func,dnamsel,datin,datout,appenddim = False, maxmembytes = 10000000):
             arefsin[ivsdin][erefdstd] = irefdstd
     
     # arefsout: references of the standard dimensions to the data stream dimensions
+    
     arefsout = []
     for ivsdout,evsdout in enumerate(vsdout):
         arefsout.append([None]*len(vsdout[ivsdout]['refdstd']))
@@ -613,7 +601,7 @@ def pcd(func,dnamsel,datin,datout,appenddim = False, maxmembytes = 10000000):
         for irefdstd,erefdstd in enumerate(vsdout[ivsdout]['refdstd']):
             arefsout[ivsdout][erefdstd] = irefdstd
     
-    #print ("dnamsstd", dnamsstd)
+    print "dnamsstd", dnamsstd
     if appenddim == True:
         membytes = 0
         # dsellen = len(dnamsel)
@@ -665,6 +653,7 @@ def pcd(func,dnamsel,datin,datout,appenddim = False, maxmembytes = 10000000):
                         arefdfuncout[ivsdout].insert(maxarefdfunc, arefsout[ivsdout][idnam])
                         adimfuncout[ivsdout].insert(maxarefdfunc,range(vsdout[ivsdout]['dims'][arefsout[ivsdout][idnam]]))
                         alendfuncout[ivsdout] = alendfuncout[ivsdout] *vsdout[ivsdout]['dims'][arefsout[ivsdout][idnam]]
+                    #dnamsel.insert(dsellen,dnamsstd[idnam])
     
                     # recalculate the amount of bytes
                     membytes = 0
@@ -697,6 +686,8 @@ def pcd(func,dnamsel,datin,datout,appenddim = False, maxmembytes = 10000000):
         adimnoiterout.append(list(adimfuncout[ivsdout]))
         arefdnoiterout.append(list(arefdfuncout[ivsdout]))
 
+    #dnamselnoiter = list(dnamsel)
+    
     # membytes: minimum total memory that will be used. We will the increase usage  when possible/allowed.
     membytes = 0
     for ivsdin,evsdin in enumerate(vsdin):
@@ -779,10 +770,10 @@ def pcd(func,dnamsel,datin,datout,appenddim = False, maxmembytes = 10000000):
     # # vsdin[ivsdin]['refdstd']: references of data stream dimensions (vsdin[..]['dnams'] to the standard dimensions (dnamsstd) 
     # dnamselnoiter: references
 
-    # print ('dims in:',vsdin[ivsdin]['dims'])
-    # print ('dnams in:',vsdin[ivsdin]['dnams'])
-    # print ('dims out:',vsdout[ivsdin]['dims'])
-    # print ('dnams out:',vsdout[ivsdin]['dnams'])
+    print 'dims in:',vsdin[ivsdin]['dims']
+    print 'dnams in:',vsdin[ivsdin]['dnams']
+    print 'dims out:',vsdout[ivsdin]['dims']
+    print 'dnams out:',vsdout[ivsdin]['dnams']
     
     # guess from residual dimensions that are not in refnoiterin
     refditerstd = []
@@ -840,11 +831,11 @@ def pcd(func,dnamsel,datin,datout,appenddim = False, maxmembytes = 10000000):
     rwchunksizein = [1]*len(vsdin)
     for ivsdin,evsdin in enumerate(vsdin):
         idim = len(vsdin[ivsdin]['dims'])-1
-        while ((idim in arefdnoiterin[ivsdin]) & (idim >= 0) & (vsdin[ivsdin]['dsel'][idim] == False) & ((type(datin[ivsdin]['file']).__name__  != 'list') | (idim != 0))):
+        while ((idim in arefdnoiterin[ivsdin]) & (idim >= 0) & (vsdin[ivsdin]['dsel'][idim] == False) & ((str(type(datin[ivsdin]['file']))[7:11]  != 'list') | (idim != 0))):
             # The inner dimensions just have to be referenced so not in correct order.  We know that they will be read in the correct order in the end
             rwchunksizein[ivsdin] = rwchunksizein[ivsdin]*vsdin[ivsdin]['dims'][idim]
             idim = idim - 1
-    #print ("rwchunksizein", rwchunksizein)
+    print "rwchunksizeout", rwchunksizein
     
 
     rwchunksizeout = [1]*len(vsdout)
@@ -854,7 +845,7 @@ def pcd(func,dnamsel,datin,datout,appenddim = False, maxmembytes = 10000000):
             # The inner dimensions just have to be referenced so not in correct order.  We know that they will be read in the correct order in the end
             rwchunksizeout[ivsdout] = rwchunksizeout[ivsdout]*vsdout[ivsdout]['dims'][idim]
             idim = idim - 1
-    #print ("rwchunksizein",rwchunksizeout)
+    print "rwchunksizein",rwchunksizeout
     
     adimnoapplyout = []
     for ivsdout,evsdout in enumerate(vsdout):
@@ -1008,9 +999,11 @@ def pcd(func,dnamsel,datin,datout,appenddim = False, maxmembytes = 10000000):
         sys.stdout.write (str(j+1)+'/'+str(lenitermax))
     
     for ivsdin,evsdin in enumerate(vsdin):
-        if type(vsdin[ivsdin]['fp']).__name__ == 'file':
+        if str(type(vsdin[ivsdin]['fp']))[7:11] == 'file':
             vsdin[ivsdin]['fp'].close()
     for ivsdout,evsdout in enumerate(vsdout):
         vsdout[ivsdout]['fp'].close()
     print(' ')
+
+import pylab as pl
 

@@ -8,19 +8,19 @@ fnins = ['/home/hendrik/data/belgium_aq/rcm/aq09/stage1/int2lm/laf2009010100_urb
 #print fnin
 # fobjin = open(fnin,'rb')
 # fin = NetCDF.NetCDFFile(fnin,'r')
-fnout = '/home/hendrik/data/belgium_aq/rcm/aq09/stage1/int2lm/laf2009010100_urb_ahf3.nc'
-os.system('rm '+fnout)
+fout = NetCDF.NetCDFFile('/home/hendrik/data/belgium_aq/rcm/aq09/stage1/int2lm/laf2009010100_urb_ahf3.nc','w')
+#os.system('rm '+fnout)
 #print fnout
 # fobjout = open(fnout,'wb+''rlat')
-fout = NetCDF.NetCDFFile(fnout,'w')
-datin =  [[fnins,'T'],[fnins,'rlat']]
-datout = [[fout,'T'],]
+datin =  [{'file':fnins,'varname':'T','predim':'time'},\
+          {'file':fnins,'varname':'rlat','predim':'time'}]
+datout = [{'file':fout,'varname':'T'},]
 # selection of function dimension input
 func = lambda x, y: (np.array([np.mean(x,axis=0)],dtype=np.float32) ,) # *(1.+np.zeros(x.shape))
 dnamsel = ['time',]
-pcd.pcd(func,dnamsel,datin,datout,predim = 'time')
+pcd.pcd(func,dnamsel,datin,datout,appenddim=True)
 
-fout.close()
+fout.close();print('output file written to:',fout )
 
 
 # fig = pl.figure()

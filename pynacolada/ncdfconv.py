@@ -1,22 +1,23 @@
 from numpy import *
 from datetime import *
-from matplotlib.dates import *
+from matplotlib.dates import * # only for date2num?
+from ncdfextract import ncgettypecode
 
-# get corresponding format for netcdf file
-def ncgetformat(fmt):    
-    if fmt == float64: #double
-        return 'd'
-    elif fmt == float32:
-        return 'f'
-    elif fmt == int:
-        return 'i'
-    elif fmt == long:
-        return 'l'
-    elif fmt == datetime:
-        return 'd' 
-    else:
-        print (' WARNING: format '+fmt+' could not be discovered! Assuming that it is double.')
-        return 'd'
+# # should be the same as ncgettypecode
+# def ncgetformat(fmt):    
+#     if fmt == float64: #double
+#         return 'd'
+#     elif fmt == float32:
+#         return 'f'
+#     elif fmt == int:
+#         return 'i'
+#     elif fmt == long:
+#         return 'l'
+#     elif fmt == datetime:
+#         return 'd' 
+#     else:
+#         print (' WARNING: format '+fmt+' could not be discovered! Assuming that it is double.')
+#         return 'd'
 
 def csv2netcdf(infile,outfile,sep=None,nalist = [''],formatlist=[],refdat = datetime(2000,1,1),tunits = 'hours',customnames=[]):
     '''
@@ -57,7 +58,7 @@ def csv2netcdf(infile,outfile,sep=None,nalist = [''],formatlist=[],refdat = date
                 tunits +' since '+ datetime.strftime(refdat,'%Y-%m-%d %H:%M:%S'))
 
     for icn,ecn in enumerate(colnames):
-        outfile.createVariable(ecn,ncgetformat(formatlist[icn][0]),('time',))
+        outfile.createVariable(ecn,ncgettypecode(formatlist[icn][0]),('time',))
     for iline,eline in enumerate(infile):
         currline = eline.replace('\n','').split(sep)
         colnum = min(len(currline),len(colnames))
@@ -116,10 +117,11 @@ def csv2netcdf(infile,outfile,sep=None,nalist = [''],formatlist=[],refdat = date
                     (dt-refdat).total_seconds()/60.
 
 def ncwritedatetime(ncfile,dt,tunits = None, refdat = None):
-    # purpose: write given time coordinate to ncdf file
-    # dt: array of datetimes
-    # tunits: time unit (can be either 'hour', 'days', 'minutes','seconds',
-    # refdat: reference date from which the timesteps are represented
+    ''' purpose: write given time coordinate to ncdf file
+    dt: array of datetimes
+    tunits: time unit (can be either 'hour', 'days', 'minutes' or 'seconds')
+    refdat: reference date from which the timesteps are represented
+    '''
 
     if refdat == None: refdat = dt[0]
     if 'time' not in ncfile.dimensions:
@@ -141,7 +143,6 @@ def ncwritedatetime(ncfile,dt,tunits = None, refdat = None):
     setattr(ncfile.variables['time'],\
             'units', \
              tunits +' since '+ datetime.strftime(refdat,'%Y-%m-%d %H:%M:%S'))
-
 
     for idt,edt in enumerate(dt):
         if tunits == 'hours':

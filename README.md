@@ -15,12 +15,16 @@ severe memory restrictions due to the limited RAM in computers. They also don't
 allow a quick moviewize visualization of such large data sets, simply because
 they cannot load all those 'terrabytes' into memory at once. The
 PynaColaDa-tool now provides the best of both worlds: it allows to perform any
-arbitrary pre-defined or user-defined custom function analysis on a massively
+arbitrary pre-defined or user-defined custom function/analysis on a massively
 HUGE dataset very easily, with great performance (from the numpy/matlib
 library), and WITHOUT the memory restrictions! As it both directly 'reads from'
-and 'writes to' NetCDF format, it allows to easily scroll through your analysis
-data sets, i.e. with ncview.
+and 'writes to' NetCDF format, it allows to easily scroll through your data
+analysis, i.e. with ncview.
 
+This package also contains some convenient netcdf dataformat
+extraction  (see ncgettypecode, ncgetdatetime ) and construction tools
+(see ncwritedatetime, nccopydimension, nccopyattrfile, nccopyattrvar,
+nccopyvariable,csv2netcdf)
 
 The power of tools lies in their examples. Typical usage of the package, in particular ncmultifunc,
 looks like this::
