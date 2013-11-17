@@ -14,9 +14,10 @@ from Scientific.IO import NetCDF
 fin = NetCDF.NetCDFFile('/home/hendrik/data/belgium_aq/rcm/aq09/stage1/int2lm/laf2009010100_urb_ahf.nc','r')
 fout = NetCDF.NetCDFFile('/home/hendrik/data/belgium_aq/rcm/aq09/stage1/int2lm/laf2009010100_urb_ahf_sel.nc','w')
 
-dnamsel = ['rlon','rlat']
 func = lambda x: x[20:90,30:100]
+dnamsel = ['rlon','rlat']
 for evar in fin.variables:
+    # apply the domain selection on all variables that involve these dimensions
     if ( ('rlat' in fin.variables[evar].dimensions) & \
         ('rlon' in fin.variables[evar].dimensions)):
         datin =  [{'file':fin,'varname':evar,}]

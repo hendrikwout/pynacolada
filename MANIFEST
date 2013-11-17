@@ -8,6 +8,9 @@ TODO
 VERSION
 setup.py
 ubuntubuild.sh
+examples/.copytest.py.swp
+examples/.pcdselindexbox.py.swp
+examples/copytest.py
 examples/examplepcd.py
 examples/pcdfunctionexamples.py
 examples/pcdselindexbox.py
@@ -19,5 +22,4 @@ pynacolada/ncdfconv.py
 pynacolada/ncdfextract.py
 pynacolada/ncdfproc.py
 pynacolada/netcdf.py
-pynacolada/pynacolada-orig.py
 pynacolada/pynacolada.py

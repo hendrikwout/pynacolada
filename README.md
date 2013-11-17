@@ -26,8 +26,7 @@ extraction  (see ncgettypecode, ncgetdatetime ) and construction tools
 (see ncwritedatetime, nccopydimension, nccopyattrfile, nccopyattrvar,
 nccopyvariable,csv2netcdf)
 
-The power of tools lies in their examples. Typical usage of the package, in particular ncmultifunc,
-looks like this::
+The power of tools lies in their examples. Typical usage of the package, in particular pynacolada.pcd(), can be found below. Additional examples can be found under the 'examples-directory'.::
 
 
     import pynacolada as pcd

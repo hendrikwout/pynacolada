@@ -1,11 +1,15 @@
 from numpy import *
+import pynacolada as pcd2
 
 def nccopydimension (ncin,ncout,dimension,copyvalues=True):
     """Copy a dimension from one NetCDF file to another
 
        By default. The variable named after the dimension is also copied """
     if (dimension in ncin.dimensions) & (dimension not in ncout.dimensions):
-        ncout.createDimension(dimension,ncin.dimensions[dimension])
+        if ncin.dimensions[dimension] != None:
+            ncout.createDimension(dimension,max(1,ncin.dimensions[dimension]))
+        else:
+            ncout.createDimension(dimension,1)
         if (dimension in ncin.variables) & (dimension not in ncout.variables):
             nccopyvariable(ncin,ncout,dimension,copyvalues=copyvalues)
                      # dimoutsize =  indimncpointers[idim].dimensions[edim] 
@@ -100,5 +104,7 @@ def nccopyvariable(ncin,ncout,varin,varout=None,copyvalues=False,copyattr=True):
             #     if attr not in ['assignValue', 'getValue', 'typecode']:
             #         setattr(ncout.variables[varoutdef],attr,getattr(ncin.variables[varin],attr))
     if copyvalues == True:
-        ncout.variables[varoutdef][:] = ncin.variables[varin][:]
+        pcd2.pcd(lambda x: array(x),[],[{'file':ncin,'varname':varin}],[{'file':ncout,'varname':varoutdef}],appenddim=True)
+        # # this would lead to memory problems
+        #ncout.variables[varoutdef][:] = ncin.variables[varin][:]
 

@@ -1,6 +1,13 @@
 
 
 
+VERSION 0.2.10: sub revision - zo nov 17 15:06:04 CET 2013
+
+add example for copying values
+In order to support without memory problems very large NetCDF variables when copying them, the 'copyvalues' option in 'nccopyvariable' now uses pynacolada.pcd() to copy the values.
+bugfix for the case when the output netcdf variable already exists
+
+
 VERSION 0.2.9: sub revision - zo nov 17 09:08:39 CET 2013
 
 clean up code to get rid of unnecessary dependencies

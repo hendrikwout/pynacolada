@@ -211,6 +211,7 @@ def pcd(func,dnamsel,datin,datout,appenddim = False, maxmembytes = 10000000):
 
     maxmembytes: the maximum amount of bytes that is allowed for the buffers to be read/written from/to the input/output data streams. 
     """
+    print datin
     # obtain definitions of the variable stream input
     vsdin = [] # input variable stream definitions
     for idatin,edatin in enumerate(datin):
@@ -234,7 +235,7 @@ def pcd(func,dnamsel,datin,datout,appenddim = False, maxmembytes = 10000000):
             predim = None
             if 'predim' in datin[idatin]:
                 predim = datin[idatin]['predim']
-            if ((nctemp.variables[datin[idatin]['varname']].shape[0] == 1) & ((predim == None) | (nctemp.variables[datin[idatin]['varname']].dimensions[0] == predim))):
+            if ((max(nctemp.variables[datin[idatin]['varname']].shape[0],1) == 1) & ((predim == None) | (nctemp.variables[datin[idatin]['varname']].dimensions[0] == predim))):
                 # we expand the first dimension (which only has length 1 per file)
                 vsdin[idatin]['dims'] = [len(datin[idatin]['file'])]+list(nctemp.variables[datin[idatin]['varname']].shape[1:])
 
@@ -286,20 +287,34 @@ def pcd(func,dnamsel,datin,datout,appenddim = False, maxmembytes = 10000000):
         nctemp.close()
     
     # obtain definitions of the variable stream output
-    vsdout = [] # input variable stream definitions
+    vsdout = [] # output variable stream definitions
     for idatout,edatout in enumerate(datout):
         vsdout.append(dict())
         if edatout['varname'] in edatout['file'].variables:
             vsdout[idatout]['dnams'] = []
             for idim,edim in enumerate(datout[idatout]['file'].variables[datout[idatout]['varname']].dimensions):
                 vsdout[idatout]['dnams'].append(str(edim))
-    
-            vsdout[idatout]['dims'] = list(datout[idatout]['file'].variables[datout[idatout]['varname']].shape)
+
+
+            # we assume a netcdf file
+            if type(datout[idatout]['file']).__name__  == 'NetCDFFile':
+                # obtain file name from open netcdf!! very nasty!!!
+                ncfn =  str(datout[idatout]['file'])[19:(str(datout[idatout]['file']).index("'",19))]
+            # we assume a file name
+            elif type(datout[idatout]['file']).__name__ == 'str':
+                ncfn = datout[idatout]['file']
+            else:
+                raise SomeError("Input file "+ str(datout[idatout]) + " ("+str(idatout)+")  could not be recognized.")
+            datout[idatout]['file'].sync()
+            nctemp = netcdf_file(ncfn,'r')
+            vsdout[idatout]['dims'] = [max(e,1) for e in nctemp.variables[datout[idatout]['varname']].shape]
              # dselmarker
             vsdout[idatout]['dsel'] = [False]*len(vsdout[idatout])
-            vsdout[idatout]['itemsize'] = datout[idatout]['file'].variables[datout[idatout]['varname']].itemsize()
-            vsdout[idatout]['dtype']=     datout[idatout]['file'].variables[datout[idatout]['varname']]._dtype
-            vsdout[idatout]['voffset'] =  datout[idatout]['file'].variables[datout[idatout]['varname']]._voffset
+            vsdout[idatout]['itemsize'] = nctemp.variables[datout[idatout]['varname']].itemsize()
+            vsdout[idatout]['dtype']=     nctemp.variables[datout[idatout]['varname']]._dtype
+            vsdout[idatout]['voffset'] =  nctemp.variables[datout[idatout]['varname']]._voffset
+            nctemp.close()
+            #datout[idatout]['file'] = NetCDF.NetCDFFile(ncfn,'a')
         else:
             # the variable doesn't exists (we will create it afterwards)
             vsdout[idatout]['dnams'] = None
