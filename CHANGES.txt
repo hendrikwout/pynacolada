@@ -1,6 +1,11 @@
 
 
 
+VERSION 0.2.12: sub revision - zo nov 24 19:18:50 CET 2013
+
+Add README.md to MANIFEST.in, so that it can be installed with pypi-install
+
+
 VERSION 0.2.11: sub revision - zo nov 17 20:49:35 CET 2013
 
 ignore the copyvalues option when a variable doesn't contain any values.

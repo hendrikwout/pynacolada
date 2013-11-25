@@ -1,4 +1,5 @@
 You can install it just as any Python package from Pypi (more information, see https://wiki.python.org/moin/CheeseShopTutorial):
+- 'pypi-install pynacolada'
 - as user: 'python setup.py install'
 - as root (system-wide): 'sudo python setup.py install'
 

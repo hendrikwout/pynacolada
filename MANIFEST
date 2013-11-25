@@ -4,11 +4,11 @@ INSTALL
 LASTBUILD
 LICENCE.txt
 MANIFEST.in
+README.md
 TODO
 VERSION
 setup.py
 ubuntubuild.sh
-examples/.pcdselindexbox.py.swp
 examples/copytest.py
 examples/examplepcd.py
 examples/pcdfunctionexamples.py
