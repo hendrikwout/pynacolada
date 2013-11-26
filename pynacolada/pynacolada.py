@@ -621,20 +621,36 @@ def pcd(func,dnamsel,datin,datout,appenddim = False, maxmembytes = 10000000):
         vsdout[idatout]['voffset'] = nctemp.variables[datout[idatout]['varname']]._voffset
         nctemp.close()
     
+    # # bugfix 2013-11-26: this paragraph is replaced by the one below (analogous to the 'construction' of adimfuncin
     # # next: check whether the output variable dimensions (if already present) are not too large, otherwise raise error. + Construct final output dimension specs
-    adimfuncout = [[None]*len(refdfuncstd)]*(len(vsdout))
+    # adimfuncout = [[None]*len(refdfuncstd)]*(len(vsdout))
+    # alendfuncout = []
+    # for ivsdout,evsdout in enumerate(vsdout):
+    #     alendfuncout.append(1)
+    #     for irefdfuncstd,erefdfuncstd in enumerate(refdfuncstd):
+    #         # dselmarker
+    #         # edim = evsdout['dims'][vsdout[ivsdout]['refdstd'].outdex(erefdfuncstd)]
+    #         if evsdout['dsel'][vsdout[ivsdout]['refdstd'].index(erefdfuncstd)] != False:
+    #             adimfuncout[ivsdout][irefdfuncstd] = evsdout['dsel'][vsdout[ivsdout]['refdstd'].index(erefdfuncstd)]
+    #         else:
+    #             adimfuncout[ivsdout][irefdfuncstd] = range(evsdout['dims'][vsdout[ivsdout]['refdstd'].index(erefdfuncstd)])
+    #         alendfuncout[ivsdout] = alendfuncout[ivsdout]*len(adimfuncout[ivsdout][irefdfuncstd])
+
+
+    adimfuncout = []
     alendfuncout = []
     for ivsdout,evsdout in enumerate(vsdout):
         alendfuncout.append(1)
+        adimfuncout.append([])
         for irefdfuncstd,erefdfuncstd in enumerate(refdfuncstd):
             # dselmarker
-            # edim = evsdout['dims'][vsdout[ivsdout]['refdstd'].outdex(erefdfuncstd)]
+            # edim = evsdout['dims'][vsdout[ivsdout]['refdstd'].index(erefdfuncstd)]
             if evsdout['dsel'][vsdout[ivsdout]['refdstd'].index(erefdfuncstd)] != False:
-                adimfuncout[ivsdout][irefdfuncstd] = evsdout['dsel'][vsdout[ivsdout]['refdstd'].index(erefdfuncstd)]
+                adimfuncout[ivsdout].append(list(evsdout['dsel'][vsdout[ivsdout]['refdstd'].index(erefdfuncstd)]))
             else:
-                adimfuncout[ivsdout][irefdfuncstd] = range(evsdout['dims'][vsdout[ivsdout]['refdstd'].index(erefdfuncstd)])
+                adimfuncout[ivsdout].append(range(evsdout['dims'][vsdout[ivsdout]['refdstd'].index(erefdfuncstd)]))
             alendfuncout[ivsdout] = alendfuncout[ivsdout]*len(adimfuncout[ivsdout][irefdfuncstd])
-    
+
     # arefsin: references of the standard dimensions to the data stream dimensions
     arefsin = []
     for ivsdin,evsdin in enumerate(vsdin):

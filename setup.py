@@ -3,7 +3,7 @@ from distutils.core import setup
 
 setup(
     name='pynacolada',
-    version='0.2.12',
+    version='0.2.13',
     author='H. Wouters',
     author_email='hendrikwout@gmail.com',
     packages=['pynacolada'],

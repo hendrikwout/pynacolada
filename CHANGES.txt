@@ -1,6 +1,11 @@
 
 
 
+VERSION 0.2.13: sub revision - di nov 26 14:24:12 CET 2013
+
+bugfix in the construction of the function output dimensions
+
+
 VERSION 0.2.12: sub revision - zo nov 24 19:18:50 CET 2013
 
 Add README.md to MANIFEST.in, so that it can be installed with pypi-install
