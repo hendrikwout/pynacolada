@@ -9,6 +9,7 @@ TODO
 VERSION
 setup.py
 ubuntubuild.sh
+examples/avgsa.py
 examples/copytest.py
 examples/examplepcd.py
 examples/pcdfunctionexamples.py

@@ -172,7 +172,7 @@ def readicecubeps(fstream,shp,refiter,dimiter,dimiterpos,refnoiter,dimnoiter,vty
 
 # we kunnen eens proberen om een variabele aan te maken met een vooraf gespecifieerde dimensie!
 
-def pcd(func,dnamsel,datin,datout,appenddim = False, maxmembytes = 10000000):
+def pcd(func,dnamsel,datin,datout,appenddim = False, maxmembytes = 10000000, forcearray=False):
     """ purpose (see also README.md): process binary NetCDF data streams
     func: the function/analysis to be applied on the data input streams
           specified below. The arguments  of func correspond to the respective
@@ -301,7 +301,7 @@ def pcd(func,dnamsel,datin,datout,appenddim = False, maxmembytes = 10000000):
         vsdin[idatin]['voffset']  = nctemp.variables[datin[idatin]['varname']]._voffset
 
         # dselmarker
-        vsdin[idatin]['dsel'] = [False]*len(vsdin[idatin]['dims'])
+        vsdin[idatin]['dsel'] = [range(e) for e in vsdin[idatin]['dims']]
         if 'dsel' in datin[idatin]:
             # cropped dimensions
             for edcrop in datin[idatin]['dsel']:
@@ -334,7 +334,7 @@ def pcd(func,dnamsel,datin,datout,appenddim = False, maxmembytes = 10000000):
             nctemp = netcdf_file(ncfn,'r')
             vsdout[idatout]['dims'] = [max(e,1) for e in nctemp.variables[datout[idatout]['varname']].shape]
              # dselmarker
-            vsdout[idatout]['dsel'] = [False]*len(vsdout[idatout])
+            vsdout[idatout]['dsel'] = [range(e) for e in vsdout[idatout]['dims']]
             vsdout[idatout]['itemsize'] = nctemp.variables[datout[idatout]['varname']].itemsize()
             vsdout[idatout]['dtype']=     nctemp.variables[datout[idatout]['varname']]._dtype
             vsdout[idatout]['voffset'] =  nctemp.variables[datout[idatout]['varname']]._voffset
@@ -378,11 +378,13 @@ def pcd(func,dnamsel,datin,datout,appenddim = False, maxmembytes = 10000000):
                     # In this case, wait for assigning the output dimensions. This actually depends on the specified function
                     dimsstd.insert(idx  ,None)
             else:
-                if ((vsdin[ivsdin]['dims'][idnam] != 1) & (dimsstd[dnamsstd.index(ednam)] != 1) & \
+                if ((len(vsdin[ivsdin]['dsel'][idnam]) != 1) & (dimsstd[dnamsstd.index(ednam)] != 1) & \
                     # we allow non-equal dimension lengths, as long as the dimension is covered/captured by the function
                     # maybe still allow non-equal dimension length not covered by the function????
                     (dimsstd[dnamsstd.index(ednam)] != None) & \
-                    (vsdin[ivsdin]['dims'][idnam] != dimsstd[dnamsstd.index(ednam)])):
+                    (len(vsdin[ivsdin]['dsel'][idnam]) != dimsstd[dnamsstd.index(ednam)])):
+                    print(vsdin[ivsdin]['dims'][idnam])
+                    print(vsdin[ivsdin]['dims'][idnam])
                     raise SomeError("The corresponding output dnamensions (index: "+str(dnamsstd.index(ednam))+") of the input variable "+str(ivsdin)+ " "+ str(idnam)+ " "+" have a different length and not equal to 1.")
                 else:
                     # None means it's considered by the function
@@ -495,8 +497,28 @@ def pcd(func,dnamsel,datin,datout,appenddim = False, maxmembytes = 10000000):
     
     # 'probe' function output dimensions
     dummydat = []
+    shapein = []
     for ivsdin,evsdin in enumerate(vsdin):
-        dummydat.append(np.zeros([len(e) for e in adimfuncin[ivsdin]]))
+        shapein.append([len(e) for e in adimfuncin[ivsdin]])
+
+        # if shapein[ivsdin] == tuple():
+        #     if forcenum and (not forcearray):
+        #         # to do: make it 
+        #         if appenddim == True:
+        #             dummydat.append(0.)
+        #         else:
+        #            raise SomeError('we can not force to be numeric if the option appenddim is switched on')
+        # else: 
+        #     np.zeros(shapein[ivsdin])
+
+    # we are in the special case of an extra dimension to be added to the input
+    if (list() in shapein) and (forcearray):
+        for ivsdin,evsdin in enumerate(vsdin):
+            dummydat.append(np.zeros([1]+shapein[ivsdin]))
+    else:
+        for ivsdin,evsdin in enumerate(vsdin):
+            dummydat.append(np.zeros(shapein[ivsdin]))
+
     ddout =  func(*dummydat)
     if (type(ddout).__name__ == 'tuple'):
         ddout = list(ddout)
@@ -512,16 +534,22 @@ def pcd(func,dnamsel,datin,datout,appenddim = False, maxmembytes = 10000000):
     for iddout in range(len(ddout)):
         if type(ddout[iddout] ) != np.ndarray: 
             ddout[iddout] = np.array(ddout[iddout])
-    
+            # we are in the special case of an extra dimension to be added to the input -> so we remove it again
+        if (list() in shapein) and (forcearray):
+            if len(ddout[iddout].shape) > 1: 
+                ddout[iddout].shape = ddout[iddout].shape[1:]
+            else:
+                ddout[iddout].shape = []
+
         if (len(np.array(ddout[iddout]).shape) != len(adimfuncin[ivsdin])):
             raise SomeError('The amount of input ('+str(len(adimfuncin[ivsdin]))+') and output dimensions ('+str(len(ddout[iddout].shape))+') of function  is not the same')
     
         if vsdout[iddout]['dims'] == None:
             vsdout[iddout]['dims'] = list(dimsstd)
-            vsdout[iddout]['dsel'] = [False]*len(vsdout[iddout]['dims']) # Added for consistency with input dimensions. As output dimension, it is not really used.
             # overwrite dimensions with the function output dimensions
             for irefdfuncout,erefdfuncout in enumerate(arefdfuncout[iddout]):
                 vsdout[iddout]['dims'][erefdfuncout] = ddout[iddout].shape[irefdfuncout]
+            vsdout[iddout]['dsel'] = [range(e) for e in vsdout[iddout]['dims']] # Added for consistency with input dimensions. As output dimension, it is not really used.
     
         if vsdout[iddout]['dtype'] == None:
             # output netcdf variable does not exist... creating
@@ -896,7 +924,7 @@ def pcd(func,dnamsel,datin,datout,appenddim = False, maxmembytes = 10000000):
     rwchunksizein = [1]*len(vsdin)
     for ivsdin,evsdin in enumerate(vsdin):
         idim = len(vsdin[ivsdin]['dims'])-1
-        while ((idim in arefdnoiterin[ivsdin]) & (idim >= 0) & (vsdin[ivsdin]['dsel'][idim] == False) & ((type(datin[ivsdin]['file']).__name__  != 'list') | (idim != 0))):
+        while ((idim in arefdnoiterin[ivsdin]) & (idim >= 0) & (vsdin[ivsdin]['dsel'][idim] == range(vsdin[ivsdin]['dims'][idim])) & ((type(datin[ivsdin]['file']).__name__  != 'list') | (idim != 0))):
             # The inner dimensions just have to be referenced so not in correct order.  We know that they will be read in the correct order in the end
             rwchunksizein[ivsdin] = rwchunksizein[ivsdin]*vsdin[ivsdin]['dims'][idim]
             idim = idim - 1
@@ -976,6 +1004,7 @@ def pcd(func,dnamsel,datin,datout,appenddim = False, maxmembytes = 10000000):
         for k in range(lennoapplymax):
             # actually, this is just the end of the file output already written
             ahunkin = []
+            shapein = []
             for ivsdin, evsdin in enumerate(vsdin):
                 pos = 0
                 # e.g. pos = (9)+ 20*(10) + 50*50*20*(5)
@@ -989,9 +1018,16 @@ def pcd(func,dnamsel,datin,datout,appenddim = False, maxmembytes = 10000000):
                             # curaddout = curaddout * dimnoiteroutref[i]
                     pos    = pos    + curadd
                 ahunkin.append(dataicecubein[ivsdin][pos:(pos+alendfuncin[ivsdin])])
-                ahunkin[ivsdin].shape = [len(e) for e in adimfuncin[ivsdin]]
-    
-            # apply the function
+                shapein.append([len(e) for e in adimfuncin[ivsdin]])
+                #ahunkin[ivsdin].shape = [len(e) for e in adimfuncin[ivsdin]]
+            # we are in the special case of an extra dimension to be prepended to the input
+            if (list() in shapein) and (forcearray):
+                for ivsdin,evsdin in enumerate(vsdin):
+                    ahunkin[ivsdin].shape = [1]+shapein[ivsdin]
+            else:
+                for ivsdin,evsdin in enumerate(vsdin):
+                    ahunkin[ivsdin].shape = shapein[ivsdin]
+                    # apply the function
     
             ahunkout =  func(*ahunkin)
             if (type(ahunkout).__name__ == 'tuple'):
@@ -1002,6 +1038,14 @@ def pcd(func,dnamsel,datin,datout,appenddim = False, maxmembytes = 10000000):
             for ihunkout in range(len(ahunkout)):
                 ahunkout[ihunkout] = np.array(ahunkout[ihunkout])
                 # e.g. posout = (9)+ 20*(10) + 50*50*20*(5)
+
+                # we are in the special case of an extra dimension to be prepended to the input -> so we remove this dimension again
+                if (list() in shapein) and (forcearray):
+                    if len(ahunkout[iddout].shape) > 1: 
+                        ahunkout[iddout].shape = ahunkout[iddout].shape[1:]
+                    else:
+                        ahunkout[iddout].shape = []
+
                 posout    = 0
                 for idimpos,edimpos in enumerate(dimnoapplypos):
                     curadd    = np.mod(edimpos,len(adimnoapplyout[ihunkout][idimpos]))

@@ -1,6 +1,21 @@
 
 
 
+VERSION 0.2.19: sub revision - za nov 30 22:12:39 CET 2013
+
+adding a more advanced 'stein-alpert' example
+some serious bugfixes concerning 'dsel'. Now, it is always defined from the beginning, even when it is not specified by the user ->in that case, data[i]['dsel'] it is equal to range(data[i]['dims']). 
+
+VERSION 0.2.18: sub revision - wo nov 27 14:54:38 CET 2013
+
+whoops, previous versions above 0.2.14 won't work
+
+
+VERSION 0.2.14: sub revision - wo nov 27 10:02:56 CET 2013
+
+add a forcearray option so that the function number of input dimensions is at least 1.
+
+
 VERSION 0.2.13: sub revision - di nov 26 14:24:12 CET 2013
 
 bugfix in the construction of the function output dimensions
