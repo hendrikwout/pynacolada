@@ -105,7 +105,7 @@ def rwicecube(filestream,shp,refiter,dimiter,dimpos,refnoiter,dimnoiter,icecube,
         if dimnoiterpos != []:
             # rwchsize: allow reading of chunks for the inner dimensions
             dimnoiterpos[-1] = dimnoiterpos[-1] + rwchsize
-            for idimidx,edimidx in enumerate(reversed(dimnoiterpos)):
+            for idimidx,edimidx in reversed(list(enumerate(dimnoiterpos))):
                 if idimidx > 0:
                     while dimnoiterpos[idimidx] >= len(dimnoiter[idimidx]):
                         dimnoiterpos[idimidx-1] = dimnoiterpos[idimidx-1] + 1
@@ -1061,7 +1061,7 @@ def pcd(func,dnamsel,datin,datout,appenddim = False, maxmembytes = 10000000, for
     
             # go to next data slice  
             dimnoapplypos[-1] = dimnoapplypos[-1] + 1
-            for idimidx,edimidx in enumerate(reversed(dimnoapplypos)):
+            for idimidx,edimidx in reversed(list(enumerate(dimnoapplypos))):
                 # # alternative (makes 'dimiter' redundant)
                 # if dimiterpos[idimidx] == shp[refiter[idimidx]]:
                 if idimidx > 0:
@@ -1094,7 +1094,7 @@ def pcd(func,dnamsel,datin,datout,appenddim = False, maxmembytes = 10000000, for
     
         # go to next data slice  
         dimiterpos[-1] = dimiterpos[-1] + 1
-        for idimidx,edimidx in enumerate(reversed(dimiterpos)):
+        for idimidx,edimidx in reversed(list(enumerate(dimiterpos))):
             # # alternative (makes 'dimiter' redundant)
             # if dimiterpos[idimidx] == shp[refiter[idimidx]]:
             if dimiterpos[idimidx] == dimitermax[idimidx]:
