@@ -51,23 +51,24 @@ def csv2netcdf(infile,outfile,sep=None,nalist = [''],formatlist=[],refdat = date
 
     outfile.createDimension('time',leninfile)
     outfile.createVariable('time','d',('time',))
-    outfile.createVariable('datetime','d',('time',))
     if (tunits not in nalist):
         setattr(outfile.variables['time'],\
                 'units', \
                 tunits +' since '+ datetime.strftime(refdat,'%Y-%m-%d %H:%M:%S'))
 
-    for icn,ecn in enumerate(colnames):
-        outfile.createVariable(ecn,ncgettypecode(formatlist[icn][0]),('time',))
+    for icn,ecnorig in enumerate(colnames):
+        ecn = ''.join(e for e in ecnorig if e.isalnum())
+        if formatlist[icn][0].__name__ != 'datetime':
+            outfile.createVariable(ecn,ncgettypecode(formatlist[icn][0]),('time',))
     for iline,eline in enumerate(infile):
         currline = eline.replace('\n','').split(sep)
         colnum = min(len(currline),len(colnames))
         for icn in range(colnum):
-            ecn = colnames[icn]
+            ecn = ''.join(e for e in colnames[icn] if e.isalnum())
             if currline[icn] not in nalist:
-                if formatlist[icn][0] == datetime:
-                    outfile.variables[ecn][iline] = date2num(datetime.strptime(currline[icn],formatlist[icn][1]))
-                else:
+                # if formatlist[icn][0] == datetime:
+                #     outfile.variables[ecn][iline] = date2num(datetime.strptime(currline[icn],formatlist[icn][1]))
+		if formatlist[icn][0] != datetime:
                     try:
                         outfile.variables[ecn][iline] = formatlist[icn][0](currline[icn])
                     except:
@@ -101,7 +102,7 @@ def csv2netcdf(infile,outfile,sep=None,nalist = [''],formatlist=[],refdat = date
                 dt = dt + timedelta(seconds = sec)
 
         # output to netcdf
-        outfile.variables['datetime'][iline] = date2num(dt)
+        # outfile.variables['datetime'][iline] = date2num(dt)
 
         if tunits == 'hours':
             outfile.variables['time'][iline] = \

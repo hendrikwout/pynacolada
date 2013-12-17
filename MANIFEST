@@ -11,12 +11,14 @@ setup.py
 ubuntubuild.sh
 examples/avgsa.py
 examples/copytest.py
+examples/examplecsv2netcdf.py
 examples/examplepcd.py
 examples/pcdfunctionexamples.py
 examples/pcdselindexbox.py
 examples/pynatest.py
 examples/pynatestlist.py
 examples/readtime.py
+examples/data/example.csv
 pynacolada/__init__.py
 pynacolada/ncdfconv.py
 pynacolada/ncdfextract.py

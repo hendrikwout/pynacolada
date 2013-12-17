@@ -1,6 +1,12 @@
 
 
 
+VERSION 0.2.21: sub revision - di dec 17 15:36:58 CET 2013
+
+changes in csv2netcdf: remove special characters in labels
+add example csv2netcdf
+
+
 VERSION 0.2.20: sub revision - ma dec  2 13:17:02 CET 2013
 
 bugfix in the detemination of the array-position
