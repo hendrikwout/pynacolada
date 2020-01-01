@@ -2,6 +2,12 @@
 from distutils.core import setup
 from version import get_git_version
 
+# read the contents of your README file
+from os import path
+this_directory = path.abspath(path.dirname(__file__))
+with open(path.join(this_directory, 'README.md'), encoding='utf-8') as f:
+    long_description = f.read()
+
 # setup(
 #     name='pynacolada',
 #     version='0.2.21',
@@ -26,6 +32,8 @@ setup(
     download_url = 'download link you saved',
     keywords = ['xarrays', 'climate data processing'],
     classifiers = [],
-    long_description=open('README.md').read(),
+    #long_description=open('README.md').read(),
+    long_description=long_description,
+    long_description_content_type= 'text/markdown',
 )
 
