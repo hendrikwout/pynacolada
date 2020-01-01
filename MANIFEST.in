@@ -3,6 +3,7 @@ include LICENCE.txt
 include version.py
 include _version.py
 include ubuntubuild.sh
+include CHANGELOG.txt
 recursive-include pynacolada *py 
 # include CHANGES.txt
 # include VERSION
