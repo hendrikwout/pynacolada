@@ -1,9 +1,9 @@
-recursive-include pynacolada *py 
 include README.md
 include LICENCE.txt
 include version.py
 include _version.py
-include ubuntubuild.py
+include ubuntubuild.sh
+recursive-include pynacolada *py 
 # include CHANGES.txt
 # include VERSION
 # include INSTALL
