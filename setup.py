@@ -29,7 +29,7 @@ setup(
     author = 'hendrikwout',
     author_email = 'hendrikwout@gmail.com',
     url = 'github package source url',
-    download_url = 'download link you saved',
+    # download_url = 'download link you saved',
     keywords = ['xarrays', 'climate data processing'],
     classifiers = [],
     #long_description=open('README.md').read(),
