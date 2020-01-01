@@ -2,6 +2,11 @@ Changelog
 =========
 
 
+0.5.16 (2020-01-01)
+-------------------
+- Add CHANGELOG.txt. [Hendrik Wouters]
+
+
 0.5.14 (2020-01-01)
 -------------------
 - Add initial io lib including routines to write ascii 2d raster files.

@@ -33,7 +33,7 @@ setup(
     keywords = ['xarrays', 'climate data processing'],
     classifiers = [],
     long_description=long_description,
-    long_description_content_type= 'text/markdown',
+    #long_description_content_type= 'text/markdown',
     #long_description=open('README.md').read(),
 )
 
