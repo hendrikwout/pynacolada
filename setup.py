@@ -28,7 +28,7 @@ setup(
     description = 'description',
     author = 'hendrikwout',
     author_email = 'hendrikwout@gmail.com',
-    url = 'github package source url',
+    # url = 'github package source url',
     # download_url = 'download link you saved',
     keywords = ['xarrays', 'climate data processing'],
     classifiers = [],
