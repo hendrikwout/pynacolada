@@ -2,6 +2,16 @@ Changelog
 =========
 
 
+0.5.20 (2020-01-01)
+-------------------
+- Test. [Hendrik Wouters]
+
+
+0.5.19 (2020-01-01)
+-------------------
+- Test. [Hendrik Wouters]
+
+
 0.5.18 (2020-01-01)
 -------------------
 - Add CHANGELOG.txt. [Hendrik Wouters]
