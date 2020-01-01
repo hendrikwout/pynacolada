@@ -2,8 +2,9 @@ Changelog
 =========
 
 
-(unreleased)
-------------
+0.5.18 (2020-01-01)
+-------------------
+- Add CHANGELOG.txt. [Hendrik Wouters]
 - Add CHANGELOG.txt. [Hendrik Wouters]
 
 
