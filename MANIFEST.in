@@ -1,0 +1,15 @@
+recursive-include pynacolada *py 
+include README.md
+include LICENCE.txt
+include version.py
+include _version.py
+include ubuntubuild.py
+# include CHANGES.txt
+# include VERSION
+# include INSTALL
+# include TODO
+# include LASTBUILD
+# include ubuntubuild.sh
+# include MANIFEST.in
+# recursive-include examples *
+
