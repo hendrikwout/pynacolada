@@ -32,8 +32,8 @@ setup(
     # download_url = 'download link you saved',
     keywords = ['xarrays', 'climate data processing'],
     classifiers = [],
-    #long_description=open('README.md').read(),
     long_description=long_description,
     long_description_content_type= 'text/markdown',
+    #long_description=open('README.md').read(),
 )
 

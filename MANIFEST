@@ -4,6 +4,8 @@ README.md
 _version.py
 setup.cfg
 setup.py
+ubuntubuild.sh
 version.py
 pynacolada/__init__.py
 pynacolada/apply_func.py
+pynacolada/io.py
