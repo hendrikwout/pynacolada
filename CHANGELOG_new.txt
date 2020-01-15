@@ -1,0 +1,127 @@
+Changelog
+=========
+
+
+0.5.21 (2020-01-01)
+-------------------
+- Create changelog for this release $RELEASE. [Hendrik Wouters]
+- Test ; my changes. [Hendrik Wouters]
+
+
+0.5.20 (2020-01-01)
+-------------------
+- Test. [Hendrik Wouters]
+
+
+0.5.19 (2020-01-01)
+-------------------
+- Test. [Hendrik Wouters]
+
+
+0.5.18 (2020-01-01)
+-------------------
+- Add CHANGELOG.txt. [Hendrik Wouters]
+- Add CHANGELOG.txt. [Hendrik Wouters]
+
+
+0.5.16 (2020-01-01)
+-------------------
+- Add CHANGELOG.txt. [Hendrik Wouters]
+
+
+0.5.14 (2020-01-01)
+-------------------
+- Add initial io lib including routines to write ascii 2d raster files.
+  [Hendrik Wouters]
+
+
+0.5.11 (2020-01-01)
+-------------------
+- Add initial io lib including routines to write ascii 2d raster files.
+  [Hendrik Wouters]
+
+
+0.5.10 (2020-01-01)
+-------------------
+- Test. [Hendrik Wouters]
+
+
+0.5.8 (2020-01-01)
+------------------
+- Test. [Hendrik Wouters]
+- Test. [Hendrik Wouters]
+
+
+0.5.7 (2020-01-01)
+------------------
+- Test. [Hendrik Wouters]
+
+
+0.5.5 (2020-01-01)
+------------------
+- Initial version. [Hendrik Wouters]
+- Initial version. [Hendrik Wouters]
+
+
+0.5.4 (2020-01-01)
+------------------
+- Initial. [Hendrik Wouters]
+
+
+0.5.0 (2019-12-30)
+------------------
+- Initial version. [Hendrik Wouters]
+
+  On branch master
+  Your branch is ahead of 'origin/master' by 1 commit.
+    (use "git push" to publish your local commits)
+
+  Changes to be committed:
+        new file:   pynacolada/__init__.py
+        new file:   pynacolada/apply_func.py
+
+  Changes not staged for commit:
+        deleted:
+        modified:   setup.py
+
+  Untracked files:
+        _version.py
+- Merge branch 'master' of github.com:hendrikwout/pynacolada. [Hendrik
+  Wouters]
+- Create README.md. [hendrikwout]
+- Setup.py update. [Hendrik Wouters]
+- Clean-up before major revision for working with xarrays and Python
+  3.x. [Hendrik Wouters]
+- See CHANGES.txt. [hendrikwout]
+- See CHANGES.txt. [hendrikwout]
+- See CHANGES.txt. [hendrikwout]
+- Bugfix in the determination of the output dimensions. [hendrikwout]
+- Bugfix in the determination of the output dimensions. [hendrikwout]
+- Add newest package. [hendrikwout]
+- Cleanups and add running-average function. [hendrikwout]
+- See CHANGES. [hendrikwout]
+- Bugfixes, see CHANGES. [hendrikwout]
+- Bugfixes, see CHANGES. [hendrikwout]
+- Lots of changes, see CHANGES. [hendrikwout]
+- Bugfixes related to filelist inputs. [hendrikwout]
+- Replace pcl to pcd. [hendrikwout]
+- Replace pcl to pcd. [hendrikwout]
+- Replace pcl to pcd. [hendrikwout]
+- Update readme. [hendrikwout]
+- Minor changes in the example. [hendrikwout]
+- Add latest debian package. [hendrikwout]
+- Update of TODO. [hendrikwout]
+- Update of TODO. [hendrikwout]
+- Add extensive example. python3 compatibility. [hendrikwout]
+- Commit test. [hendrikwout]
+- Update to do list. [hendrikwout]
+- Merge branch 'master' of https://github.com/hendrikwout/pynacolada.
+  [hendrikwout]
+- Delete laf2009010100_out.nc. [hendrikwout]
+- Add example of extracting datetimes from a Netcdf variable.
+  [hendrikwout]
+- Latest debian packagge build. [hendrikwout]
+- Add Netcdf basic functionality from other deprecated package.
+  [hendrikwout]
+
+

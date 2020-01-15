@@ -41,5 +41,6 @@ def dataarray_to_ascii(xarray,fname,fmt='.5E',nanvalue=-9.99999E+20):
         writefile = open(writefile.name,'a')
 
     if type(fname).__name__ == 'str':
+        writefile.close();print('file written to: ',writefile)
 
-def series_to_fwf(df_series, fname,show_columns=False):
+# def series_to_fwf(df_series, fname,show_columns=False):
