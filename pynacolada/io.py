@@ -5,6 +5,17 @@ import pandas as pd
 from tabulate import tabulate
 import glob
 from xarray_extras import csv
+from .io_gsod import GSOD as gsod
+
+
+def DataArray_like(da,name=None,**kwargs):
+    da_out = da[:]
+    da_out.values[:] = 0.
+    if name is not None:
+        da_out.name = name
+    for key,value in kwargs.items():
+        da_out.attrs[key] = value
+    return da_out
 
 def dataarray_to_ascii(xarray,fname,fmt='.5E',nanvalue=-9.99999E+20):
     '''

@@ -1,4 +1,3 @@
-
 def apply_func(func,xarrays,dims_apply, method_dims_no_apply='outer',filenames_out = None, maximum_input_memory_chars = 1024*1024*1024 ,squeeze_apply_dims = False,release=False):
     if type(xarrays).__name__ != 'tuple':
         xarrays = [xarrays]
