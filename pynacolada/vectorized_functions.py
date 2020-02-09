@@ -6,6 +6,7 @@ purpose: vectorized functions that can be used with apply_func
 
 import math
 import numpy as np
+from scipy.spatial import Delaunay
 
 def moving_average(a, n=3) : 
     cumsum = np.cumsum(a, dtype=float,axis=-1) 
@@ -21,40 +22,128 @@ def moving_average(a, n=3) :
  
     return ret[:] 
 
-def calc_qvals(vals,bins = 50,axis=-1):
+def calc_quantiles(vals,bins = 50,axis=-1,cdfs=None,stable_end_point = True ,profile=None,start=0.,end=1.):
     # a special way of filtering nans, since we need to conserve the dimension length for vectorized operation
     sorted_vals = np.sort(vals,axis=axis)
     lengths = np.sum(np.isnan(vals) == False,axis=axis,keepdims  = True,dtype=int)
+
+    if profile == 'uniform':
+        cdfs = [ibin / bins for ibin in range(0,bins+1)]
+    elif profile == 'exponential':
+        xvals = np.linspace(np.log(1.-end),np.log(1.-start),bins+1)[::-1] 
+        cdfs = [ (1.-np.exp(x)) for x in xvals]
+    elif profile is not None:
+        raise ValueError ('profile not inplemented')
     
-    pos = []
-    for ibin in range(0,bins-1):
-        #pos.append(np.minimum(np.array(lengths * ibin / bins,dtype=int),lengths-1))
-        pos.append(np.array(lengths * ibin / bins,dtype=int))
-    pos.append(lengths-1)
+    if cdfs is None:
+        raise ValueError ('No cdfs could be obtained')
+
+    pos = [ np.array(lengths * cdf,dtype=int) for cdf in cdfs]
+    
+    # pos = []
+    # for cdf in cdfs[:-1]:
+    #     #pos.append(np.minimum(np.array(lengths * ibin / bins,dtype=int),lengths-1))
+    #     pos.append(np.array(lengths * ibin / bins,dtype=int))
+    if stable_end_point:
+        # ignore the possible very extreme value of the 100th cdf, and replace with the last previous occuring cdf
+        pos[-1] = pos[-2]
+
     pos = np.concatenate(pos,axis=axis)
+    quantiles = np.take_along_axis(sorted_vals,pos,axis = axis) 
+#     print(cdfs)
+    
+    return (quantiles,quantiles*0+np.array(cdfs).reshape([1]*(len(quantiles.shape)-1)+[np.array(cdfs).shape[-1]])) 
 
-    return np.take_along_axis(sorted_vals,pos,axis = axis) 
+def biascorrect_quantiles(series_biased,series_reference,**kwargs):
+    # ,profile='exponential',bins=50,end=0.9999,
+    cdfs,quantiles_biased    = calc_quantiles(series_biased,**kwargs)
+    cdfs,quantiles_reference = calc_quantiles(series_reference,cdfs=cdfs)
+    series_cdf_biased    = interp1d(quantiles_biased,cdfs,series_bias)
+    series_cdf_reference = interp1d(quantiles_reference,cdfs,series_reference)
+
+    series_biased_recalc         = interp1d(cdfs,quantiles_biased,cdf_series_biased)
+    series_corrected_preliminary = interp1d(cdfs,quantiles_reference,cdf_series_biased)
+    series_corrected = series_biased + series_biased_recalc - series_corrected_preliminary
+
+    return series_corrected
+
+def interpolate_delaunay_linear(values,xylist,uvlist,remove_duplicate_points=False ,dropnans=False,fill_value=np.nan):
+    d = len(xylist)
+
+    uvshape = uvlist[0].shape
+    xystack = np.stack([xy.ravel() for xy in xylist],axis=-1) 
+    valuesstack = values.copy()
+    valuesstack.shape =  [element for element in values.shape[:-len(xylist[0].shape)]] + [element for element in xystack.shape[0:1]]
+    if dropnans:
+        nans =[x for x in np.where(~np.isnan(valuesstack[0]))[0]]
+        valuesstack = np.take(valuesstack,nans,axis=1)
+        xystack = np.take(xystack,nans,axis=0)
+    
+    # if remove_duplicate_points:
+    #     index_input_unique = np.unique(xystack,return_index=True,axis=0)[1]
+    #     xystack = np.take(xystack,index_input_unique,axis=0)
+    #     valuesstack = np.take(valuesstack,index_input_unique,axis=1)
+    uvstack = np.stack([uv.ravel() for uv in uvlist],axis=-1) 
+
+    for i,xy in enumerate(xylist): 
+        if xy.shape != xylist[0].shape:
+            raise ValueError('Dimension of xylist['+str(i)+'] should be be equal to xylist[0].')
+
+    print( values.shape[:len(xylist[0].shape)] ,  xylist[0].shape)
+    if values.shape[-len(xylist[0].shape):] != xylist[0].shape:
+        raise ValueError('Inner dimensions of "values" '+str(values.shape)+' should be equal to the dimensions of the arrays in xylist '+ str(xylist[0].shape)+'.')
+
+
+    uvstackshape = tuple(uvstack.shape)
+    axis0shape = 1
+    for facdim in uvstack.shape[:-1]:
+        axis0shape *= facdim
+    uvstack.shape = (axis0shape,uvstack.shape[-1]) 
+    # print(uvstack.shape)
+    # print(xystack.shape) 
+    tri = Delaunay(xystack) 
+    # print(uvstack.shape)  
+    simplex = tri.find_simplex(uvstack) 
+    vertices = np.take(tri.simplices, simplex, axis=0) 
+    temp = np.take(tri.transform, simplex, axis=0)                                                                                       
+    delta = uvstack - temp[:, d] 
+    bary = np.einsum('njk,nk->nj', temp[:, :d, :], delta)                                                                                
+    vtx, wts = vertices, np.hstack((bary, 1 - bary.sum(axis=1, keepdims=True)))
+
+    outeraxisshaperavel = 1
+    for facdim in valuesstack.shape[:-1]:
+        outeraxisshaperavel *= facdim
+    valuesstack.shape = [outeraxisshaperavel] + [valuesstack.shape[-1]] 
+    
+    # import pdb; pdb.set_trace()
+    valout = np.einsum('pnj,nj->pn', np.take(valuesstack, vtx,axis=-1), wts)
+    valout[:,np.any(wts < 0, axis=1)] = fill_value
+    valout.shape = [element for element in values.shape[:-len(xylist[0].shape)]]+[element for element in uvshape ]
+    # import pdb;pdb.set_trace()
+
+    #new axis are added to conform the output to 4 dimenions
+    return np.array(valout[...,np.newaxis,np.newaxis,:,:])
     
 
-def calc_cdf(vals,qvals):
-    cdf_disc = np.zeros(list(vals.shape)+[qvals.shape[-1]],dtype=bool)
-    for iqval in range(0,qvals.shape[-1]):
-        if iqval < (qvals.shape[-1]-1):
-            select = ((vals >= qvals[...,iqval:iqval+1]) & (vals < qvals[...,(iqval+1):(iqval+2)])) | (vals == qvals[...,iqval:iqval+1]) 
-        elif iqval == (qvals.shape[-1] - 1):
-            select = (vals >= qvals[...,iqval:iqval+1]) 
-        cdf_disc[...,iqval] = select
-    
-        #ranges = np.concatenate([cdf_disc.argmax(axis=-1)[...,np.newaxis],cdf_disc[...,::-1].argmax(axis=-1)[...,np.newaxis]],axis=-1)
-    
-    # def argmax_reverse(data,*args,**kwargs):
-    #     return data.shape[-1] - data[...::-1].argmax(axis=-1)
-    
-    
-    out = np.round(np.random.uniform(cdf_disc.argmax(axis=-1),cdf_disc.shape[-1]  - (cdf_disc[...,::-1].argmax(axis=-1)+1)))
-    out[np.isnan(vals)] = np.nan
-    
-    return out
+# def calc_cdf_series(vals,quantiles):
+#     cdf_disc = np.zeros(list(vals.shape)+[quantiles.shape[-1]],dtype=bool)
+#     for iquantile in range(0,quantiles.shape[-1]):
+#         if iquantile < (quantiles.shape[-1]-1):
+#             select = ((vals >= quantiles[...,iquantile:iquantile+1]) & (vals < quantiles[...,(iquantile+1):(iquantile+2)])) | (vals == quantiles[...,iquantile:iquantile+1]) 
+#         elif iquantile == (quantiles.shape[-1] - 1):
+#             select = (vals >= quantiles[...,iquantile:iquantile+1]) 
+#         cdf_disc[...,iquantile] = select
+#     
+#         #ranges = np.concatenate([cdf_disc.argmax(axis=-1)[...,np.newaxis],cdf_disc[...,::-1].argmax(axis=-1)[...,np.newaxis]],axis=-1)
+#     
+#     # def argmax_reverse(data,*args,**kwargs):
+#     #     return data.shape[-1] - data[...::-1].argmax(axis=-1)
+#     
+#     
+#     out = np.round(np.random.uniform(cdf_disc.argmax(axis=-1),cdf_disc.shape[-1]  - (cdf_disc[...,::-1].argmax(axis=-1)+1)))
+#     out[np.isnan(vals)] = np.nan
+#     
+#     return out
 
 
 
@@ -63,11 +152,12 @@ def interp1d(x_fix, y_fix, x_var):
     interpolation along axis, and supports parallel vectorized independent iterpolations on multidimensional slices.
 
     '''
+    print(x_fix.shape,y_fix.shape,x_var.shape)
 
     # this function assumes that x_fix is monotonically increasing!
 
-    x_fix = x_fix.reshape([1]*(len(x_var.shape) - len(x_fix.shape))+list(x_fix.shape))
-    y_fix = y_fix.reshape([1]*(len(x_var.shape) - len(x_fix.shape))+list(y_fix.shape))
+    # x_fix = x_fix.reshape([1]*(len(x_var.shape) - len(x_fix.shape))+list(x_fix.shape))
+    # y_fix = y_fix.reshape([1]*(len(x_var.shape) - len(x_fix.shape))+list(y_fix.shape))
 
     # if 1 not in x_fix.shape:
     #     start_shape_weights = 0
@@ -96,20 +186,20 @@ def interp1d(x_fix, y_fix, x_var):
 
     y_var_right =np.take_along_axis(y_fix,x_indices_right,axis=-1) 
     y_var = np.take_along_axis(y_fix,x_indices_left,axis=-1) * weights + np.take_along_axis(y_fix,x_indices_right,axis=-1) * (1.-weights)
+    #import pdb; pdb.set_trace()
     y_var_orig = np.array(y_var)
     y_var_max = np.take_along_axis(y_fix,x_indices_left,axis=-1)
 
     #maxidx = np.take_along_axis(maxidx[None,...],x_indices_left[...,None],axis=-1)
     #maxidx = x_fix.shape[-1] - np.argmax(x_fix[...,::-1] == x_fix[...,::-1,None],axis=-1)[::-1] 
-    minidx = np.argmax(x_fix == x_fix[...,None],axis=-1) 
-    x_indices_min = np.take_along_axis(minidx[None,...],x_indices_left[...,None],axis=-1)[:,0]
+    minidx = np.argmax(x_fix[...,None,:] == x_fix[...,None],axis=-1) 
+    x_indices_min = np.take_along_axis(minidx[...,None,:],x_indices_left[...,None],axis=-1)[...,0]
     y_var_min = np.take_along_axis(y_fix,np.clip(x_indices_min,0,y_fix.shape[-1]-1),axis=-1)
 
     weight_rand = np.random.rand(*y_var_min.shape)
     select_for_random_y = ( (x_indices_left-1) != (x_indices_min))
     y_var[select_for_random_y] = (y_var_min *weight_rand + y_var_max*(1-weight_rand))[select_for_random_y]
     y_var[np.isnan(x_var)] = np.nan
-
     return y_var
 
     # x_indices_left = np.argmax(distances >=0,axis=-2)

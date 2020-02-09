@@ -1,3 +1,9 @@
+import numpy as np
+import math
+import xarray as xr
+import os
+import netCDF4 as nc4
+
 def apply_func(func,xarrays,dims_apply, method_dims_no_apply='outer',filenames_out = None, maximum_input_memory_chars = 1024*1024*1024 ,squeeze_apply_dims = False,release=False):
     if type(xarrays).__name__ != 'tuple':
         xarrays = [xarrays]
@@ -254,8 +260,8 @@ def apply_func(func,xarrays,dims_apply, method_dims_no_apply='outer',filenames_o
             
         print('applying function on input chunks')
                 
-        #import pdb; pdb.set_trace()
         chunks_out_parts_transposed = func(*arrays_chunk_transposed) #.squeeze_apply_dims()
+#        import pdb; pdb.set_trace()
 
         list_output = True
         if type(chunks_out_parts_transposed).__name__ not in ['tuple','list']:

@@ -9,7 +9,7 @@ from .io_gsod import GSOD as gsod
 
 
 def DataArray_like(da,name=None,**kwargs):
-    da_out = da[:]
+    da_out = da.copy()
     da_out.values[:] = 0.
     if name is not None:
         da_out.name = name
