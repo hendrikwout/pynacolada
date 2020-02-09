@@ -4,6 +4,24 @@ Changelog
 
 (unreleased)
 ------------
+- Severall updates, including additional example vectorized functions
+  that can be used with apply_func on big dataset. [Hendrik Wouters]
+- Severall updates, including additional example vectorized functions
+  that can be used with apply_func on big dataset. [Hendrik Wouters]
+
+
+0.5.22 (2020-02-09)
+-------------------
+- Severall updates, including additional example vectorized functions
+  that can be used with apply_func on big dataset. [Hendrik Wouters]
+- Add an example vectorized functions for usage in apply_func. [Hendrik
+  Wouters]
+- Add an example numpy-based function moving_average. [Hendrik Wouters]
+
+
+0.5.21 (2020-01-01)
+-------------------
+- Create changelog for this release $RELEASE. [Hendrik Wouters]
 - Test ; my changes. [Hendrik Wouters]
 
 
