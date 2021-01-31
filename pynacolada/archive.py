@@ -101,6 +101,7 @@ class archive (object):
                     self.coordinates[key] = []
 
 
+
                     for coordinate in space_coordinates:
                         self.coordinates[key].append(DataArray_input[coordinate])
 
