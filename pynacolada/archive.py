@@ -99,6 +99,7 @@ class archive (object):
                         self.coordinates[key] = DataArray_input[key]
                 if key == 'space':
                     self.coordinates[key] = []
+                    
                     for coordinate in space_coordinates:
                         self.coordinates[key].append(DataArray_input[coordinate])
 
