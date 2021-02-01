@@ -15,3 +15,6 @@
 #   dimensions of the data input. Rewrite the code, so that also chunks of
 #   intermediate size can be read as well.
 # - make a cdo-like command line interface (please let me know if you or someone else wants to contribute to this)
+
+
+# test test
