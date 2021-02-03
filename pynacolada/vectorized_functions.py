@@ -22,13 +22,13 @@ def moving_average(a, n=3) :
  
     return ret[:] 
 
-def calc_quantiles(vals,bins = 50,axis=-1,cdfs=None,stable_end_point = True ,profile=None,start=0.,end=1.):
+def calc_quantiles(vals,bins = 50,axis=-1,stable_start_point = True,stable_end_point=True,cdfs=None,profile=None,start=0.,end=0.999):
     # a special way of filtering nans, since we need to conserve the dimension length for vectorized operation
-    sorted_vals = np.sort(vals,axis=axis)
-    lengths = np.sum(np.isnan(vals) == False,axis=axis,keepdims  = True,dtype=int)
+
 
     if profile == 'uniform':
-        cdfs = [ibin / bins for ibin in range(0,bins+1)]
+        # cdfs = [ibin / bins for ibin in range(0,bins+1)]
+        cdfs = np.linspace(start,end,bins+1)
     elif profile == 'exponential':
         xvals = np.linspace(np.log(1.-end),np.log(1.-start),bins+1)[::-1] 
         cdfs = [ (1.-np.exp(x)) for x in xvals]
@@ -38,7 +38,15 @@ def calc_quantiles(vals,bins = 50,axis=-1,cdfs=None,stable_end_point = True ,pro
     if cdfs is None:
         raise ValueError ('No cdfs could be obtained')
 
-    pos = [ np.array(lengths * cdf,dtype=int) for cdf in cdfs]
+    # cdfwindow = 12*40
+    # splitby = 12*5
+
+
+    sorted_vals = np.sort(vals,axis=axis)
+    lengths = np.sum(np.isnan(vals) == False,axis=axis,keepdims  = True,dtype=int)
+
+    pos = [ np.array( (lengths-1) * cdf,dtype=int) for cdf in cdfs]
+
     
     # pos = []
     # for cdf in cdfs[:-1]:
@@ -47,6 +55,8 @@ def calc_quantiles(vals,bins = 50,axis=-1,cdfs=None,stable_end_point = True ,pro
     if stable_end_point:
         # ignore the possible very extreme value of the 100th cdf, and replace with the last previous occuring cdf
         pos[-1] = pos[-2]
+    if stable_start_point:
+        pos[0] = pos[1]
 
     pos = np.concatenate(pos,axis=axis)
     quantiles = np.take_along_axis(sorted_vals,pos,axis = axis) 
@@ -67,7 +77,7 @@ def biascorrect_quantiles(series_biased,series_reference,**kwargs):
 
     return series_corrected
 
-def interpolate_delaunay_linear(values,xylist,uvlist,remove_duplicate_points=False ,dropnans=False,fill_value=np.nan):
+def interpolate_delaunay_linear(values,xylist,uvlist,remove_duplicate_points=False ,dropnans=False,fill_value=np.nan,add_newaxes=True):
     d = len(xylist)
 
     uvshape = uvlist[0].shape
@@ -122,7 +132,10 @@ def interpolate_delaunay_linear(values,xylist,uvlist,remove_duplicate_points=Fal
     # import pdb;pdb.set_trace()
 
     #new axis are added to conform the output to 4 dimenions
-    return np.array(valout[...,np.newaxis,np.newaxis,:,:])
+    if add_newaxes:
+        return np.array(valout[...,np.newaxis,np.newaxis,:,:])
+    else:
+        return np.array(valout[...,:,:])
     
 
 # def calc_cdf_series(vals,quantiles):
@@ -144,10 +157,96 @@ def interpolate_delaunay_linear(values,xylist,uvlist,remove_duplicate_points=Fal
 #     out[np.isnan(vals)] = np.nan
 #     
 #     return out
+def lookup_nearest(x_fix, y_fix, x_var):
+    '''
+    lookup nearest y_fix value for which x_fix is closest to the x_var values. The output 'y_var' will have the same dimension as x_var  array x_var array and  of first elements in pair
+    
+    '''
+    x_fix = x_fix.reshape([1]*(len(x_var.shape) )+list(x_fix.shape)) 
+    y_fix = y_fix.reshape([1]*(len(x_var.shape) )+list(y_fix.shape))
+
+    # distances = \
+    #     x_fix.reshape(list(x_fix.shape[:])+[1])-\
+    #     x_var.reshape(list(x_var.shape[:-1])+[1,x_var.shape[-1]]) # 1,1,1001,151
+    distances = np.abs(x_fix - np.expand_dims(x_var,axis=-1))
 
 
+    x_indices_closest = np.expand_dims(np.argmin(np.abs(distances),axis=-1) ,axis=-1)
+    y_var_closest = np.take_along_axis(y_fix,x_indices_closest,axis=-1) 
+    print(y_var_closest.shape)
+    return y_var_closest[...,0]
 
 def interp1d(x_fix, y_fix, x_var):
+    '''
+    interpolation along axis, and supports parallel vectorized independent iterpolations on multidimensional slices.
+
+    '''
+    #print(x_fix.shape,y_fix.shape,x_var.shape)
+
+    # this function assumes that x_fix is monotonically increasing!
+
+    # x_fix = x_fix.reshape([1]*(len(x_var.shape) - len(x_fix.shape))+list(x_fix.shape))
+    # y_fix = y_fix.reshape([1]*(len(x_var.shape) - len(x_fix.shape))+list(y_fix.shape))
+
+    #workaround flawed implementation apply_func
+    if x_fix.shape[-2] != 1:
+        x_fix = x_fix.reshape(list(x_fix.shape[:-1])+[1]+[x_fix.shape[-1]])
+    if y_fix.shape[-2] != 1:
+        y_fix = y_fix.reshape(list(y_fix.shape[:-1])+[1]+[y_fix.shape[-1]])
+    if x_var.shape[-1] != 1:
+        x_var = x_var.reshape(list(x_var.shape)+[1])
+
+    # if 1 not in x_fix.shape:
+    #     start_shape_weights = 0
+    # else:
+    #     start_shape_weights = len(x_fix.shape) - x_fix.shape[::-1].index(1) 
+
+    distances = x_fix - x_var
+
+    # import pdb; pdb.set_trace()
+    # distances = \
+    #         x_fix.reshape(list(x_fix.shape[:])+[1])-\
+    #         x_var.reshape(list(x_var.shape[:-1])+[1,x_var.shape[-1]])
+
+    # x_repeat = np.tile(x_var[...,None], (x_fix.shape[-1],))
+    # #distances = np.abs(x_repeat - x_fix)
+    # distances = np.abs(x_var[...,None] - x_fix[...,None,:] )
+
+    #x_indices_right = np.expand_dims(x_fix.shape[-1] -1 - np.argmax(distances[...,::-1,:] <=0,axis=-2)[...,::-1],axis=-2)
+    
+    x_indices_right = np.clip(np.expand_dims(np.argmax(distances >0,axis=-1),axis=-1),1,None)
+    # for extrapolation on the right hand side
+    x_indices_right[distances[...,-1][...,np.newaxis]<=0] = (y_fix.shape[-1] -1)
+
+    distances_closest_right = np.take_along_axis(distances,x_indices_right,axis=-1) 
+    x_indices_left = np.clip(x_indices_right-1,None,distances.shape[-1]-1)
+    distances_closest_left = np.take_along_axis(distances,x_indices_left,axis=-1) 
+    weights = distances_closest_right/(distances_closest_right-distances_closest_left)
+    weights[distances_closest_right==distances_closest_left] = 1.
+
+    # weights = weights.reshape(weights.shape[:-1])
+    # x_indices_left = x_indices_left.reshape(x_indices_left.shape[:-1])
+    # x_indices_right = x_indices_right.reshape(x_indices_right.shape[:-1])
+
+    y_var_right =np.take_along_axis(y_fix,x_indices_right,axis=-1) 
+    y_var = np.take_along_axis(y_fix,x_indices_left,axis=-1) * weights + np.take_along_axis(y_fix,x_indices_right,axis=-1) * (1.-weights)
+    y_var_orig = np.array(y_var)
+    y_var_max = np.take_along_axis(y_fix,x_indices_left,axis=-1)
+
+    #maxidx = np.take_along_axis(maxidx[None,...],x_indices_left[...,None],axis=-1)
+    #maxidx = x_fix.shape[-1] - np.argmax(x_fix[...,::-1] == x_fix[...,::-1,None],axis=-1)[::-1] 
+    minidx = np.argmax(x_fix[...,None,:] == x_fix[...,None],axis=-1) 
+
+    x_indices_min = np.take_along_axis(minidx[...,None,:],x_indices_left[...,None],axis=-1)[...,0]
+    y_var_min = np.take_along_axis(y_fix,np.clip(x_indices_min,0,y_fix.shape[-1]-1),axis=-1)
+
+    weight_rand = np.random.rand(*y_var_min.shape)
+    select_for_random_y = ( (x_indices_min) != (x_indices_left)) & (weights == 1.)
+    y_var[select_for_random_y] = (y_var_min *weight_rand + y_var_max*(1-weight_rand))[select_for_random_y]
+    
+    return y_var[...,0]
+
+def interp1d_orig(x_fix, y_fix, x_var):
     '''
     interpolation along axis, and supports parallel vectorized independent iterpolations on multidimensional slices.
 
