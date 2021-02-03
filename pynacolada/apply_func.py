@@ -3,8 +3,11 @@ import math
 import xarray as xr
 import os
 import netCDF4 as nc4
+import pandas as pd
+from tqdm import tqdm
+import tempfile
 
-def apply_func(func,xarrays,dims_apply, method_dims_no_apply='outer',filenames_out = None, maximum_input_memory_chars = 1024*1024*1024 ,squeeze_apply_dims = False,release=False):
+def apply_func(func,xarrays,dims_apply, method_dims_no_apply='outer',filenames_out = None, attributes = None,maximum_input_memory_chars = 1024*1024*202 ,squeeze_apply_dims = False,release=False,output_dims={},transpose_hack=True,tempfile_dir=None,initialize_array=None,copy_coordinates=False):
     if type(xarrays).__name__ != 'tuple':
         xarrays = [xarrays]
 
@@ -34,8 +37,19 @@ def apply_func(func,xarrays,dims_apply, method_dims_no_apply='outer',filenames_o
 
                 else:
                     dimslib[dim] = xarray[dim]
-        dims_transposed[xarrayname[-1]] = []
+
+
+        dims_apply_def = []
         for dim in dims_apply:
+            if type(dim).__name__ == 'int':
+                print('Assigning '+xarraydims[0][dim]+' for dims_apply integer '+str(dim))
+                dims_apply_def.append(xarraydims[0][dim])
+            else:
+                dims_apply_def.append(dim)
+
+
+        dims_transposed[xarrayname[-1]] = []
+        for dim in dims_apply_def:
 
             if dim in xarraydims[-1]:
                 dims_transposed[xarrayname[-1]] += [dim]
@@ -62,10 +76,11 @@ def apply_func(func,xarrays,dims_apply, method_dims_no_apply='outer',filenames_o
 
 
 
-    total_array_size = np.prod([dimslib[d].shape[0] for d in dims_no_apply+dims_apply])
+    #import pdb; pdb.set_trace()
+    total_array_size = np.prod([dimslib[d].shape[0] for d in dims_no_apply+dims_apply_def])
     number_of_chunks = math.ceil(total_array_size*len(xarrays)/maximum_input_memory_chars)
 
-    min_chunk_size = np.prod([dimslib[d].shape[0] for d in dims_apply])
+    min_chunk_size = np.prod([dimslib[d].shape[0] for d in dims_apply_def])
     chunk_size = max(min_chunk_size,math.ceil(total_array_size/number_of_chunks))
     chunk_size = min(chunk_size,total_array_size)
 
@@ -73,8 +88,17 @@ def apply_func(func,xarrays,dims_apply, method_dims_no_apply='outer',filenames_o
 
     first = True
     chunks =np.arange(0,total_array_size,chunk_size,dtype=int)
-    for ichunk,chunk_start in enumerate(chunks):
-        print('processing chunk: ', ichunk,'(',chunk_start, ') /',len(chunks), ' (',chunks[-1],')')
+
+    print('processing chunks',chunks)
+    if filenames_out is not None:
+        filenames_out_temp = []
+        for filename_out in filenames_out:
+            filenames_out_temp.append(tempfile.mktemp(suffix='.nc',dir=tempfile_dir))
+
+        print('dumping to: ', filenames_out)
+        print('dumping to: ', filenames_out_temp)
+    for ichunk,chunk_start in tqdm(list(enumerate(chunks))):
+        ##print('processing chunk: ', ichunk,'(',chunk_start, ') /',len(chunks), ' (',chunks[-1],')')
         
         arrays_chunk_transposed = []
 
@@ -84,7 +108,7 @@ def apply_func(func,xarrays,dims_apply, method_dims_no_apply='outer',filenames_o
         this_idxs_start = []
         this_idxs_end = []
         for idim,dim in enumerate(dims_no_apply):
-            inner_chunk_size = np.prod([dimslib[d].shape[0] for d in dims_no_apply[idim+1:]+dims_apply])
+            inner_chunk_size = np.prod([dimslib[d].shape[0] for d in dims_no_apply[idim+1:]+dims_apply_def])
 
             this_idx_start = math.floor(chunk_start/inner_chunk_size)
             this_idxs_start.append(this_idx_start)
@@ -192,7 +216,7 @@ def apply_func(func,xarrays,dims_apply, method_dims_no_apply='outer',filenames_o
                         xarray_chunk_part_select[dim] = range(idx_chunk_part_current,idx_chunk_part_end+1)
                         xarray_chunk_part_dims.append(dim)
 
-                for idim,dim in enumerate(dims_apply):
+                for idim,dim in enumerate(dims_apply_def):
                     if dim in xarraydims[ixarray_in]:
                         xarray_chunk_part_select[dim] = range(0,dimslib[dim].shape[0])
                         xarray_chunk_part_dims.append(dim)
@@ -210,13 +234,13 @@ def apply_func(func,xarrays,dims_apply, method_dims_no_apply='outer',filenames_o
                         xarray_chunk_part_select_def[dim] = select
 
 
-                print('reading part of chunk of array',str(ipart)+'/'+str(len(idxs_chunk_parts_current)), ichunk,ixarray_in)
+                ##print('reading part of chunk of array',str(ipart)+'/'+str(len(idxs_chunk_parts_current)), ichunk,ixarray_in)
                 if concat_outer_dim:
                     outer_start = xarray_chunk_part_select[xarray[0].dims[0]][0]
                     outer_end = xarray_chunk_part_select[xarray[0].dims[0]][-1]+1
                     
-                    print(outer_start,outer_end)
-                    print('Warning: it is supposed that the input data file list is in sequential order of the outer dimensions.')
+                    ##print(outer_start,outer_end)
+                    ##print('Warning: it is supposed that the input data file list is in sequential order of the outer dimensions.')
 
                     tempdatalist = []
                     current_outer_pos = 0
@@ -225,7 +249,7 @@ def apply_func(func,xarrays,dims_apply, method_dims_no_apply='outer',filenames_o
                         if (current_outer_pos < outer_end) and (next_outer_pos > outer_start):
                             current_file_start = max(outer_start,current_outer_pos) - current_outer_pos
                             current_file_end = min(outer_end,next_outer_pos) - current_outer_pos
-                            print('reading ifile',ixarray_in,ifile,current_file_start,current_file_end)
+                            ##print('reading ifile',ixarray_in,ifile,current_file_start,current_file_end)
 
                             xarray_chunk_part_select_def[xarray[0].dims[0]] = range(current_file_start,current_file_end)
                             # import pdb;pdb.set_trace()
@@ -234,7 +258,7 @@ def apply_func(func,xarrays,dims_apply, method_dims_no_apply='outer',filenames_o
                         current_outer_pos = next_outer_pos
 
                     array_chunk_part_transposed.append(np.concatenate(tempdatalist,axis=0).transpose([xarraydims[ixarray_in].index(dim) for dim in xarray_chunk_part_dims]))
-                    print('reading chunk and transposing: ',xarraydims[ixarray_in],'->',xarray_chunk_part_dims)
+                    ##print('reading chunk and transposing: ',xarraydims[ixarray_in],'->',xarray_chunk_part_dims)
                     for tempdata in tempdatalist:
                         del tempdata
                     del tempdatalist
@@ -242,7 +266,7 @@ def apply_func(func,xarrays,dims_apply, method_dims_no_apply='outer',filenames_o
                     # print(array_chunk_part_transposed.shape)
                 else:
                     array_chunk_part_transposed.append(np.ascontiguousarray(xarray.isel(xarray_chunk_part_select_def).values.transpose([xarraydims[ixarray_in].index(dim) for dim in xarray_chunk_part_dims])))
-                    print('reading chunk and transposing: ',xarraydims[ixarray_in],'->',xarray_chunk_part_dims)
+                    ##print('reading chunk and transposing: ',xarraydims[ixarray_in],'->',xarray_chunk_part_dims)
                 shape_out = [1]
                 next_idim = 0
                 for idim,dim in enumerate(xarray_chunk_part_dims):
@@ -253,12 +277,12 @@ def apply_func(func,xarrays,dims_apply, method_dims_no_apply='outer',filenames_o
                         
                 shape_out += [dimsize for dimsize in array_chunk_part_transposed[-1].shape[next_idim:]]
                 array_chunk_part_transposed[-1].shape = shape_out
-                print('Part of chunk read : ', ixarray_in,ipart)
-            print('Concatenating chunk for input array',ixarray_in)
+                ##print('Part of chunk read : ', ixarray_in,ipart)
+            ##print('Concatenating chunk for input array',ixarray_in)
             arrays_chunk_transposed.append(np.concatenate(array_chunk_part_transposed,axis=0))
             del array_chunk_part_transposed
             
-        print('applying function on input chunks')
+        ##print('applying function on input chunks')
                 
         chunks_out_parts_transposed = func(*arrays_chunk_transposed) #.squeeze_apply_dims()
 #        import pdb; pdb.set_trace()
@@ -284,6 +308,7 @@ def apply_func(func,xarrays,dims_apply, method_dims_no_apply='outer',filenames_o
             dims_out_transposed = []
             shapes_out_transposed = []
             coords_out_transposed = []
+            variables_out = []
             for iarray,chunk_out_parts_transposed in enumerate(chunks_out_parts_transposed):
                 shapes_out_transposed.append(shape_no_apply+[dimsize for dimsize in chunk_out_parts_transposed.shape[1:]])
                 dims_out_transposed.append([None]*len(shapes_out_transposed[iarray]))
@@ -297,10 +322,10 @@ def apply_func(func,xarrays,dims_apply, method_dims_no_apply='outer',filenames_o
                         coords_out_transposed[iarray][idim] = dimslib[dim]
                     else:
                         # we inherit the dimension namings from the apply_dims
-#                        for idim_apply,dim in list(enumerate(dims_apply))[::-1]:
+#                        for idim_apply,dim in list(enumerate(dims_apply_def))[::-1]:
                         #dim_found = False
-                        # while (not dim_found) and (idim_apply < len(dims_apply)):
-                        dim = dims_apply[idim_apply]
+                        # while (not dim_found) and (idim_apply < len(dims_apply_def)):
+                        dim = dims_apply_def[idim_apply]
                         # if (dim not in dims_out_transposed[iarray]) and (not (squeeze_apply_dims and (shapes_out_transposed[iarray][idim]) == 1)) :
                             # if (dim_apply == dim) and (dimslib[dim_apply] != shapes_out_transposed[iarray][idim]) and (shapes_out_transposed[iarray][idim] != 1):
                             #     raise IOError('I was expecting the same dimension length for the output ('+str(+ shapes_out_transposed[iarray][idim]+') as for the input ('+str(+ dimslib[dim_apply]+')  for '+dim+'. Please check.')
@@ -314,14 +339,20 @@ def apply_func(func,xarrays,dims_apply, method_dims_no_apply='outer',filenames_o
                             # else:
                             #     coords_out_transposed[iarray][idim] = range(0,shapes_out_transposed[iarray][idim])
                         # dim_found = False
-                        # while (not dim_found) and (idim_apply < len(dims_apply)):
+                        # while (not dim_found) and (idim_apply < len(dims_apply_def)):
                         #     if (not squeeze_apply_dims) or (shapes_out_transposed[iarray][idim] != 1):
                         if (len(dimslib[dim]) == shapes_out_transposed[iarray][idim]):
                             dims_out_transposed[iarray][idim] = dim
-                            coords_out_transposed[iarray][idim] = dimslib[dim]
+                            if dim in output_dims.keys():
+                                coords_out_transposed[iarray][idim] = output_dims[dim]
+                            else:
+                                coords_out_transposed[iarray][idim] = dimslib[dim]
                         else:
                             dims_out_transposed[iarray][idim] = dim
-                            coords_out_transposed[iarray][idim] = range(0,shapes_out_transposed[iarray][idim])
+                            if dim in output_dims.keys():
+                                coords_out_transposed[iarray][idim] = output_dims[dim]
+                            else:
+                                coords_out_transposed[iarray][idim] = range(0,shapes_out_transposed[iarray][idim])
                         dim_found=True
                         idim_apply +=1
 
@@ -329,8 +360,8 @@ def apply_func(func,xarrays,dims_apply, method_dims_no_apply='outer',filenames_o
                         #    idim_apply +=1
 
                         #idim_apply = 0
-                        # while (not dim_found) and (idim_apply < len(dims_apply)):
-                        # # for idim_apply,dim_apply in list(enumerate(dims_apply)):
+                        # while (not dim_found) and (idim_apply < len(dims_apply_def)):
+                        # # for idim_apply,dim_apply in list(enumerate(dims_apply_def)):
                         #     if (dim not in dims_out_transposed[iarray]) and ((not (squeeze_apply_dims and (shapes_out_transposed[iarray][idim]) == 1)) or (len(dimslib[dim]) == shapes_out_transposed[iarray][idim])):
                         #         dims_out_transposed[iarray][idim] = dim
                         #         coords_out_transposed[iarray][idim] = range(0,shapes_out_transposed[iarray][idim])
@@ -360,19 +391,34 @@ def apply_func(func,xarrays,dims_apply, method_dims_no_apply='outer',filenames_o
                     xrtemp = xr.Dataset()
                     for idim,dim in enumerate(dims_out_transposed[iarray]):
                         xrtemp[dim] = coords_out_transposed[iarray][idim]
-                        #import pdb;pdb.set_trace()
                         # ncouts[iarray].createDimension(dim,shapes_out_transposed[iarray][idim])
                         # ncouts[iarray].createVariable(dim,'d',(dim,),)
                         # ncouts[iarray].variables[dim][:] = coords_out_transposed[iarray][idim]
+                    fnout = filenames_out_temp[iarray] #'testing_'+str(iarray)+'.nc'
+                    if copy_coordinates:
+                        coordinates_template = xarrays[0].coords
+                        for coord in coordinates_template: 
+                            if coord not in dims_apply_def:
+                                xrtemp.coords[coord] = coordinates_template[coord]
 
-                    fnout = filenames_out[iarray] #'testing_'+str(iarray)+'.nc'
-                    print('writing to file: '+fnout)
+                    ##print('writing to file: '+fnout)
+                    os.system('mkdir -p '+os.path.dirname(fnout))
                     os.system('rm '+fnout)
+                    if initialize_array is not None:
+                        xrtemp = initialize_array(xrtemp)
+                    # import pdb; pdb.set_trace()
                     xrtemp.to_netcdf(fnout)
                     xrtemp.close()
                     ncouts.append(nc4.Dataset(fnout,'a'))
+
+                    variables_out.append('__xarray_data_variable__')
+                    if attributes is not None:
+                        for attribute_key,attribute_value in attributes[iarray].items():
+                            if attribute_key == 'variable':
+                                ##print('setting variable name',variables_out[iarray])
+                                variables_out[iarray] = attribute_value
                     
-                    ncouts[iarray].createVariable('__xarray_data_variable__','f',dims_out_transposed[iarray],)
+                    ncouts[iarray].createVariable(variables_out[iarray],'f',dims_out_transposed[iarray],)
 
                     # dims_out_def = dims_out_transposed[iarray]
                     # shape_out_def = shapes_out_transposed[iarray]
@@ -384,8 +430,6 @@ def apply_func(func,xarrays,dims_apply, method_dims_no_apply='outer',filenames_o
                                          coords=coords_out_transposed[iarray]
                             )
                     )
-            print(coords_out_transposed)
-            print(dims_out_transposed)
             first = False
         
         for iarray,chunk_out_parts_transposed in enumerate(chunks_out_parts_transposed):
@@ -408,7 +452,7 @@ def apply_func(func,xarrays,dims_apply, method_dims_no_apply='outer',filenames_o
                         idim += 1
 
                 idim = 0
-                for dim in dims_apply:
+                for dim in dims_apply_def:
                     if (dim in dims_out_transposed[iarray]):# and (not (squeeze_apply_dims and (shapes_out_transposed[iarray][idim]) == 1)):
 #                        xarray_chunk_part_select[dim] = range(0,dimslib[dim].shape[0])
                         xarray_chunk_part_select[dim] = range(0,chunk_out_parts_transposed.shape[1+idim])
@@ -418,7 +462,7 @@ def apply_func(func,xarrays,dims_apply, method_dims_no_apply='outer',filenames_o
                 next_pos_chunk_part_no_apply = pos_chunk_part_no_apply + extent_chunk_part_no_apply
                 temp = chunk_out_parts_transposed[pos_chunk_part_no_apply:next_pos_chunk_part_no_apply]
                 temp.shape = [ len(dim_select) for dim_select in xarray_chunk_part_select.values()]
-                print('writing part of chunk of array: ', str(ipart)+'/'+str(len(idxs_chunk_parts_current)),ichunk,iarray)
+                ##print('writing part of chunk of array: ', str(ipart)+'/'+str(len(idxs_chunk_parts_current)),ichunk,iarray)
 
                 #remove explicit selection of full dimension ranges to hopefully speed up xarray selection
                 xarray_chunk_part_select_def = {}
@@ -427,7 +471,7 @@ def apply_func(func,xarrays,dims_apply, method_dims_no_apply='outer',filenames_o
                         xarray_chunk_part_select_def[dim] = select
                 # import pdb; pdb.set_trace()
                 if filenames_out is not None:
-                    ncouts[iarray].variables['__xarray_data_variable__'][tuple(xarray_chunk_part_select.values())] = np.ascontiguousarray(temp)
+                    ncouts[iarray].variables[variables_out[iarray]][tuple(xarray_chunk_part_select.values())] = np.ascontiguousarray(temp)
                 else:
                     xarrays_out_transposed[iarray][xarray_chunk_part_select_def] = np.ascontiguousarray(temp)
                 pos_chunk_part_no_apply = next_pos_chunk_part_no_apply
@@ -435,21 +479,35 @@ def apply_func(func,xarrays,dims_apply, method_dims_no_apply='outer',filenames_o
             del chunk_out_parts_transposed
         del chunks_out_parts_transposed
 
-
     if filenames_out is not None:
         xarrays_out_transposed = []
-        for incout,ncout in enumerate(ncouts):
-            ncout.close()
-            fnout = filenames_out[incout] #'testing_'+str(iarray)+'.nc'
-            if not release:
-                xarrays_out_transposed.append(xr.open_dataset(fnout)['__xarray_data_variable__'])
+        if attributes is not None:
+            for incout,ncout in enumerate(ncouts):
+                for attribute_key,attribute_value in attributes[incout].items():
+                    if attribute_key is not 'variable':
+                        # if attribute_key in ['source_variable','cdf']:
+                        #     import pdb; pdb.set_trace()
+                        try:
+                            if (type(attribute_value) == bool) or (type(attribute_value).__name__ == 'bool_'): 
+                                attribute_value_def = np.array(attribute_value,dtype='i1')
+                            else:
+                                attribute_value_def = attribute_value
+                            ncouts[incout][variables_out[incout]].setncattr(attribute_key,attribute_value_def)
+                        except:
+                            import pdb; pdb.set_trace()
 
-    if not release:
-        xarrays_out = [] 
+        for incout,ncout in enumerate(ncouts):
+            ncouts[incout].close()
+
+            fnout = filenames_out_temp[incout] #'testing_'+str(iarray)+'.nc'
+            xarrays_out_transposed.append(xr.open_dataset(fnout)[variables_out[incout]])
+
+    if (not release) or (filenames_out is not None):
+        if not release:
+            xarrays_out = [] 
         for ixarray_out,xarray_out_transposed in enumerate(xarrays_out_transposed):
              # transpose back according to original input
 
-             #import pdb; pdb.set_trace()
              dims_out = [None]*len(dims_out_transposed[ixarray_out])
              idims_out = 0
              for ixarray_in,xarray in enumerate(xarrays):
@@ -467,17 +525,69 @@ def apply_func(func,xarrays,dims_apply, method_dims_no_apply='outer',filenames_o
              pivot = argindex(dims_out,dims_out_transposed[ixarray_out])
              if np.any(np.array(pivot[1:]) <  np.array(pivot[:-1])):
                  print('start transposing of output ',dims_out_transposed[ixarray_out], '->',dims_out)
-                 xarrays_out.append(xarray_out_transposed.transpose(*dims_out))
+                 if (filenames_out is not None):
+                    if transpose_hack:
+                        print('work around. Transposing data on disk according to input data')
+                        xarrays_out_transposed[ixarray_out].close()
+                        fnout = filenames_out_temp[ixarray_out] #'testing_'+str(iarray)+'.nc'
+                        fnout_def =filenames_out[ixarray_out]
+                        os.system('mkdir -p '+os.path.dirname(fnout_def))
+                        os.system('mv '+fnout+' '+fnout+'_temp')
+                        os.system('ncpdq -a '+(','.join(dims_out))+' '+fnout+'_temp '+fnout)
+                        os.system('rm '+fnout_def)
+                        os.system('mv '+ fnout + ' ' +fnout_def)
+                        #xarrays_out_transposed_temp = xr.open_dataset(fnout+'_temp')[variables_out[ixarray_out]].transpose(*dims_out)
+                        #xarrays_out_transposed_temp.to_netcdf(fnout)
+                        #xarrays_out_transposed_temp.close()
+                        os.system('rm '+fnout+'_temp')
+                        if not release:
+                            xarrays_out.append(xr.open_dataset(fnout_def)[variables_out[incout]])
+                    else:
+                        xarrays_out_transposed[ixarray_out].close()
+                        fnout = filenames_out_temp[ixarray_out] #'testing_'+str(iarray)+'.nc'
+                        fnout_def =filenames_out[ixarray_out]
+                        os.system('mkdir -p '+os.path.dirname(fnout_def))
+                        os.system('rm '+fnout_def)
+                        os.system('mv '+fnout+' '+fnout_def)#+'_temp')
+                        # os.system('ncpdq -a '+(','.join(dims_out))+' '+fnout+'_temp '+fnout_def)
+                        # os.system('rm '+fnout+'_temp')
+                        if not release:
+                            xarrays_out.append(xr.open_dataset(fnout_def)[variables_out[incout]])
+                            # xarrays_out.append(xarray_out_transposed)
+                            #xarrays_out.append(xr.open_dataset(fnout)[variables_out[incout]])
+                 else:
+                    # xarrays_out_transposed[ixarray_out]
+                    # fnout = filenames_out_temp[ixarray_out] #'testing_'+str(iarray)+'.nc'
+                    # fnout_def =filenames_out[ixarray_out]
+                    # os.system('mkdir -p '+os.path.dirname(fnout_def))
+                    # os.system('mv '+fnout+' '+fnout_def)#+'_temp')
+
+                    #next line could probably go inside if statement
+                    if not release:
+                        xarrays_out.append(xarray_out_transposed.transpose(*dims_out))
+
              else:
-                 xarrays_out.append(xarray_out_transposed)
+                 if (filenames_out is not None):
+                     xarrays_out_transposed[ixarray_out].close()
+                     fnout = filenames_out_temp[ixarray_out] #'testing_'+str(iarray)+'.nc'
+                     fnout_def =filenames_out[ixarray_out]
+                     os.system('mkdir -p '+os.path.dirname(fnout_def))
+                     os.system('rm '+fnout_def)
+                     os.system('mv '+fnout+' '+fnout_def)#+'_temp')
+                     #next line could probably go inside if statement
+                     xarrays_out_transposed[ixarray_out] = xr.open_dataset(fnout_def)[variables_out[incout]]
+
+                 if not release:
+                    xarrays_out.append(xarray_out_transposed)
 
              del xarray_out_transposed
         del xarrays_out_transposed
 
-        if list_output:
-            return xarrays_out
-        else:
-            return xarrays_out[0]
+        if not release:
+            if list_output:
+                return xarrays_out
+            else:
+                return xarrays_out[0]
 
 
 #timeloop =  {{'time':   year} : {'time':year == datatime.astype('datetime64[Y]')} for years in np.unique(datatime.astype('datetime64[Y]'))}
@@ -485,3 +595,99 @@ def apply_func(func,xarrays,dims_apply, method_dims_no_apply='outer',filenames_o
 # output will be:
 
 #global_arrayout[0]  = {{'time':   year} : array_out[0]}
+def apply_func_per_group(groups,func,xarrays,dims_apply, method_dims_no_apply='outer', maximum_input_memory_chars = 1024*1024*1024 ):
+    if type(xarrays).__name__ != 'tuple':
+        xarrays = (xarrays,)
+
+    global_arrayout = []
+    global_dimsout = {}
+    first = True
+    for dimsout,seldimsin in tqdm(groups):
+        #import pdb; pdb.set_trace()
+
+        xarrays_in = []
+        for xarray in xarrays:
+            seldimsin_this_array = {}
+            concat_outer_dim = (type(xarray).__name__ == 'list')
+
+            #xarraydims = []
+            if concat_outer_dim:
+                # xarrayname.append(xarray[0].name)
+                xarraydims = xarray[0].dims
+            else:
+                # xarrayname.append(xarray.name)
+                xarraydims = xarray.dims
+
+
+            for dimnamein,seldimin in seldimsin.items():
+
+                if dimnamein in xarraydims:
+                   if concat_outer_dim and (xarraydims.index(dimnamein) == 0):
+                       seldimsin_this_array[dimnamein] = []
+                       pos = 0
+                       for xarr in xarray:
+                           next_pos = pos + len(xarr[dimnamein])
+                           seldimsin_this_array[dimnamein].append(seldimin[pos:next_pos])
+                           pos = next_pos
+
+                   else:
+                       seldimsin_this_array[dimnamein] = seldimin
+
+            if concat_outer_dim:
+                xarrays_in.append([])
+                for ixarr,xarr in enumerate(xarray):
+                    include_this_arr = True
+                    seldimsin_this_arr = {}
+
+                    for dimnamein,seldimin in seldimsin_this_array.items():
+                        if type(seldimsin_this_array[dimnamein]).__name__ == 'list':
+                            seldimsin_this_arr[dimnamein] = seldimsin_this_array[dimnamein][ixarr]                            
+                            include_this_arr = np.sum(seldimsin_this_arr[dimnamein]) != 0.
+                        else:
+                            seldimsin_this_arr[dimnamein] = seldimsin_this_array[dimnamein]
+                            
+
+                    if include_this_arr:
+                        xarrays_in[-1].append(xarr[seldimsin_this_arr])
+
+                
+            else:
+                xarrays_in.append(xarray[seldimsin_this_array])
+
+        xarrays_in = tuple(xarrays_in)
+        #print(xarrays_in)
+        temp = apply_func(func,xarrays_in,dims_apply, maximum_input_memory_chars=maximum_input_memory_chars)
+
+        if type(temp).__name__ not in ['tuple','list']:
+            list_output = False
+            temp = (temp,)
+        else:
+            list_output = True
+
+        for itmp,tmp in enumerate(temp):
+            if first:
+                global_arrayout.append([])
+            global_arrayout[itmp].append(tmp)
+
+        if len(dimsout.keys()) > 1:
+            print('number of output dimensions of more than 1 for grouping is not implemented yet.')
+            raise
+        for dimnameout,dimvalue in dimsout.items():
+            if first:
+                global_dimsout[dimnameout] = []
+            global_dimsout[dimnameout].append(dimvalue)
+        first = False
+
+    # for dimnameout,dimvalues in global_dimsout.items():
+    #     import pdb;pdb.set_trace()
+    #     global_dimsout[dimnameout] = xr.DataArray(global_dimsout[dimnameout],dims=(dimnameout,))
+
+    global_out_def = []
+    dimnameout = list(global_dimsout.keys())[0]
+    for iglob,glob_array in enumerate(global_arrayout):
+        global_out_def.append(xr.concat(glob_array,pd.Index(global_dimsout[dimnameout],name=dimnameout)))
+
+    if list_output:
+        return tuple(global_out_def)
+    else:
+        return global_out_def[0]

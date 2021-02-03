@@ -2,8 +2,13 @@ Changelog
 =========
 
 
-(unreleased)
-------------
+0.5.25 (2020-02-09)
+-------------------
+- Major upgrade. [Hendrik Wouters]
+
+
+0.5.24 (2020-02-09)
+-------------------
 - Severall updates, including additional example vectorized functions
   that can be used with apply_func on big dataset. [Hendrik Wouters]
 - Severall updates, including additional example vectorized functions
