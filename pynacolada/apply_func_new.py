@@ -501,7 +501,7 @@ def apply_func(func,xarrays,dims_apply, method_dims_no_apply='outer',filenames_o
 
                 if filenames_out is not None:
                     print(list(xarray_chunk_part_select.keys()),dims_out[iarray])
-                    print(mapdims(dims_out[iarray]),list(xarray_chunk_part_select.keys()))
+                    print(mapdims(dims_out[iarray],list(xarray_chunk_part_select.keys())))
 
                     ncouts[iarray].variables[variables_out[iarray]][tuple([xarray_chunk_part_select[dim] for dim in dims_out[iarray]])] = np.ascontiguousarray(temp).transpose(mapdims(dims_out[iarray], list(xarray_chunk_part_select.keys())))
                 else:
