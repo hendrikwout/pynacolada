@@ -1371,6 +1371,11 @@ class archive (object):
             #query is None
             read_lib_dataarrays = pd.read_pickle(temp_path_pickle)
 
+        for column in read_lib_dataarrays.columns:
+            if column not in self.lib_dataarrays.columns:
+                print('adding column '+column+' from the original set to avoid errors when the query result is empty and gets queried again')
+                self.lib_dataarrays[column] = ""
+
         for index,columns in read_lib_dataarrays.iterrows():
             absolute_path = None
 
