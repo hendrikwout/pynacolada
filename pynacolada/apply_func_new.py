@@ -274,7 +274,7 @@ def apply_func(func,xarrays,dims_apply, method_dims_no_apply='outer',filenames_o
                     if dim in dims_no_apply:
                         shape_out[0] *= array_chunk_part_transposed[-1].shape[idim]
                         next_idim = idim+1
-                        
+
                 shape_out += [dimsize for dimsize in array_chunk_part_transposed[-1].shape[next_idim:]]
                 array_chunk_part_transposed[-1].shape = shape_out
                 ##print('Part of chunk read : ', ixarray_in,ipart)
@@ -501,8 +501,10 @@ def apply_func(func,xarrays,dims_apply, method_dims_no_apply='outer',filenames_o
 
                 if filenames_out is not None:
                     print(list(xarray_chunk_part_select.keys()),dims_out[iarray])
+                    import pdb; pdb.set_trace()
                     print(mapdims(list(xarray_chunk_part_select.keys()),dims_out[iarray]))
-                    ncouts[iarray].variables[variables_out[iarray]][tuple([xarray_chunk_part_select[dim] for dim in dims_out[iarray]])] = np.ascontiguousarray(temp).transpose(mapdims(list(xarray_chunk_part_select.keys()),dims_out[iarray]))
+
+                    ncouts[iarray].variables[variables_out[iarray]][tuple([xarray_chunk_part_select[dim] for dim in dims_out[iarray]])] = np.ascontiguousarray(temp).transpose(mapdims(dims_out[iarray], list(xarray_chunk_part_select.keys())))
                 else:
                     xarrays_out_transposed[iarray][xarray_chunk_part_select_def] = np.ascontiguousarray(temp)
                 pos_chunk_part_no_apply = next_pos_chunk_part_no_apply
