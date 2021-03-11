@@ -7,7 +7,7 @@ import pandas as pd
 from tqdm import tqdm
 import tempfile
 
-def apply_func(func,xarrays,dims_apply, method_dims_no_apply='outer',filenames_out = None, attributes = None,maximum_input_memory_chars = 124*124*2 ,squeeze_apply_dims = False,release=False,output_dims={},transpose_hack=True,tempfile_dir=None,initialize_array=None,copy_coordinates=False):
+def apply_func(func,xarrays,dims_apply, method_dims_no_apply='outer',filenames_out = None, attributes = None,maximum_input_memory_chars = 10240*1024*100 ,squeeze_apply_dims = False,release=False,output_dims={},transpose_hack=True,tempfile_dir=None,initialize_array=None,copy_coordinates=False):
     if type(xarrays).__name__ != 'tuple':
         xarrays = [xarrays]
 
