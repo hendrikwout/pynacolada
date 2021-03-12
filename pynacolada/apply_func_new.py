@@ -122,7 +122,7 @@ def apply_func(func,xarrays,dims_apply, method_dims_no_apply='outer',filenames_o
         for filename_out in filenames_out:
             if not tempfile_dir:
                 filenames_out_temp.append(filename_out)
-                logger.debug("Dump output directly to final destination: "+filename_out_temp[-1])
+                logger.debug("Dump output directly to final destination: "+filenames_out_temp[-1])
             else:
                 logger.debug("Using temporary output dir, eg., good for working with network file systems")
                 if (tempfile_dir is None) or (tempfile_dir is True):
