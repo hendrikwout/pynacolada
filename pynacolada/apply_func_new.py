@@ -6,8 +6,10 @@ import netCDF4 as nc4
 import pandas as pd
 from tqdm import tqdm
 import tempfile
+import logging
 
-def apply_func(func,xarrays,dims_apply, method_dims_no_apply='outer',filenames_out = None, attributes = None,maximum_input_memory_chars = 10240*1024*100 ,squeeze_apply_dims = False,release=False,output_dims={},transpose_hack=True,tempfile_dir=None,initialize_array=None,copy_coordinates=False):
+def apply_func(func,xarrays,dims_apply, method_dims_no_apply='outer',filenames_out = None, attributes = None,maximum_input_memory_chars = 10240*1024*100 ,squeeze_apply_dims = False,release=False,output_dims={},transpose_hack=True,tempfile_dir=False,initialize_array=None,copy_coordinates=False):
+    logger = logging.getLogger()
     if type(xarrays).__name__ != 'tuple':
         xarrays = [xarrays]
 
@@ -38,14 +40,17 @@ def apply_func(func,xarrays,dims_apply, method_dims_no_apply='outer',filenames_o
                 else:
                     dimslib[dim] = xarray[dim]
 
-
         dims_apply_def = []
-        for dim in dims_apply:
-            if type(dim).__name__ == 'int':
-                print('Assigning '+xarraydims[0][dim]+' for dims_apply integer '+str(dim))
-                dims_apply_def.append(xarraydims[0][dim])
-            else:
-                dims_apply_def.append(dim)
+        if type(dims_apply).__name__ in ['list','tuple']:
+            for dim in dims_apply:
+                if type(dim).__name__ == 'int':
+                    print('Assigning '+xarraydims[0][dim]+' for dims_apply integer '+str(dim)+
+                          ' according to dimension order of first input array'+xarraydims[0].name)
+                    dims_apply_def.append(xarraydims[0][dim])
+                else:
+                    dims_apply_def.append(dim)
+        else :
+            raise ValueError ('dims_apply needs to be a tuple or list, not '+type(dims_apply).__name__+'.')
 
 
         dims_transposed[xarrayname[-1]] = []
@@ -66,12 +71,10 @@ def apply_func(func,xarrays,dims_apply, method_dims_no_apply='outer',filenames_o
                     
                     if dim not in dims_no_apply:
                         dims_no_apply += [dim]
-
-
                 # elif method_dims_no_apply == 'inner':
                 #     dims_transposed[xarray[name]].append(dim)
                 else:
-                    raise
+                    raise ValueError('Value '+method_dims_no_apply+' for method_dims_no_apply is not implemented')
 
 
 
@@ -89,14 +92,23 @@ def apply_func(func,xarrays,dims_apply, method_dims_no_apply='outer',filenames_o
     first = True
     chunks =np.arange(0,total_array_size,chunk_size,dtype=int)
 
-    print('processing chunks',chunks)
+    logger.debug('Setting output filenames')
     if filenames_out is not None:
         filenames_out_temp = []
         for filename_out in filenames_out:
-            filenames_out_temp.append(tempfile.mktemp(suffix='.nc',dir=tempfile_dir))
+            if not tempfile_dir:
+                filenames_out_temp.append(filename_out)
+                logger.debug("Dump output directly to final destination: "+filename_out_temp[-1])
+            else:
+                logger.debug("Using temporary output dir, eg., good for working with network file systems")
+                elif (tempfile_dir is None) or (tempfile_dir is True):
+                    filenames_out_temp.append(tempfile.mktemp(suffix='.nc',dir=None))
+                    logger.debug("Using temporary output in default tempfile_dir: "+filenames_out_temp[-1])
+                else (tempfile_dir is None) or (tempfile_dir is True):
+                    filenames_out_temp.append(tempfile.mktemp(suffix='.nc',dir=tempfile_dir))
+                    logger.debug("Using temporary output in specified tempfile_dir: "+filenames_out_temp[-1])
 
-        print('dumping to: ', filenames_out)
-        print('dumping to: ', filenames_out_temp)
+    logger.debug('Start loop over data chunks')
     for ichunk,chunk_start in tqdm(list(enumerate(chunks))):
         ##print('processing chunk: ', ichunk,'(',chunk_start, ') /',len(chunks), ' (',chunks[-1],')')
         
