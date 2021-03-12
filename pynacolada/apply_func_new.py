@@ -37,7 +37,7 @@ def apply_func(func,xarrays,dims_apply, method_dims_no_apply='outer',filenames_o
             if type(dims_apply).__name__ in ['list', 'tuple']:
                 for dim in dims_apply:
                     if type(dim).__name__ == 'int':
-                        print('Assigning ' + xarraydims[ixarray_in][dim] + ' for dims_apply integer ' + str(dim) +
+                        logger.debug('Assigning ' + xarraydims[ixarray_in][dim] + ' for dims_apply integer ' + str(dim) +
                               ' according to dimension order of first input array' + xarray[ixarray_in].name)
                         dims_apply_def.append(xarraydims[ixarray_in][dim])
                     else:
@@ -482,7 +482,7 @@ def apply_func(func,xarrays,dims_apply, method_dims_no_apply='outer',filenames_o
                                          coords=coords_out
                             )
                     )
-                print(dims_out)
+                logger.debug(dims_out)
 
             first = False
         
@@ -532,8 +532,8 @@ def apply_func(func,xarrays,dims_apply, method_dims_no_apply='outer',filenames_o
                     return [(a.index(b[i]) if b[i] in a else -1) for i in range(len(b))]
 
                 if filenames_out is not None:
-                    print(list(xarray_chunk_part_select.keys()),dims_out[iarray])
-                    print(mapdims(dims_out[iarray],list(xarray_chunk_part_select.keys())))
+                    logger.debug(list(xarray_chunk_part_select.keys()),dims_out[iarray])
+                    logger.debug(mapdims(dims_out[iarray],list(xarray_chunk_part_select.keys())))
 
                     ncouts[iarray].variables[variables_out[iarray]][tuple([xarray_chunk_part_select[dim] for dim in dims_out[iarray]])] = np.ascontiguousarray(temp).transpose(mapdims(dims_out[iarray], list(xarray_chunk_part_select.keys())))
                 else:
@@ -733,7 +733,7 @@ def apply_func_per_group(groups,func,xarrays,dims_apply, method_dims_no_apply='o
             global_arrayout[itmp].append(tmp)
 
         if len(dimsout.keys()) > 1:
-            print('number of output dimensions of more than 1 for grouping is not implemented yet.')
+            logger.debug('number of output dimensions of more than 1 for grouping is not implemented yet.')
             raise
         for dimnameout,dimvalue in dimsout.items():
             if first:
