@@ -562,7 +562,7 @@ def apply_func(func,xarrays,dims_apply, method_dims_no_apply='outer',filenames_o
         for incout,ncout in enumerate(ncouts):
             ncouts[incout].close()
 
-            fnout = filenames_out_temp[incout] #'testing_'+str(iarray)+'.nc'
+            fnout = filenames_temp[incout] #'testing_'+str(iarray)+'.nc'
             xarrays_out.append(xr.open_dataset(fnout)[variables_out[incout]])
 
     if (not release) or (filenames_out is not None):
@@ -633,8 +633,8 @@ def apply_func(func,xarrays,dims_apply, method_dims_no_apply='outer',filenames_o
                  fnout = filenames_out_temp[ixarray_out] #'testing_'+str(iarray)+'.nc'
                  fnout_def =filenames_out[ixarray_out]
                  os.system('mkdir -p '+os.path.dirname(fnout_def))
-                 os.system('rm '+fnout_def)
-                 os.system('mv '+fnout+' '+fnout_def)#+'_temp')
+                 if (fnout != fnout_def):
+                    os.system('mv '+fnout+' '+fnout_def)#+'_temp')
                  #next line could probably go inside if statement
                  if not release:
                     xarrays_out[ixarray_out] = xr.open_dataset(fnout_def)[variables_out[incout]]
