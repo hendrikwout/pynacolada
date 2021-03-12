@@ -20,6 +20,7 @@ def apply_func(func,xarrays,dims_apply, method_dims_no_apply='outer',filenames_o
     xarraydims = []
     xarrayname = []
 
+    logger.debug('Determining dimension names over which the function is applied')
     for ixarray_in,xarray in enumerate(xarrays):
         concat_outer_dim = (type(xarray).__name__ == 'list')
         if concat_outer_dim:
@@ -29,68 +30,91 @@ def apply_func(func,xarrays,dims_apply, method_dims_no_apply='outer',filenames_o
             xarrayname.append(xarray.name)
             xarraydims.append(xarray.dims)
 
-        for idim,dim in enumerate(xarraydims[ixarray_in]):
-            if dim not in dimslib.keys():
-                if concat_outer_dim:
-                    if idim == 0:
-                        dimslib[dim] = xr.concat([xarray_file[dim] for xarray_file in xarray],dim=dim)
+        reference_input_xarray = 0
+        if ixarray_in == reference_input_xarray:
+            dims_apply_def = []
+            if type(dims_apply).__name__ in ['list', 'tuple']:
+                for dim in dims_apply:
+                    if type(dim).__name__ == 'int':
+                        print('Assigning ' + xarraydims[ixarray_in][dim] + ' for dims_apply integer ' + str(dim) +
+                              ' according to dimension order of first input array' + xarray[ixarray_in].name)
+                        dims_apply_def.append(xarraydims[ixarray_in][dim])
                     else:
-                        dimslib[dim] = xarray[0][dim]
+                        dims_apply_def.append(dim)
+            else:
+                raise ValueError('dims_apply needs to be a tuple or list, not a ' + type(dims_apply).__name__ + '.')
 
-                else:
-                    dimslib[dim] = xarray[dim]
+    logger.debug('Building default dimensions library describing the entire space with unfolded dimensions over all input arrays '+str(xarray))
 
-        dims_apply_def = []
-        if type(dims_apply).__name__ in ['list','tuple']:
-            for dim in dims_apply:
-                if type(dim).__name__ == 'int':
-                    print('Assigning '+xarraydims[0][dim]+' for dims_apply integer '+str(dim)+
-                          ' according to dimension order of first input array'+xarraydims[0].name)
-                    dims_apply_def.append(xarraydims[0][dim])
-                else:
-                    dims_apply_def.append(dim)
-        else :
-            raise ValueError ('dims_apply needs to be a tuple or list, not '+type(dims_apply).__name__+'.')
-
-
-        dims_transposed[xarrayname[-1]] = []
+    logger.debug('Add first the dimensions over which the operator is being applied. For each dimension name, we keep only track of the longest among the different input arrays.')
+    for ixarray_in,xarray in enumerate(xarrays):
+        concat_outer_dim = (type(xarray).__name__ == 'list')
         for dim in dims_apply_def:
+            if concat_outer_dim:
+                if idim == 0:
+                    dimslib_temp = xr.concat([xarray_file[dim] for xarray_file in xarray], dim=dim)
+                else:
+                    dimslib_temp = xarray[0][dim]
+                if (dim not in dimslib[dim]) or (len(dimslib_temp) > len(dimslib[dim])):
+                    dimslib[dim] = dimlib_temp
 
-            if dim in xarraydims[-1]:
-                dims_transposed[xarrayname[-1]] += [dim]
+    logger.debug('Adding remaining dimensions over which the operator is not being applied. We also check if we have consistent dimensions among the input arrays.')
+    for ixarray_in, xarray in enumerate(xarrays):
+        concat_outer_dim = (type(xarray).__name__ == 'list')
+        for idim,dim in enumerate(xarraydims[ixarray_in]):
+            if concat_outer_dim:
+                if idim == 0:
+                    dimslib_temp = xr.concat([xarray_file[dim] for xarray_file in xarray],dim=dim)
+                else:
+                    dimslib_temp = xarray[0][dim]
+
+            else:
+                dimslib_temp = xarray[dim]
+
+            if dim not in dimslib.keys():
+                dimslib[dim] = dimslib_temp
+            else:
+                if not ((len(dimslib[dim]) == 1) or (dimslib_temp == dimslib[dim]) ):
+                    raise ValueError('dimension '+str(dimslib_temp)+' of xarray '+str(xarray) +'is not consistent with dimension '+dimslib[dim]+' occurring in other input arrays. Please check. ')
+        logger.debug('dimslib result: '+str(dimslib))
+
+    logger.debug('Determining dimensions of input arrays over which the operator or function is not applied but dupplicated ')
+    for ixarray_in, xarray in enumerate(xarrays):
+        concat_outer_dim = (type(xarray).__name__ == 'list')
+        for ixarray_in, xarray in enumerate(xarrays):
+            dims_transposed[xarrayname[ixarray_in]] = []
+        for dim in dims_apply_def:
+            if dim in xarraydims[ixarray_in]:
+                dims_transposed[xarrayname[ixarray_in]] += [dim]
 
         # adding dimensions over which the function is not applied but duplicated
         # - as outer dimensions (default, should be the fastest way when posisble)
         # - or as inner dimensions (default)
         idim = 0
-        for dim in xarraydims[-1]:
-            if dim not in dims_transposed[xarrayname[-1]]:
-                if method_dims_no_apply == 'outer':
-                    dims_transposed[xarrayname[-1]].insert(idim,dim)
-                    idim +=1
-                    
-                    if dim not in dims_no_apply:
-                        dims_no_apply += [dim]
+        for dim in xarraydims[ixarray_in]:
+            if dim not in dims_transposed[xarrayname[ixarray_in]]:
+                dims_transposed[xarrayname[ixarray_in]].insert(idim,dim)
+                idim +=1
+
+                if dim not in dims_no_apply:
+                    dims_no_apply += [dim]
                 # elif method_dims_no_apply == 'inner':
                 #     dims_transposed[xarray[name]].append(dim)
-                else:
-                    raise ValueError('Value '+method_dims_no_apply+' for method_dims_no_apply is not implemented')
-
-
-
 
     #import pdb; pdb.set_trace()
-    total_array_size = np.prod([dimslib[d].shape[0] for d in dims_no_apply+dims_apply_def])
-    number_of_chunks = math.ceil(total_array_size*len(xarrays)/maximum_input_memory_chars)
+    logger.debug('Determining the total space size, chunk sizes, the number of chunks, and the list of chunks')
+    total_space_size = np.prod([dimslib[d].shape[0] for d in dims_no_apply+dims_apply_def])
+    number_of_chunks = math.ceil(total_space_size*len(xarrays)/maximum_input_memory_chars)
 
     min_chunk_size = np.prod([dimslib[d].shape[0] for d in dims_apply_def])
-    chunk_size = max(min_chunk_size,math.ceil(total_array_size/number_of_chunks))
-    chunk_size = min(chunk_size,total_array_size)
+    chunk_size = max(min_chunk_size,math.ceil(total_space_size/number_of_chunks))
+    chunk_size = min(chunk_size,total_space_size)
 
-    number_of_chunks = total_array_size/chunk_size
+    number_of_chunks = total_space_size/chunk_size
 
     first = True
-    chunks =np.arange(0,total_array_size,chunk_size,dtype=int)
+    chunks =np.arange(0,total_space_size,chunk_size,dtype=int)
+    logger.debug('total_space_size/chunks/Setting output filenames')
 
     logger.debug('Setting output filenames')
     if filenames_out is not None:
@@ -101,10 +125,10 @@ def apply_func(func,xarrays,dims_apply, method_dims_no_apply='outer',filenames_o
                 logger.debug("Dump output directly to final destination: "+filename_out_temp[-1])
             else:
                 logger.debug("Using temporary output dir, eg., good for working with network file systems")
-                elif (tempfile_dir is None) or (tempfile_dir is True):
+                if (tempfile_dir is None) or (tempfile_dir is True):
                     filenames_out_temp.append(tempfile.mktemp(suffix='.nc',dir=None))
                     logger.debug("Using temporary output in default tempfile_dir: "+filenames_out_temp[-1])
-                else (tempfile_dir is None) or (tempfile_dir is True):
+                else:
                     filenames_out_temp.append(tempfile.mktemp(suffix='.nc',dir=tempfile_dir))
                     logger.debug("Using temporary output in specified tempfile_dir: "+filenames_out_temp[-1])
 
@@ -114,13 +138,13 @@ def apply_func(func,xarrays,dims_apply, method_dims_no_apply='outer',filenames_o
         
         arrays_chunk_transposed = []
 
-        chunk_end = min(chunk_start + chunk_size, total_array_size)
+        chunk_end = min(chunk_start + chunk_size, total_space_size)
 
         #determin starting end ending point of current chunk in dims_no_apply-space
         this_idxs_start = []
         this_idxs_end = []
         for idim,dim in enumerate(dims_no_apply):
-            inner_chunk_size = np.prod([dimslib[d].shape[0] for d in dims_no_apply[idim+1:]+dims_apply_def])
+            inner_chunk_size = np.prod([dimslib[d].shape[0] for d in (dims_no_apply[idim+1:]+dims_apply_def)])
 
             this_idx_start = math.floor(chunk_start/inner_chunk_size)
             this_idxs_start.append(this_idx_start)
@@ -233,18 +257,12 @@ def apply_func(func,xarrays,dims_apply, method_dims_no_apply='outer',filenames_o
                         xarray_chunk_part_select[dim] = range(0,dimslib[dim].shape[0])
                         xarray_chunk_part_dims.append(dim)
 
-                # print(idxs_chunk_parts_current_this_array)
-                # print(idxs_chunk_parts_end_this_array)
-                # print(xarray_chunk_part_select)
-                # print(xarray_chunk_part_dims)
-        
                 #remove explicit selection of full dimension ranges to hopefully speed up xarray selection
                 xarray_chunk_part_select_def = {}
                 for dim,select in xarray_chunk_part_select.items():
             
                     if not ((select[0] == 0) and (select[-1] == (dimslib[dim].shape[0]-1))):
                         xarray_chunk_part_select_def[dim] = select
-
 
                 ##print('reading part of chunk of array',str(ipart)+'/'+str(len(idxs_chunk_parts_current)), ichunk,ixarray_in)
                 if concat_outer_dim:
@@ -287,6 +305,7 @@ def apply_func(func,xarrays,dims_apply, method_dims_no_apply='outer',filenames_o
                         shape_out[0] *= array_chunk_part_transposed[-1].shape[idim]
                         next_idim = idim+1
 
+                # make modification here to have input xarray chunk in original dimension format!!!
                 shape_out += [dimsize for dimsize in array_chunk_part_transposed[-1].shape[next_idim:]]
                 array_chunk_part_transposed[-1].shape = shape_out
                 ##print('Part of chunk read : ', ixarray_in,ipart)
