@@ -562,7 +562,7 @@ def apply_func(func,xarrays,dims_apply, method_dims_no_apply='outer',filenames_o
         for incout,ncout in enumerate(ncouts):
             ncouts[incout].close()
 
-            fnout = filenames_temp[incout] #'testing_'+str(iarray)+'.nc'
+            fnout = filenames_out_temp[incout] #'testing_'+str(iarray)+'.nc'
             xarrays_out.append(xr.open_dataset(fnout)[variables_out[incout]])
 
     if (not release) or (filenames_out is not None):
