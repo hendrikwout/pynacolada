@@ -102,7 +102,7 @@ class archive (object):
 
         Dataset.close()
 
-    def add_dataarray(self,DataArray_or_filepath,skip_unavailable= False,release_dataarray_pointer=False,cache_to_tempdir=False,cache_to_ram=False,reset_space=True,**kwargs):
+    def add_dataarray(self,DataArray_or_filepath,skip_unavailable= False,release_dataarray_pointer=False,cache_to_tempdir=False,cache_to_ram=False,reset_space=False,**kwargs):
         #DataArray = None
         if type(DataArray_or_filepath).__name__ == 'str':
             filepath = DataArray_or_filepath
