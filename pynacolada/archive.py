@@ -102,7 +102,7 @@ class archive (object):
 
         Dataset.close()
 
-    def add_dataarray(self,DataArray_or_filepath,skip_unavailable= False,release_dataarray_pointer=False,cache_to_tempdir=False,cache_to_ram=False,**kwargs):
+    def add_dataarray(self,DataArray_or_filepath,skip_unavailable= False,release_dataarray_pointer=False,cache_to_tempdir=False,cache_to_ram=False,reset_space=True,**kwargs):
         #DataArray = None
         if type(DataArray_or_filepath).__name__ == 'str':
             filepath = DataArray_or_filepath
@@ -251,7 +251,7 @@ class archive (object):
                 for coordinate in space_coordinates:
                     spacing_temp = (DataArray[coordinate].values[1] - DataArray[coordinate].values[0])
                     if not np.any(DataArray[coordinate][1:].values != (DataArray[coordinate].values[:-1] + spacing_temp)):
-                        spacing[coordinate] = spacing_temp
+                        spacing[coordinate] = str(DataArray[coordinate][0].values)+':'+str(DataArray[coordinate][-1].values)+':'+str(spacing_temp)
                     else:
                         spacing[coordinate] = 'irregular'
                 dict_index_space = [key+'_'+str(value) for key,value in spacing.items()]
@@ -1272,6 +1272,7 @@ class archive (object):
             release_dataarray_pointer =False,
             cache_to_tempdir=False,
             cache_to_ram=False,
+            reset_space=False
             **kwargs):
 
 
@@ -1282,7 +1283,7 @@ class archive (object):
             filenames = path
             for filename in filenames:
                 
-                self.add_dataarray(xr.open_dataarray(filename),absolute_path=filename,skip_unavailable=False,release_dataarray_pointer =True,cache_to_tempdir=False,**extra_attributes)
+                self.add_dataarray(xr.open_dataarray(filename),absolute_path=filename,skip_unavailable=False,release_dataarray_pointer =True,cache_to_tempdir=False,reset_space=reset_space,**extra_attributes)
 
         # elif os.path.isfile(path):
         #     print('pkl file '+path+' detected. Listing files from there.' )
@@ -1399,7 +1400,7 @@ class archive (object):
                 if filename not in self.lib_dataarrays.absolute_path:
                     path = os.path.relpath(filename,os.path.dirname(temp_path_pickle))
                     print('Opening file : '+filename)
-                    self.add_dataarray(filename,skip_unavailable=skip_unavailable, release_dataarray_pointer = True, cache_to_tempdir=False,path=path,cache_to_ram=cache_to_ram,**extra_attributes)
+                    self.add_dataarray(filename,skip_unavailable=skip_unavailable, release_dataarray_pointer = True, cache_to_tempdir=False,path=path,cache_to_ram=cache_to_ram,reset_space=reset_space,**extra_attributes)
         self.path_pickle = temp_path_pickle
         
         # import pdb; pdb.set_trace()
@@ -1427,7 +1428,7 @@ class archive (object):
             if (absolute_path is not None) and (absolute_path not in self.lib_dataarrays.absolute_path):
                 #if index[0] == 'mslhf_0001':
                 print('Opening file : '+absolute_path)
-                self.add_dataarray(absolute_path,skip_unavailable=skip_unavailable,release_dataarray_pointer =release_dataarray_pointer,cache_to_tempdir=cache_to_tempdir,cache_to_ram=cache_to_ram,**({**dict(zip(read_lib_dataarrays.index.names,idx)),**columns}),**extra_attributes)
+                self.add_dataarray(absolute_path,skip_unavailable=skip_unavailable,release_dataarray_pointer =release_dataarray_pointer,cache_to_tempdir=cache_to_tempdir,cache_to_ram=cache_to_ram,reset_space=reset_space,**({**dict(zip(read_lib_dataarrays.index.names,idx)),**columns}),**extra_attributes)
 
             
 
