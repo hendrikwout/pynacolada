@@ -251,10 +251,10 @@ class archive (object):
                 for coordinate in space_coordinates:
                     spacing_temp = (DataArray[coordinate].values[1] - DataArray[coordinate].values[0])
                     if not np.any(DataArray[coordinate][1:].values != (DataArray[coordinate].values[:-1] + spacing_temp)):
-                        spacing[coordinate] = str(DataArray[coordinate][0].values)+':'+str(DataArray[coordinate][-1].values)+':'+str(spacing_temp)
+                        spacing[coordinate] = str(DataArray[coordinate][0].values)+','+str(DataArray[coordinate][-1].values)+','+str(spacing_temp)
                     else:
                         spacing[coordinate] = 'irregular'
-                dict_index_space = [key+'_'+str(value) for key,value in spacing.items()]
+                dict_index_space = [key+':'+str(value) for key,value in spacing.items()]
                 dict_index_space ='_'.join(dict_index_space) 
                 dict_index['space'] = dict_index_space
                 #DataArray.attrs['space'] = dict_index_space
