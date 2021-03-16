@@ -246,7 +246,7 @@ class archive (object):
                 if key in space_coordinates:
                     space_coordinates.remove(key)
 
-            if ('space' not in dict_index.keys()) or (dict_index['space'] is None):
+            if ('space' not in dict_index.keys()) or (dict_index['space'] is None) or reset_space:
                 spacing = {}
                 for coordinate in space_coordinates:
                     spacing_temp = (DataArray[coordinate].values[1] - DataArray[coordinate].values[0])
