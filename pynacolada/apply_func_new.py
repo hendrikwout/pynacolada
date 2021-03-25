@@ -9,7 +9,7 @@ import tempfile
 import logging
 
 logging.basicConfig(level=logging.DEBUG)
-def apply_func(func,xarrays,dims_apply, method_dims_no_apply='outer',filenames_out = None, attributes = None,maximum_input_memory_chars = 10240*1024*100 ,squeeze_apply_dims = False,release=False,output_dims={},transpose_hack=True,tempfile_dir=False,initialize_array=None,copy_coordinates=False):
+def apply_func(func,xarrays,dims_apply, method_dims_no_apply='outer',filenames_out = None, attributes = None,maximum_input_memory_chars = 10240*1024*100 ,squeeze_apply_dims = False,release=False,output_dims={},transpose_hack=True,tempfile_dir=False,initialize_array=None,copy_coordinates=True):
     logger = logging.getLogger()
     if type(xarrays).__name__ != 'tuple':
         xarrays = [xarrays]
@@ -446,8 +446,8 @@ def apply_func(func,xarrays,dims_apply, method_dims_no_apply='outer',filenames_o
                         # ncouts[iarray].createVariable(dim,'d',(dim,),)
                         # ncouts[iarray].variables[dim][:] = coords_out_transposed[iarray][idim]
                     fnout = filenames_out_temp[ixarray_out] #'testing_'+str(iarray)+'.nc'
+                    import pdb; pdb.set_trace()
                     if copy_coordinates:
-                        import pdb; pdb.set_trace()
                         coordinates_template = xarrays[0].coords
                         for coord in coordinates_template: 
                             if coord not in dims_apply_def:
