@@ -447,6 +447,7 @@ def apply_func(func,xarrays,dims_apply, method_dims_no_apply='outer',filenames_o
                         # ncouts[iarray].variables[dim][:] = coords_out_transposed[iarray][idim]
                     fnout = filenames_out_temp[ixarray_out] #'testing_'+str(iarray)+'.nc'
                     if copy_coordinates:
+                        import pdb; pdb.set_trace()
                         coordinates_template = xarrays[0].coords
                         for coord in coordinates_template: 
                             if coord not in dims_apply_def:
