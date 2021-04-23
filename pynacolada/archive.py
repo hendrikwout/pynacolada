@@ -30,15 +30,6 @@ def empty_multiindex(names):
     return pd.MultiIndex.from_tuples(tuples=[(None,) * len(names)], names=names)
 
 def apply_func_wrapper(
-    """
-    purpose: this wrapper routine allows to apply a function in automatic groups of
-    dataarrays in an archive or collection of archive, and dumps the output to
-    a specified output archive.
-
-    input:
-
-    output:
-    """
    func,
    lib_dataarrays,
    archive_out,
@@ -59,6 +50,15 @@ def apply_func_wrapper(
    **kwargs,
 ):
 
+    """
+    purpose: this wrapper routine allows to apply a function in automatic groups of
+    dataarrays in an archive or collection of archive, and dumps the output to
+    a specified output archive.
+
+    input:
+
+    output:
+    """
     apply_groups_in_df = parse_to_dataframe(apply_groups_in)
     apply_groups_out_df = parse_to_dataframe(apply_groups_out)
 
@@ -374,7 +374,7 @@ class collection (object):
         apply_func_wrapper(
             func,
             lib_dataarrays = lib_dataarrays,
-            
+
         ):
 
         if add_archive_out_to_collection and (archive_out not in self.archives):
