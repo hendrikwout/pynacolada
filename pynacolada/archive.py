@@ -29,6 +29,361 @@ def empty_multiindex(names):
     """
     return pd.MultiIndex.from_tuples(tuples=[(None,) * len(names)], names=names)
 
+def apply_func_wrapper(
+    """
+    purpose: this wrapper routine allows to apply a function in automatic groups of
+    dataarrays in an archive or collection of archive, and dumps the output to
+    a specified output archive.
+
+    input:
+
+    output:
+    """
+   func,
+   lib_dataarrays,
+   archive_out,
+   xarray_function_wrapper=apply_func,
+   dataarrays_wrapper = lambda *x: (*x,),
+   groupby=None,
+   apply_groups_in=[],
+   apply_groups_out=[],
+   divide_into_groups_extra = [],
+   mode = 'numpy_output_to_disk_in_chunks',
+   inherit_attributes = False,
+   query=None,
+   extra_attributes={},
+   post_apply=None,
+   initialize_array=None,
+   copy_coordinates=False,
+   #lib_dataarrays = self.lib_dataarrays
+   **kwargs,
+):
+
+    apply_groups_in_df = parse_to_dataframe(apply_groups_in)
+    apply_groups_out_df = parse_to_dataframe(apply_groups_out)
+
+    divide_into_groups = []
+    for name in lib_dataarrays.index.names:
+        if (name not in apply_groups_in_df.columns):
+            divide_into_groups.append(name)
+    for name in divide_into_groups_extra:
+        if name not in divide_into_groups:
+            divide_into_groups.append(name)
+
+    if query is not None:
+        if type(query) == str:
+
+            read_lib_dataarrays = lib_dataarrays.query(query).copy()
+        elif type(query) == pd.DataFrame:
+            read_lib_dataarrays = query
+        else:
+            raise ValueError('type of input query ' + query + 'not implemented')
+    else:
+        read_lib_dataarrays = lib_dataarrays.copy()
+    groups_in_loop = read_lib_dataarrays.reset_index().groupby(divide_into_groups)
+    print('Looping over data array input groups: ', list(groups_in_loop))
+    for idx, group in tqdm(groups_in_loop):
+
+        def always_tuple(idx):
+            if type(idx) is not tuple:
+                return (idx,)
+            else:
+                return idx
+
+
+        def always_multi_index(index):
+
+            if type(index) == pd.core.indexes.base.Index:
+                return pd.MultiIndex.from_tuples([x.split()[::-1] for x in index], names=(index.name,))
+            else:
+                return index
+
+
+        apply_this_group_in_df = apply_groups_in_df.copy()
+        for idx_group_in, row in apply_this_group_in_df.iterrows():
+            for column in apply_this_group_in_df.columns:
+                if row[column] is None:
+                    # import pdb;pdb.set_trace()
+                    apply_this_group_in_df[column].loc[idx_group_in] = group.loc[:, column].unique()
+
+        for column in apply_this_group_in_df.columns:
+            apply_this_group_in_df = apply_this_group_in_df.explode(column)
+
+        multi_idx = always_tuple(idx)
+
+        check_group_columns = []
+        for column in apply_this_group_in_df.columns:
+            if (~apply_this_group_in_df[column].isnull()).any():
+                check_group_columns.append(column)
+
+        group_reduced = group[check_group_columns].drop_duplicates().reset_index().drop(columns='index')
+        apply_this_group_in_df_reduced = apply_this_group_in_df[check_group_columns].drop_duplicates().reset_index().drop(
+            columns='index')
+
+        if len(apply_groups_in_df) == 0:
+            all_input_available_in_this_group = True
+        else:
+            apply_this_group_in_reduced_index = pd.MultiIndex.from_frame(apply_this_group_in_df_reduced)
+            group_reduced_indexed_for_apply_groups_in = group.set_index(list(apply_this_group_in_df_reduced.columns))
+            group_reduced_indexed_for_apply_groups_in.index = always_multi_index(
+                group_reduced_indexed_for_apply_groups_in.index)
+
+            all_input_available_in_this_group = not (len(apply_this_group_in_reduced_index) != len(
+                apply_this_group_in_reduced_index.intersection(group_reduced_indexed_for_apply_groups_in.index)))
+
+        # group_indexed_for_apply_groups_in = group.set_index(list(apply_this_group_in_df.columns))
+
+        #
+        #
+        #
+        # apply_this_group_in_index = pd.MultiIndex.from_frame(apply_this_group_in_df)
+        # group_indexed_for_apply_groups_in.index = always_multi_index(apply_this_group_in_df.index)
+        #
+        # stop
+        #
+        # #group_selection_index = pd.MultiIndex.from_frame(frame_for_selecting_xarrays_from_current_group)
+        #
+        # all_input_available_in_this_group = not (group_indexed_for_apply_groups_in.index != apply_groups_in_index).any()
+        #
+        if all_input_available_in_this_group:
+
+            if len(apply_this_group_in_df) == 0:
+                table_this_group_in = group
+            else:
+                apply_this_group_in_index = pd.MultiIndex.from_frame(apply_this_group_in_df)
+                group_indexed_for_apply_groups_in = group.set_index(list(apply_this_group_in_df.columns))
+                group_indexed_for_apply_groups_in.index = always_multi_index(group_indexed_for_apply_groups_in.index)
+
+                # apply_this_group_in_df = apply_groups_in_df.copy()
+                # for idx_group_in,row in apply_this_group_in_df.iterrows():
+                #     for column in apply_this_group_in_df.columns:
+                #         if row[column] is None:
+                #             apply_this_group_in_df[column].loc[idx_group_in] = group.loc[:,column].unique()
+
+                # import pdb; pdb.set_trace()
+                # apply_this_group_in_index = apply_this_group_in_index.intersection(group_indexed_for_apply_groups_in.index,sort=None)
+                # import pdb; pdb.set_trace()
+                table_this_group_in = group_indexed_for_apply_groups_in.loc[apply_this_group_in_index]
+
+            # apply_groups_out_index = pd.MultiIndex.from_frame(apply_groups_out_df)
+            # group_indexed_for_apply_groups_out = group.set_index(list(apply_groups_out_df.columns))
+            # group_indexed_for_apply_groups_out.index = always_multi_index(group_indexed_for_apply_groups_out.index)
+
+            apply_groups_out_df_this_group = apply_groups_out_df.copy()
+
+            print('converting label functions where necessary')
+            for idx_group_out, row in apply_groups_out_df.iterrows():
+                for key, value in row.items():
+                    if type(apply_groups_out_df_this_group.loc[idx_group_out, key]).__name__ == 'function':
+                        apply_groups_out_df_this_group.loc[idx_group_out, key] = apply_groups_out_df.loc[
+                            idx_group_out, key](*tuple(table_this_group_in.reset_index()[[key]].values[:, 0]))
+                    # elif apply_groups_out_df_this_group.loc[idx_group_out,key] is None:
+                    #     raise ValueError('Not supported yet')
+                    else:
+                        apply_groups_out_df_this_group.loc[idx_group_out, key] = apply_groups_out_df.loc[idx_group_out, key]
+            table_this_group_out = apply_groups_out_df_this_group
+
+            dataarrays_group_in = []
+            for idx_group_in, row in table_this_group_in.iterrows():
+                if table_this_group_in.index.names[0] is None:  # trivial case where no group_in selection is made
+                    index_dataarray = [dict(zip(table_this_group_in.columns, row))[key] for key in
+                                       lib_dataarrays.index.names]
+                else:
+                    index_dataarray = [{**dict(zip(table_this_group_in.index.names, idx_group_in)),
+                                        **dict(zip(table_this_group_in.columns, row))}[key] for key in
+                                       lib_dataarrays.index.names]
+
+                # index_dataarray = [{**dict(zip(table_this_group_in.index.names,idx_group_in)),**dict(zip(table_this_group_in.columns,row))}[key] for key in self.lib_dataarrays.index.names]
+
+                row_of_dataarray = lib_dataarrays.loc[tuple(index_dataarray)]
+
+                if row_of_dataarray.dataarray_pointer is None:
+                    dataarrays_group_in.append(row_of_dataarray.dataarray_pointer.copy())
+                else:
+                    dataarrays_group_in.append(xr.open_dataarray(row_of_dataarray.absolute_path))
+
+                for dataarray in dataarrays_group_in:
+                    dataarray.close()
+                    del dataarray
+
+            ifile = 0
+            attributes_dataarrays_out = []
+            for idx_group_out, row in table_this_group_out.iterrows():
+                attributes_dataarrays_out.append({})
+
+                if inherit_attributes:
+                    if table_this_group_in.index.names[0] is None:  # trivial case where no group_in selection is made
+                        attributes_in = \
+                            dict(zip(table_this_group_in.columns,
+                                     table_this_group_in.iloc[min(ifile, len(dataarrays_group_in) - 1)]))
+
+                    else:
+                        attributes_in = \
+                            {
+                                **dict(zip(table_this_group_in.index.names,
+                                           table_this_group_in.iloc[min(ifile, len(dataarrays_group_in) - 1)].name)),
+                                **dict(zip(table_this_group_in.columns,
+                                           table_this_group_in.iloc[min(ifile, len(dataarrays_group_in) - 1)]))
+                            }
+
+                    for key, value in attributes_in.items():
+                        if (key not in attributes_dataarrays_out[ifile]) and \
+                                ((inherit_attributes == True) or (key in inherit_attributes)) and \
+                                (key not in ['absolute_path_as_cache', 'absolute_path_for_reading', 'absolute_path',
+                                             'path']):
+                            attributes_dataarrays_out[ifile][key] = value
+
+                # !!
+                for key in lib_dataarrays.index.names:
+                    if key in table_this_group_out.columns:
+                        attributes_dataarrays_out[ifile][key] = row[key]
+                    elif key in table_this_group_in.index.names:
+                        attributes_dataarrays_out[ifile][key] = \
+                            table_this_group_in.iloc[min(ifile, len(dataarrays_group_in) - 1)].name[
+                                table_this_group_in.index.names.index(key)]
+                    else:
+                        attributes_dataarrays_out[ifile][key] = \
+                            table_this_group_in.iloc[min(ifile, len(dataarrays_group_in) - 1)][key]
+                for key in row.index:
+                    attributes_dataarrays_out[ifile][key] = row[key]
+
+                    # for key in self.lib_dataarrays.columns:
+                    #     if key == 'provider':
+                    #         import pdb; pdb.set_trace()
+
+                    #     if (key not in attributes_dataarrays_out[ifile]) and (inherit_attributes or (key in inherit_attributes)) and (key not in ['absolute_path','path']):
+                    #         attributes_dataarrays_out[ifile][key] = {**dict(zip(table_this_group_in.index.names,table_this_group_in.iloc[min(ifile,len(dataarrays_group_in)-1)])),**dict(zip(table_this_group_in.columns,table_this_group_in.iloc[min(ifile,len(dataarrays_group_in)-1)]))}[key]
+
+                for key, value in extra_attributes.items():
+                    attributes_dataarrays_out[ifile][key] = value
+                ifile += 1
+
+            if mode in ['numpy_output_to_disk_in_chunks', 'numpy_output_to_disk_no_chunks']:
+                if (archive_out.file_pattern is None):
+                    raise ValueError("I don't know how to write the data file to disk. Please set to file_pattern")
+                filenames_out = []
+                ifile = 0
+                for idx_group_out, row in table_this_group_out.iterrows():
+                    filename_out = os.path.dirname(archive_out.path_pickle) + '/' + ''.join(np.array(list(
+                        zip(archive_out.file_pattern.split('"')[::2],
+                            [attributes_dataarrays_out[ifile][key] for key in archive_out.file_pattern.split('"')[1::2]] + [
+                                '']))).ravel())
+                    if filename_out in archive_out.lib_dataarrays.absolute_path.unique():
+                        raise ValueError(
+                            'filename ' + filename_out + ' already exists in the output library. Consider revising the output file_pattern.')
+                    filenames_out.append(filename_out)
+
+                    ifile += 1
+
+            if mode == 'xarray':
+                print('making a temporary dataarray copy to prevent data hanging around into memory afterwards')
+                dataarrays_group_in_copy = [dataarray.copy(deep=False) for dataarray in dataarrays_group_in]
+                temp_dataarrays = func(*dataarrays_wrapper(*tuple(dataarrays_group_in_copy)))
+                # temp_dataarrays = func(*dataarrays_wrapper(*tuple(dataarrays_group_in)))
+
+                for idataarray, dataarray in enumerate(temp_dataarrays):
+                    for key, value in attributes_dataarrays_out[idataarray].items():
+                        if key == 'variable':
+                            dataarray.name = value
+                        else:
+                            dataarray.attrs[key] = value
+                    archive_out.add_dataarray(dataarray)  # attributes_dataarrays_out[idataarray])
+                for idataarray in range(len(dataarrays_group_in_copy)):
+                    dataarrays_group_in_copy[idataarray].close()
+                for itemp_dataarray in range(len(temp_dataarrays)):
+                    temp_dataarrays[itemp_dataarray].close()
+
+            elif mode in ['numpy_output_to_disk_in_chunks', 'numpy_output_to_disk_no_chunks']:
+
+                if mode == 'numpy_output_to_disk_in_chunks':
+                    xarray_function_wrapper(func, dataarrays_wrapper(*tuple(dataarrays_group_in)),
+                                            filenames_out=filenames_out, attributes=attributes_dataarrays_out, release=True,
+                                            initialize_array=initialize_array, copy_coordinates=copy_coordinates, **kwargs)
+                elif mode == 'numpy_output_to_disk_no_chunks':
+                    temp_dataarrays = xarray_function_wrapper(func, dataarrays_wrapper(*tuple(dataarrays_group_in)),
+                                                              **kwargs)
+                    if type(temp_dataarrays) != tuple:
+                        print(
+                            'this is a workaround in case we get a single dataarray instead of tuple of dataarrays from the wrapper function. This needs revision')
+                        idataarray = 0
+                        for key, value in attributes_dataarrays_out[idataarray].items():
+                            if key not in ['variable', 'absolute_path_for_reading', 'absolute_path_as_cache',
+                                           'absolute_path', 'path']:
+                                if type(value) == bool:
+                                    temp_dataarrays.attrs[key] = int(value)
+                                else:
+                                    temp_dataarrays.attrs[key] = value
+                            if key == 'variable':
+                                temp_dataarrays.name = value
+                        # import pdb;pdb.set_trace()
+                        os.system('rm ' + filenames_out[idataarray])
+                        if post_apply is not None:
+                            post_apply(temp_dataarrays)
+                        os.system('mkdir -p ' + os.path.dirname(filenames_out[idataarray]))
+                        temp_dataarrays.to_netcdf(filenames_out[idataarray])
+                        temp_dataarrays.close()
+                    else:
+                        for idataarray in range(len(temp_dataarrays)):
+                            for key, value in attributes_dataarrays_out[idataarray].items():
+                                if key not in ['variable', 'absolute_path_for_reading', 'absolute_path_as_cache',
+                                               'absolute_path', 'path']:
+                                    temp_dataarrays[idataarray].attrs[key] = value
+                                if key == 'variable':
+                                    temp_dataarrays[idataarray].name = value
+
+                        for idataarray in range(len(temp_dataarrays)):
+                            if post_apply is not None:
+                                post_apply(temp_dataarrays[idataarray])
+                            os.system('rm ' + filenames_out[idataarray])
+                            os.system('mkdir -p ' + os.path.dirname(filenames_out[idataarray]))
+                            temp_dataarrays[idataarray].to_netcdf(filenames_out[idataarray])
+                            temp_dataarrays[idataarray].close()
+
+                for ixr_out, filename_out in enumerate(filenames_out):
+                    archive_out.add_dataarray(filename_out)
+            else:
+                ValueError('mode ' + mode + ' not implemented')
+            for idataarray in range(len(dataarrays_group_in)):
+                dataarrays_group_in[idataarray].close()
+
+
+class collection (object):
+    def __init__(self,archives,*args,**kwargs):
+        self.archives =  archives
+    def apply_func(
+            func,
+            archive_out = None,
+            add_archive_out_to_collection=True
+            *args,**kwargs):
+
+        if type(archive_out) is str:
+            archive_out = pcd.archive(archive_out)
+            write_mode = 'create_new_archive'
+        elif archive is not None: # type is considered an archive object
+            write_mode = 'add_to_external_archive'
+
+        if archive_out is not None:
+            write_mode = 'add_to_external_archive'
+        else:
+            write_mode = 'add_to_current_archive'
+
+        lib_dataarrays = pd.DataFrame()
+        for archive in archives:
+            lib_dataarrays = lib_dataarrays.append(archive_libdataarrays,ignore_index=True)
+
+        apply_func_wrapper(
+            func,
+            lib_dataarrays = lib_dataarrays,
+            
+        ):
+
+        if add_archive_out_to_collection and (archive_out not in self.archives):
+            self.archive.append(archive_out)
+
+        if write_mode == 'create_new_archive':
+            return archive_out
+
+
 class archive (object):
     def __init__(self,path=None,*args,**kwargs):
         self.lib_dataarrays = pd.DataFrame(index=empty_multiindex(['variable','source','time','space']),columns = ['path','absolute_path']).iloc[1:]
@@ -102,7 +457,16 @@ class archive (object):
 
         Dataset.close()
 
-    def add_dataarray(self,DataArray_or_filepath,skip_unavailable= False,release_dataarray_pointer=False,cache_to_tempdir=False,cache_to_ram=False,reset_space=False,**kwargs):
+    def add_dataarray(
+            self,
+            DataArray_or_filepath,
+            skip_unavailable= False,
+            release_dataarray_pointer=False,
+            cache_to_tempdir=False,
+            cache_to_ram=False,
+            reset_space=False,
+            **kwargs,
+    ):
         #DataArray = None
         if type(DataArray_or_filepath).__name__ == 'str':
             filepath = DataArray_or_filepath
@@ -294,6 +658,8 @@ class archive (object):
                 self.lib_dataarrays['absolute_path_for_reading'] = None
             if 'absolute_path_as_cache' not in self.lib_dataarrays.columns:
                 self.lib_dataarrays['absolute_path_as_cache'] = None
+            if 'dataarray_pointer' not in self.lib_dataarrays.columns:
+                self.lib_dataarrays['dataarray_pointer'] = None
             if 'path' not in self.lib_dataarrays.columns:
                 self.lib_dataarrays['path'] = None
 
@@ -304,10 +670,11 @@ class archive (object):
                 if index not in self.lib_dataarrays.index:
                     self.lib_dataarrays.loc[index] = ''
                 self.lib_dataarrays[key].loc[index] = value
-                if key not in [ 'absolute_path_as_cache','absolute_path_for_reading','absolute_path','path']:
+                if key not in [ 'dataarray_pointer', 'absolute_path_as_cache','absolute_path_for_reading','absolute_path','path']:
                     self.dataarrays[index].attrs[key] = value
 
             self.lib_dataarrays.sort_index(inplace=True)
+
             if release_dataarray_pointer:
                 print('closing',index)
                 self.dataarrays[index].close()
@@ -316,6 +683,9 @@ class archive (object):
                     print('Released pointer, so removing cached file: ',CMD)
                     os.system(CMD)
                 #del self.dataarrays[index]
+                self.lib_dataarrays.loc[[index,'dataarray_pointer']] = None
+            else:
+                self.lib_dataarrays.loc[[index,'dataarray_pointer']] = self.dataarrays[index]
 
     #         if self.path_pickle:# and (type(self.lib_dataarrays.loc[index].absolute_path) != str):
     #             self.dump()
@@ -611,21 +981,10 @@ class archive (object):
 
     #def cdo(self,cdostring,):
     def apply_func(self,
-            func, 
-            xarray_function_wrapper=apply_func,
-            dataarrays_wrapper = lambda *x: (*x,),
-            groupby=None,
-            apply_groups_in=[],
-            apply_groups_out=[],
-            divide_into_groups_extra = [],
-            archive_out = None,
-            mode = 'numpy_output_to_disk_in_chunks', 
-            inherit_attributes = False,
-            query=None,
-            extra_attributes={}, 
-            post_apply=None,
-            initialize_array=None,
-            copy_coordinates=False,
+            func,
+            #lib_dataarrays = self.lib_dataarrays
+            archive_out = None
+            *args,
             **kwargs):
         #apply_groups_in = {'variable':['aridity'],'source':[None]}
         #apply_groups_out={'variable':['aridity'],'source':[lambda labels: labels[0].replace('historical','rcp45'),lambda labels: labels[0].replace('historical','rcp85')]}
@@ -640,291 +999,30 @@ class archive (object):
                     'you want to merge it to the current archive, you need to '
                     'dump the current archive so that the self.path_pickle is '
                     'set.')
-        
+
         if archive_out is not None:
             write_mode = 'add_to_external_archive'
         else:
             write_mode = 'add_to_current_archive'
 
 
-        if write_mode == 'create_new_archive':
-            archive_out = archive()
-            archive_out.dump(path_archive_out)
-        elif write_mode == 'add_to_current_archive':
+        # if write_mode == 'create_new_archive':
+        #     archive_out = archive()
+        #     archive_out.dump(path_archive_out)
+        #el
+        if write_mode == 'add_to_current_archive':
             archive_out = self
         
+        apply_func_wrapper(
+            func,
+            lib_dataarrays = self.lib_dataarrays,
+            archive_out = archive_out,
+            **kwargs,
+        )
 
-        
-        
-        apply_groups_in_df = parse_to_dataframe(apply_groups_in)
-        apply_groups_out_df = parse_to_dataframe(apply_groups_out)
-        
-        divide_into_groups = []
-        for name in self.lib_dataarrays.index.names:
-            if (name not in apply_groups_in_df.columns):
-                divide_into_groups.append(name)
-        for name in divide_into_groups_extra:
-            if name not in divide_into_groups:
-                divide_into_groups.append(name)
-        
-        if query is not None:
-            if type(query) == str:
-
-                read_lib_dataarrays = self.lib_dataarrays.query(query).copy()
-            elif type(query) ==  pd.DataFrame:
-                read_lib_dataarrays = query
-            else:
-                raise ValueError('type of input query '+query+'not implemented')
-        else:
-            read_lib_dataarrays = self.lib_dataarrays.copy()
-        groups_in_loop = read_lib_dataarrays.reset_index().groupby(divide_into_groups)
-        print('Looping over data array input groups: ',list(groups_in_loop))
-        for idx,group in tqdm(groups_in_loop):
-        
-            def always_tuple (idx):
-                if type(idx) is not tuple:
-                    return (idx,)
-                else:
-                    return  idx
-            def always_multi_index (index):
-            
-                if type(index) == pd.core.indexes.base.Index:
-                     return pd.MultiIndex.from_tuples([x.split()[::-1] for x in index],names=(index.name,))
-                else:
-                    return index
-            
-            apply_this_group_in_df = apply_groups_in_df.copy()
-            for idx_group_in,row in apply_this_group_in_df.iterrows():
-                for column in apply_this_group_in_df.columns:
-                    if row[column] is None:
-                        #import pdb;pdb.set_trace()
-                        apply_this_group_in_df[column].loc[idx_group_in] = group.loc[:,column].unique()
-            
-            for column in apply_this_group_in_df.columns:
-                apply_this_group_in_df = apply_this_group_in_df.explode(column)
-            
-            multi_idx = always_tuple(idx)
-            
-            check_group_columns = []
-            for column in apply_this_group_in_df.columns: 
-                if (~apply_this_group_in_df[column].isnull()).any(): 
-                    check_group_columns.append(column) 
-            
-            group_reduced = group[check_group_columns].drop_duplicates().reset_index().drop(columns='index')
-            apply_this_group_in_df_reduced = apply_this_group_in_df[check_group_columns].drop_duplicates().reset_index().drop(columns='index')
-            
-            if len(apply_groups_in_df) == 0:
-                all_input_available_in_this_group = True
-            else:
-                apply_this_group_in_reduced_index = pd.MultiIndex.from_frame(apply_this_group_in_df_reduced)
-                group_reduced_indexed_for_apply_groups_in = group.set_index(list(apply_this_group_in_df_reduced.columns))
-                group_reduced_indexed_for_apply_groups_in.index = always_multi_index(group_reduced_indexed_for_apply_groups_in.index)
-                
-                all_input_available_in_this_group = not (len(apply_this_group_in_reduced_index) != len(apply_this_group_in_reduced_index.intersection(group_reduced_indexed_for_apply_groups_in.index)))
-            
-            #group_indexed_for_apply_groups_in = group.set_index(list(apply_this_group_in_df.columns))
-            
-            
-            
-            
-            
-            # 
-            # 
-            # 
-            # apply_this_group_in_index = pd.MultiIndex.from_frame(apply_this_group_in_df)
-            # group_indexed_for_apply_groups_in.index = always_multi_index(apply_this_group_in_df.index)
-            # 
-            # stop
-            # 
-            # #group_selection_index = pd.MultiIndex.from_frame(frame_for_selecting_xarrays_from_current_group)
-            # 
-            # all_input_available_in_this_group = not (group_indexed_for_apply_groups_in.index != apply_groups_in_index).any()
-            # 
-            if all_input_available_in_this_group:
-            
-                if len(apply_this_group_in_df) == 0:
-                    table_this_group_in = group
-                else:
-                    apply_this_group_in_index = pd.MultiIndex.from_frame(apply_this_group_in_df)
-                    group_indexed_for_apply_groups_in = group.set_index(list(apply_this_group_in_df.columns))
-                    group_indexed_for_apply_groups_in.index = always_multi_index(group_indexed_for_apply_groups_in.index)
-                
-                    # apply_this_group_in_df = apply_groups_in_df.copy()
-                    # for idx_group_in,row in apply_this_group_in_df.iterrows():
-                    #     for column in apply_this_group_in_df.columns:
-                    #         if row[column] is None:
-                    #             apply_this_group_in_df[column].loc[idx_group_in] = group.loc[:,column].unique()
-                
-                    
-                    # import pdb; pdb.set_trace()
-                    # apply_this_group_in_index = apply_this_group_in_index.intersection(group_indexed_for_apply_groups_in.index,sort=None)
-                    # import pdb; pdb.set_trace()
-                    table_this_group_in = group_indexed_for_apply_groups_in.loc[apply_this_group_in_index]
-
-                
-                #apply_groups_out_index = pd.MultiIndex.from_frame(apply_groups_out_df)
-                    # group_indexed_for_apply_groups_out = group.set_index(list(apply_groups_out_df.columns))
-                    # group_indexed_for_apply_groups_out.index = always_multi_index(group_indexed_for_apply_groups_out.index)
-                
-            
-                apply_groups_out_df_this_group = apply_groups_out_df.copy()
-                
-
-                print('converting label functions where necessary')
-                for idx_group_out,row in apply_groups_out_df.iterrows():
-                    for key,value in row.items():
-                        if type(apply_groups_out_df_this_group.loc[idx_group_out,key]).__name__ == 'function':
-                            apply_groups_out_df_this_group.loc[idx_group_out,key]= apply_groups_out_df.loc[idx_group_out,key](*tuple(table_this_group_in.reset_index()[[key]].values[:,0]))
-                        # elif apply_groups_out_df_this_group.loc[idx_group_out,key] is None:
-                        #     raise ValueError('Not supported yet')
-                        else:
-                            apply_groups_out_df_this_group.loc[idx_group_out,key]= apply_groups_out_df.loc[idx_group_out,key]
-                table_this_group_out = apply_groups_out_df_this_group
-
-                
-                dataarrays_group_in = []
-                for idx_group_in,row in table_this_group_in.iterrows():
-                    if table_this_group_in.index.names[0] is None: # trivial case where no group_in selection is made
-                        index_dataarray = [dict(zip(table_this_group_in.columns,row))[key] for key in self.lib_dataarrays.index.names]
-                    else:
-                        index_dataarray = [{**dict(zip(table_this_group_in.index.names,idx_group_in)),**dict(zip(table_this_group_in.columns,row))}[key] for key in self.lib_dataarrays.index.names]
-
-                    #index_dataarray = [{**dict(zip(table_this_group_in.index.names,idx_group_in)),**dict(zip(table_this_group_in.columns,row))}[key] for key in self.lib_dataarrays.index.names]
-                    dataarrays_group_in.append(self.dataarrays[tuple(index_dataarray)])
-            
-                ifile = 0
-                attributes_dataarrays_out = []
-                for idx_group_out,row in table_this_group_out.iterrows():
-                    attributes_dataarrays_out.append({})
-
-                    if inherit_attributes:
-                        if table_this_group_in.index.names[0] is None: # trivial case where no group_in selection is made
-                            attributes_in = \
-                                dict(zip(table_this_group_in.columns,
-                                    table_this_group_in.iloc[min(ifile,len(dataarrays_group_in)-1)]))
-
-                        else:
-                            attributes_in = \
-                                { 
-                                **dict(zip(table_this_group_in.index.names,
-                                    table_this_group_in.iloc[min(ifile,len(dataarrays_group_in)-1)].name)),
-                                **dict(zip(table_this_group_in.columns,
-                                    table_this_group_in.iloc[min(ifile,len(dataarrays_group_in)-1)]))
-                                }
-
-
-                        for key,value in attributes_in.items():
-                            if (key not in attributes_dataarrays_out[ifile]) and \
-                               ((inherit_attributes == True) or (key in inherit_attributes)) and \
-                               (key not in ['absolute_path_as_cache','absolute_path_for_reading','absolute_path','path']):
-                                attributes_dataarrays_out[ifile][key] = value
-
-                    #!!
-                    for key in self.lib_dataarrays.index.names:
-                        if key in table_this_group_out.columns:
-                            attributes_dataarrays_out[ifile][key] = row[key]
-                        elif key in table_this_group_in.index.names:
-                            attributes_dataarrays_out[ifile][key] = table_this_group_in.iloc[min(ifile,len(dataarrays_group_in)-1)].name[table_this_group_in.index.names.index(key)]
-                        else:
-                            attributes_dataarrays_out[ifile][key] = table_this_group_in.iloc[min(ifile,len(dataarrays_group_in)-1)][key]
-                    for key in row.index:
-                        attributes_dataarrays_out[ifile][key] = row[key]
-            
-
-                    
-
-
-
-                        # for key in self.lib_dataarrays.columns:
-                        #     if key == 'provider':
-                        #         import pdb; pdb.set_trace()
-
-                        #     if (key not in attributes_dataarrays_out[ifile]) and (inherit_attributes or (key in inherit_attributes)) and (key not in ['absolute_path','path']):
-                        #         attributes_dataarrays_out[ifile][key] = {**dict(zip(table_this_group_in.index.names,table_this_group_in.iloc[min(ifile,len(dataarrays_group_in)-1)])),**dict(zip(table_this_group_in.columns,table_this_group_in.iloc[min(ifile,len(dataarrays_group_in)-1)]))}[key]
-            
-                    for key,value in extra_attributes.items():
-                        attributes_dataarrays_out[ifile][key] = value
-                    ifile += 1
-
-                if mode in ['numpy_output_to_disk_in_chunks','numpy_output_to_disk_no_chunks']:
-                    if (archive_out.file_pattern is None):
-                        raise ValueError("I don't know how to write the data file to disk. Please set to file_pattern") 
-                    filenames_out = []
-                    ifile = 0
-                    for idx_group_out,row in table_this_group_out.iterrows():
-                      filename_out = os.path.dirname(archive_out.path_pickle)+'/'+''.join(np.array(list(zip(archive_out.file_pattern.split('"')[::2],[attributes_dataarrays_out[ifile][key] for key in archive_out.file_pattern.split('"')[1::2]]+['']))).ravel())
-                      if filename_out in archive_out.lib_dataarrays.absolute_path.unique():
-                          raise ValueError('filename '+filename_out+ ' already exists in the output library. Consider revising the output file_pattern.') 
-                      filenames_out.append(filename_out)
-
-                      ifile += 1
-            
-                if mode == 'xarray':
-                    print('making a temporary dataarray copy to prevent data hanging around into memory afterwards')
-                    dataarrays_group_in_copy = [dataarray.copy(deep=False) for dataarray in dataarrays_group_in]
-                    temp_dataarrays = func(*dataarrays_wrapper(*tuple(dataarrays_group_in_copy)))
-                    #temp_dataarrays = func(*dataarrays_wrapper(*tuple(dataarrays_group_in)))
-
-                    for idataarray,dataarray in enumerate(temp_dataarrays):
-                        for key,value in attributes_dataarrays_out[idataarray].items():
-                            if key == 'variable':
-                                dataarray.name = value
-                            else:
-                                dataarray.attrs[key] = value
-                        archive_out.add_dataarray(dataarray)#attributes_dataarrays_out[idataarray])
-                    for idataarray in range(len(dataarrays_group_in_copy)):
-                        dataarrays_group_in_copy[idataarray].close()
-                    for itemp_dataarray in range(len(temp_dataarrays)):
-                        temp_dataarrays[itemp_dataarray].close()
-
-                elif mode in ['numpy_output_to_disk_in_chunks','numpy_output_to_disk_no_chunks']:
-
-                    if mode == 'numpy_output_to_disk_in_chunks':
-                        xarray_function_wrapper(func,dataarrays_wrapper(*tuple(dataarrays_group_in)),filenames_out=filenames_out,attributes = attributes_dataarrays_out, release=True, initialize_array=initialize_array,copy_coordinates=copy_coordinates,**kwargs)
-                    elif mode == 'numpy_output_to_disk_no_chunks':
-                        temp_dataarrays = xarray_function_wrapper(func,dataarrays_wrapper(*tuple(dataarrays_group_in)),**kwargs)
-                        if type(temp_dataarrays) != tuple:
-                            print('this is a workaround in case we get a single dataarray instead of tuple of dataarrays from the wrapper function. This needs revision')
-                            idataarray = 0
-                            for key,value in attributes_dataarrays_out[idataarray].items():
-                                if key not in ['variable','absolute_path_for_reading','absolute_path_as_cache','absolute_path','path']:
-                                    if type(value) == bool:
-                                        temp_dataarrays.attrs[key] = int(value)
-                                    else:
-                                        temp_dataarrays.attrs[key] = value
-                                if key == 'variable':
-                                    temp_dataarrays.name = value
-                            #import pdb;pdb.set_trace()
-                            os.system('rm '+filenames_out[idataarray])
-                            if post_apply is not None:
-                                post_apply(temp_dataarrays)
-                            os.system('mkdir -p '+os.path.dirname(filenames_out[idataarray]))
-                            temp_dataarrays.to_netcdf(filenames_out[idataarray])
-                            temp_dataarrays.close()
-                        else:
-                            for idataarray in range(len(temp_dataarrays)):
-                                for key,value in attributes_dataarrays_out[idataarray].items():
-                                    if key not in ['variable','absolute_path_for_reading','absolute_path_as_cache','absolute_path','path']:
-                                        temp_dataarrays[idataarray].attrs[key] = value
-                                    if key == 'variable':
-                                        temp_dataarrays[idataarray].name = value
-            
-                            for idataarray in range(len(temp_dataarrays)):
-                                if post_apply is not None:
-                                    post_apply(temp_dataarrays[idataarray])
-                                os.system('rm '+filenames_out[idataarray])
-                                os.system('mkdir -p '+os.path.dirname(filenames_out[idataarray]))
-                                temp_dataarrays[idataarray].to_netcdf(filenames_out[idataarray])
-                                temp_dataarrays[idataarray].close()
-            
-                    for ixr_out,filename_out in enumerate(filenames_out):
-                        archive_out.add_dataarray(filename_out)
-                else:
-                    ValueError('mode '+ mode+ ' not implemented')
-                for idataarray in range(len(dataarrays_group_in)):
-                    dataarrays_group_in[idataarray].close()
         if write_mode == 'create_new_archive':
             return archive_out
+
     def apply_func_old(self,func, xarray_function_wrapper=apply_func,dataarrays_wrapper = lambda *x: (*x,),groupby=None,apply_merge=[],apply_merge_out=[],archive_out = None,keep_in_memory_during_processing = False, inherit_attributes = False,extra_attributes={}, **kwargs):
 
         if (archive_out is None) and (self.path_pickle is None):
@@ -1208,7 +1306,14 @@ class archive (object):
                         self.dataarrays[idx]
 
                     for key,value in dict(columns).items():
-                        if key not in ['variable','absolute_path','absolute_path_for_reading','absolute_path_as_cache','path']:
+                        if key not in [
+                            'variable',
+                            'absolute_path',
+                            'absolute_path_for_reading',
+                            'absolute_path_as_cache',
+                            'path',
+                            'dataarray_pointer',
+                        ]:
                             if type(value) == bool:
                                 self.dataarrays[idx].attrs[key] = int(value)
                             else:
