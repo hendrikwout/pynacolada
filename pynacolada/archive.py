@@ -375,7 +375,7 @@ class collection (object):
             func,
             lib_dataarrays = lib_dataarrays,
 
-        ):
+        )
 
         if add_archive_out_to_collection and (archive_out not in self.archives):
             self.archive.append(archive_out)
