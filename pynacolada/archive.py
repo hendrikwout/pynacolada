@@ -684,7 +684,7 @@ class archive (object):
                     print('Released pointer, so removing cached file: ',CMD)
                     os.system(CMD)
                 #del self.dataarrays[index]
-                self.lib_dataarrays.loc[[ndex,'dataarray_pointer'] = None
+                self.lib_dataarrays.loc[index,'dataarray_pointer'] = None
             else:
                 self.lib_dataarrays.loc[index,'dataarray_pointer'] = self.dataarrays[index]
 
