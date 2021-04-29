@@ -353,8 +353,9 @@ class collection (object):
     def apply_func(
             func,
             archive_out = None,
-            add_archive_out_to_collection=True
-            *args,**kwargs):
+            add_archive_out_to_collection=True,
+            *args,
+            **kwargs):
 
         if type(archive_out) is str:
             archive_out = pcd.archive(archive_out)
