@@ -32,6 +32,7 @@ def empty_multiindex(names):
 def apply_func_wrapper(
    func,
    lib_dataarrays,
+   dataarrays,
    archive_out,
    xarray_function_wrapper=apply_func,
    dataarrays_wrapper = lambda *x: (*x,),
@@ -197,8 +198,8 @@ def apply_func_wrapper(
 
                 row_of_dataarray = lib_dataarrays.loc[tuple(index_dataarray)]
 
-                if row_of_dataarray.dataarray_pointer is None:
-                    dataarrays_group_in.append(row_of_dataarray.dataarray_pointer.copy())
+                if tuple(index_dataarray) in dataarrays.keys():
+                    dataarrays_group_in.append(dataarrays[tuple(index)].copy())
                 else:
                     dataarrays_group_in.append(xr.open_dataarray(row_of_dataarray.absolute_path))
 
@@ -369,12 +370,15 @@ class collection (object):
             write_mode = 'add_to_current_archive'
 
         lib_dataarrays = pd.DataFrame()
+        dataarrays = {}
         for archive in archives:
-            lib_dataarrays = lib_dataarrays.append(archive_libdataarrays,ignore_index=True)
+            lib_dataarrays = lib_dataarrays.append(archive.lib_dataarrays,ignore_index=True)
+            dataarrays = {**dataarrays,**archive.dataarrays}
 
         apply_func_wrapper(
             func,
             lib_dataarrays = lib_dataarrays,
+            dataarrays = dataarrays,
 
         )
 
@@ -1017,6 +1021,7 @@ class archive (object):
         apply_func_wrapper(
             func,
             lib_dataarrays = self.lib_dataarrays,
+            dataarrays = self.dataarrays,
             archive_out = archive_out,
             **kwargs,
         )
