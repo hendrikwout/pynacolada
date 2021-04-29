@@ -199,7 +199,7 @@ def apply_func_wrapper(
                 row_of_dataarray = lib_dataarrays.loc[tuple(index_dataarray)]
 
                 if tuple(index_dataarray) in dataarrays.keys():
-                    dataarrays_group_in.append(dataarrays[tuple(index)].copy())
+                    dataarrays_group_in.append(dataarrays[tuple(index_dataarray)].copy())
                 else:
                     dataarrays_group_in.append(xr.open_dataarray(row_of_dataarray.absolute_path))
 
@@ -663,8 +663,8 @@ class archive (object):
                 self.lib_dataarrays['absolute_path_for_reading'] = None
             if 'absolute_path_as_cache' not in self.lib_dataarrays.columns:
                 self.lib_dataarrays['absolute_path_as_cache'] = None
-            if 'dataarray_pointer' not in self.lib_dataarrays.columns:
-                self.lib_dataarrays['dataarray_pointer'] = None
+            # if 'dataarray_pointer' not in self.lib_dataarrays.columns:
+            #     self.lib_dataarrays['dataarray_pointer'] = None
             if 'path' not in self.lib_dataarrays.columns:
                 self.lib_dataarrays['path'] = None
 
@@ -675,7 +675,12 @@ class archive (object):
                 if index not in self.lib_dataarrays.index:
                     self.lib_dataarrays.loc[index] = ''
                 self.lib_dataarrays[key].loc[index] = value
-                if key not in [ 'dataarray_pointer', 'absolute_path_as_cache','absolute_path_for_reading','absolute_path','path']:
+                if key not in [
+                    #'dataarray_pointer',
+                    'absolute_path_as_cache',
+                    'absolute_path_for_reading',
+                    'absolute_path',
+                    'path']:
                     self.dataarrays[index].attrs[key] = value
 
             self.lib_dataarrays.sort_index(inplace=True)
@@ -687,10 +692,10 @@ class archive (object):
                     CMD='rm '+filepath_as_cache
                     print('Released pointer, so removing cached file: ',CMD)
                     os.system(CMD)
-                #del self.dataarrays[index]
-                self.lib_dataarrays.loc[index,'dataarray_pointer'] = None
-            else:
-                self.lib_dataarrays.loc[index,'dataarray_pointer'] = self.dataarrays[index]
+                # del self.dataarrays[index]
+                #self.lib_dataarrays.loc[index,'dataarray_pointer'] = None
+            # else:
+            #     self.lib_dataarrays.loc[index,'dataarray_pointer'] = self.dataarrays[index]
 
     #         if self.path_pickle:# and (type(self.lib_dataarrays.loc[index].absolute_path) != str):
     #             self.dump()
@@ -1318,7 +1323,7 @@ class archive (object):
                             'absolute_path_for_reading',
                             'absolute_path_as_cache',
                             'path',
-                            'dataarray_pointer',
+                            #'dataarray_pointer',
                         ]:
                             if type(value) == bool:
                                 self.dataarrays[idx].attrs[key] = int(value)
