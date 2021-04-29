@@ -984,7 +984,7 @@ class archive (object):
     def apply_func(self,
             func,
             #lib_dataarrays = self.lib_dataarrays
-            archive_out = None
+            archive_out = None,
             *args,
             **kwargs):
         #apply_groups_in = {'variable':['aridity'],'source':[None]}
