@@ -352,6 +352,7 @@ class collection (object):
     def __init__(self,archives,*args,**kwargs):
         self.archives =  archives
     def apply_func(
+            self,
             func,
             archive_out = None,
             add_archive_out_to_collection=True,
@@ -371,7 +372,7 @@ class collection (object):
 
         lib_dataarrays = pd.DataFrame()
         dataarrays = {}
-        for archive in archives:
+        for archive in self.archives:
             lib_dataarrays = lib_dataarrays.append(archive.lib_dataarrays,ignore_index=True)
             dataarrays = {**dataarrays,**archive.dataarrays}
 
