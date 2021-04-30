@@ -362,10 +362,7 @@ class collection (object):
         if type(archive_out) is str:
             archive_out = pcd.archive(archive_out)
             write_mode = 'create_new_archive'
-        elif archive is not None: # type is considered an archive object
-            write_mode = 'add_to_external_archive'
-
-        if archive_out is not None:
+        elif archive_out is not None: # type is considered an archive object
             write_mode = 'add_to_external_archive'
         else:
             write_mode = 'add_to_current_archive'
