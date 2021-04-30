@@ -81,7 +81,6 @@ def apply_func_wrapper(
             raise ValueError('type of input query ' + query + 'not implemented')
     else:
         read_lib_dataarrays = lib_dataarrays.copy()
-    import pdb; pdb.set_trace()
     groups_in_loop = read_lib_dataarrays.reset_index().groupby(divide_into_groups)
     print('Looping over data array input groups: ', list(groups_in_loop))
     for idx, group in tqdm(groups_in_loop):
@@ -373,6 +372,7 @@ class collection (object):
         for archive in self.archives:
             lib_dataarrays = lib_dataarrays.append(archive.lib_dataarrays,ignore_index=True)
             dataarrays = {**dataarrays,**archive.dataarrays}
+        import pdb; pdb.set_trace()
 
         apply_func_wrapper(
             func,
