@@ -370,9 +370,8 @@ class collection (object):
         lib_dataarrays = pd.DataFrame()
         dataarrays = {}
         for archive in self.archives:
-            lib_dataarrays = lib_dataarrays.append(archive.lib_dataarrays,ignore_index=True)
+            lib_dataarrays = lib_dataarrays.append(archive.lib_dataarrays)
             dataarrays = {**dataarrays,**archive.dataarrays}
-        import pdb; pdb.set_trace()
 
         apply_func_wrapper(
             func,
