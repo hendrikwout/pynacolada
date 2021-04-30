@@ -2,9 +2,9 @@ import numpy as np
 import os
 import xarray as xr
 import pandas as pd
-from tabulate import tabulate
+#from tabulate import tabulate
 import glob
-from xarray_extras import csv
+#from xarray_extras import csv
 from .io_gsod import GSOD as gsod
 
 
