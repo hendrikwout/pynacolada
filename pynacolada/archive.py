@@ -356,8 +356,8 @@ class collection (object):
             func,
             archive_out = None,
             add_archive_out_to_collection=True,
-            *args,
-            **kwargs):
+            **kwargs
+    ):
 
         if type(archive_out) is str:
             archive_out = pcd.archive(archive_out)
@@ -377,7 +377,8 @@ class collection (object):
             func,
             lib_dataarrays = lib_dataarrays,
             dataarrays = dataarrays,
-            archive_out=archive_out
+            archive_out=archive_out,
+            **kwargs
         )
 
         if add_archive_out_to_collection and (archive_out not in self.archives):
