@@ -382,7 +382,7 @@ class collection (object):
         )
 
         if add_archive_out_to_collection and (archive_out not in self.archives):
-            self.archive.append(archive_out)
+            self.archives.append(archive_out)
 
         if write_mode == 'create_new_archive':
             return archive_out
@@ -391,8 +391,6 @@ class collection (object):
 class archive (object):
     def __init__(self,path=None,*args,**kwargs):
         self.lib_dataarrays = pd.DataFrame(index=empty_multiindex(['variable','source','time','space']),columns = ['path','absolute_path']).iloc[1:]
-        self.dataarrays = {}
-        self.coordinates = {}
 
         self.settings_keys = ['file_pattern','mode']
         print('Creating generic functions to set attributes')
@@ -402,6 +400,8 @@ class archive (object):
         print('Loading default settings')
         self.file_pattern = '"variable"_"source"_"time"_"space".nc'
         self.mode = 'active'
+        self.dataarrays = {}
+        self.coordinates = {}
 
         self.path_pickle = None
         print('Loading datasets')
