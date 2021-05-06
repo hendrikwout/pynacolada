@@ -10,7 +10,7 @@ import logging
 
 
 logging.basicConfig(level=logging.DEBUG)
-def apply_func(func,xarrays,dims_apply, method_dims_no_apply='outer',filenames_out = None, attributes = None,maximum_input_memory_chars = 10240*1024*100 ,squeeze_apply_dims = False,release=False,output_dims={},transpose_hack=True,tempfile_dir=False,initialize_array=None,copy_coordinates=True):
+def apply_func(func,xarrays,dims_apply, method_dims_no_apply='outer',filenames_out = None, attributes = None,maximum_input_memory_chars = 1024*1024*100 ,squeeze_apply_dims = False,release=False,output_dims={},transpose_hack=True,tempfile_dir=False,initialize_array=None,copy_coordinates=True):
     logger = logging.getLogger()
     if type(xarrays).__name__ != 'tuple':
         xarrays = [xarrays]
