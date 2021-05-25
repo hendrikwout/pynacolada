@@ -57,7 +57,7 @@ class archive (object):
 
     def sel_lib(self,sel):
         lib_dataarrays_out = self.lib_dataarrays_out[sel]
-                 archive_out = archive()
+        archive_out = archive()
         for index,lib_dataarray in lib_dataarays_out.iterrows():
             archive_out.add_dataarray(self.dataarrays[index])
 
