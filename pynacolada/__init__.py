@@ -1,7 +1,9 @@
 from .apply_func_new import apply_func,apply_func_per_group
 # nfrom .apply_func import apply_func,apply_func_per_group
-import pynacolada.io
-import pynacolada.vectorized_functions
+# import pynacolada.io
+#import pynacolada.vectorized_functions
+from pynacolada import io
+from pynacolada import vectorized_functions
 from  .archive import *
 
 from .apply_func import apply_func as apply_func_old
