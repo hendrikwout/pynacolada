@@ -45,7 +45,9 @@ def calc_quantiles(vals,bins = 50,axis=-1,stable_start_point = True,stable_end_p
     sorted_vals = np.sort(vals,axis=axis)
     lengths = np.sum(np.isnan(vals) == False,axis=axis,keepdims  = True,dtype=int)
 
-    pos = [ np.array( (lengths-1) * cdf,dtype=int) for cdf in cdfs]
+    pos = [ np.array( (lengths-1) * cdf, dtype=int) for cdf in cdfs]
+
+    import pdb; pdb.set_trace()
 
     
     # pos = []
