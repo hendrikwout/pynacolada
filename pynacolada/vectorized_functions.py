@@ -22,9 +22,13 @@ def moving_average(a, n=3) :
  
     return ret[:] 
 
-def calc_quantiles(vals,bins = 50,axis=-1,stable_start_point = True,stable_end_point=True,cdfs=None,profile=None,start=0.,end=0.999):
+def calc_quantiles(vals,bins = 50,axis=-1,stable_start_point = True,stable_end_point=True,cdfs=None,profile=None,start=None,end=None):
     # a special way of filtering nans, since we need to conserve the dimension length for vectorized operation
 
+    if start is None:
+        start = 1./(2*bins)
+    if end is None:
+        end   = 1. - 1./(2*bins)
 
     if profile == 'uniform':
         # cdfs = [ibin / bins for ibin in range(0,bins+1)]
