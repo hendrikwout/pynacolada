@@ -22,7 +22,7 @@ def moving_average(a, n=3) :
  
     return ret[:] 
 
-def calc_quantiles(vals,bins = 50,axis=-1,stable_start_point = True,stable_end_point=True,cdfs=None,profile=None,start=None,end=None):
+def calc_quantiles(vals,bins = 50,axis=-1,stable_start_point = False,stable_end_point=False,cdfs=None,profile=None,start=None,end=None,output_cdfs=False):
     # a special way of filtering nans, since we need to conserve the dimension length for vectorized operation
 
     if start is None:
@@ -51,7 +51,6 @@ def calc_quantiles(vals,bins = 50,axis=-1,stable_start_point = True,stable_end_p
 
     pos = [ np.array( (lengths-1) * cdf, dtype=int) for cdf in cdfs]
 
-    import pdb; pdb.set_trace()
 
     
     # pos = []
@@ -67,8 +66,11 @@ def calc_quantiles(vals,bins = 50,axis=-1,stable_start_point = True,stable_end_p
     pos = np.concatenate(pos,axis=axis)
     quantiles = np.take_along_axis(sorted_vals,pos,axis = axis) 
 #     print(cdfs)
-    
-    return (quantiles,quantiles*0+np.array(cdfs).reshape([1]*(len(quantiles.shape)-1)+[np.array(cdfs).shape[-1]])) 
+
+    if output_cdfs:
+        return (quantiles,quantiles*0+np.array(cdfs).reshape([1]*(len(quantiles.shape)-1)+[np.array(cdfs).shape[-1]]))
+    else:
+        return quantiles
 
 def biascorrect_quantiles(series_biased,series_reference,**kwargs):
     # ,profile='exponential',bins=50,end=0.9999,
