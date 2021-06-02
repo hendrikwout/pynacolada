@@ -133,11 +133,9 @@ def interpolate_delaunay_linear(values,xylist,uvlist,remove_duplicate_points=Fal
         outeraxisshaperavel *= facdim
     valuesstack.shape = [outeraxisshaperavel] + [valuesstack.shape[-1]] 
     
-    # import pdb; pdb.set_trace()
     valout = np.einsum('pnj,nj->pn', np.take(valuesstack, vtx,axis=-1), wts)
     valout[:,np.any(wts < 0, axis=1)] = fill_value
     valout.shape = [element for element in values.shape[:-len(xylist[0].shape)]]+[element for element in uvshape ]
-    # import pdb;pdb.set_trace()
 
     #new axis are added to conform the output to 4 dimenions
     if add_newaxes:
@@ -211,7 +209,6 @@ def interp1d(x_fix, y_fix, x_var):
 
     distances = x_fix - x_var
 
-    # import pdb; pdb.set_trace()
     # distances = \
     #         x_fix.reshape(list(x_fix.shape[:])+[1])-\
     #         x_var.reshape(list(x_var.shape[:-1])+[1,x_var.shape[-1]])
@@ -293,7 +290,6 @@ def interp1d_orig(x_fix, y_fix, x_var):
 
     y_var_right =np.take_along_axis(y_fix,x_indices_right,axis=-1) 
     y_var = np.take_along_axis(y_fix,x_indices_left,axis=-1) * weights + np.take_along_axis(y_fix,x_indices_right,axis=-1) * (1.-weights)
-    #import pdb; pdb.set_trace()
     y_var_orig = np.array(y_var)
     y_var_max = np.take_along_axis(y_fix,x_indices_left,axis=-1)
 
