@@ -8,9 +8,59 @@ import math
 import numpy as np
 from scipy.spatial import Delaunay
 
-def moving_average(a, n=3) : 
-    cumsum = np.cumsum(a, dtype=float,axis=-1) 
-    ret = np.zeros_like(cumsum)*np.nan 
+
+def rolling_window(a, window, keepshape=False):
+    """
+    Make an ndarray with a rolling window of the last dimension
+
+    Parameters
+    ----------
+    a : array_like
+        Array to add rolling window to
+    window : int
+        Size of rolling window
+
+    Returns
+    -------
+    Array that is a view of the original array with a added dimension
+    of size w.
+
+    Examples
+    --------
+    >>> x=np.arange(10).reshape((2,5))
+    >>> rolling_window(x, 3)
+    array([[[0, 1, 2], [1, 2, 3], [2, 3, 4]],
+           [[5, 6, 7], [6, 7, 8], [7, 8, 9]]])
+
+    Calculate rolling mean of last dimension:
+    >>> np.mean(rolling_window(x, 3), -1)
+    array([[ 1.,  2.,  3.],
+           [ 6.,  7.,  8.]])
+
+    """
+
+    if keepshape:
+        a_def = np.concatente(a[..., :int(window / 2)], a, a[..., :-int(window / 2)], axis=-1)
+    else:
+        a_def = a
+
+    if window < 1:
+        raise ValueError("`window` must be at least 1.")
+    if window > a_def.shape[-1]:
+        raise ValueError("`window` is too long.")
+    shape = a_def.shape[:-1] + (a_def.shape[-1] - window + 1, window)
+    strides = a_def.strides + (a_def.strides[-1],)
+    return np.lib.stride_tricks.as_strided(a_def, shape=shape, strides=strides)
+
+
+def operator_on_rolling_window(x, window, operator):
+    x_window = rolling_window(x, window)
+    return tuple([output for output in operator(x_window)])
+
+
+def moving_average(a, n=3) :
+    cumsum = np.cumsum(a, dtype=float,axis=-1)
+    ret = np.zeros_like(cumsum)*np.nan
     ret[...,math.ceil(n/2):math.ceil(-n/2)] = cumsum[...,n:] - cumsum[...,:-n] 
  
     ret = ret/n 
