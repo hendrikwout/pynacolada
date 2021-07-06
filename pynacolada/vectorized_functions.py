@@ -77,7 +77,6 @@ def calc_quantiles(vals,bins = 50,axis=-1,stable_start_point = True,stable_end_p
     if type(bins) is list:
         cdfs = np.array(bins)
     else:
-
         if profile == 'uniform':
             # cdfs = [ibin / bins for ibin in range(0,bins+1)]
             cdfs = np.linspace(start,end,bins+1)
@@ -92,7 +91,6 @@ def calc_quantiles(vals,bins = 50,axis=-1,stable_start_point = True,stable_end_p
 
     # cdfwindow = 12*40
     # splitby = 12*5
-
 
     sorted_vals = np.sort(vals,axis=axis)
     lengths = np.sum(np.isnan(vals) == False,axis=axis,keepdims  = True,dtype=int)
