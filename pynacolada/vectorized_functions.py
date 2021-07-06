@@ -74,15 +74,18 @@ def moving_average(a, n=3) :
 def calc_quantiles(vals,bins = 50,axis=-1,stable_start_point = True,stable_end_point=True,cdfs=None,profile=None,start=0.,end=0.999):
     # a special way of filtering nans, since we need to conserve the dimension length for vectorized operation
 
+    if type(bins) is list:
+        cdfs = np.array(bins)
+    else:
 
-    if profile == 'uniform':
-        # cdfs = [ibin / bins for ibin in range(0,bins+1)]
-        cdfs = np.linspace(start,end,bins+1)
-    elif profile == 'exponential':
-        xvals = np.linspace(np.log(1.-end),np.log(1.-start),bins+1)[::-1] 
-        cdfs = [ (1.-np.exp(x)) for x in xvals]
-    elif profile is not None:
-        raise ValueError ('profile not inplemented')
+        if profile == 'uniform':
+            # cdfs = [ibin / bins for ibin in range(0,bins+1)]
+            cdfs = np.linspace(start,end,bins+1)
+        elif profile == 'exponential':
+            xvals = np.linspace(np.log(1.-end),np.log(1.-start),bins+1)[::-1]
+            cdfs = [ (1.-np.exp(x)) for x in xvals]
+        elif profile is not None:
+            raise ValueError ('profile not inplemented')
     
     if cdfs is None:
         raise ValueError ('No cdfs could be obtained')
