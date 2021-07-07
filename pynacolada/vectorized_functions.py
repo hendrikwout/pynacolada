@@ -101,7 +101,7 @@ def calc_quantiles(
     :return:
     """
 
-    if cdfs is not None:
+    if cdfs is None:
         if start is None:
             start = 1./(2*bins)
         if end is None:
