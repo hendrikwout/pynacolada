@@ -72,7 +72,7 @@ def moving_average(a, n=3) :
     return ret[:] 
 
 
-def calc_quantiles(vals,bins = 50,axis=-1,stable_start_point = True,stable_end_point=True,cdfs=None,profile=None,start=0.,end=0.999,output_cdfs=False):
+def calc_quantiles(vals,bins = 50,axis=-1,stable_start_point = True,stable_end_point=True,cdfs=None,profile=None,start=0.,end=0.999,output_cdfs=True):
     # a special way of filtering nans, since we need to conserve the dimension length for vectorized operation
 
     if type(bins) is list:
