@@ -72,8 +72,34 @@ def moving_average(a, n=3) :
     return ret[:] 
 
 
-def calc_quantiles(vals,bins = 50,axis=-1,stable_start_point = True,stable_end_point=True,cdfs=None,profile=None,start=0.,end=0.999,output_cdfs=True):
-    # a special way of filtering nans, since we need to conserve the dimension length for vectorized operation
+def calc_quantiles(
+        vals,
+        bins = 50,
+        axis=-1,
+        stable_start_point = True,
+        stable_end_point=True,
+        cdfs=None,
+        profile=None,
+        start=0.,
+        end=0.999,
+        output_cdfs=True
+):
+    """
+
+    :param vals: any (climate) variable
+    :param bins: number of bins (only used if cdfs is None)
+    :param axis: on which dimension to apply? default is inner/fastest moving dimension
+    :param stable_start_point:  (only used if cdfs is None)
+    :param stable_end_point:  (only used if cdfs is None)
+    :param cdfs: custom quantile values
+    :param profile:
+        some variables benefit from non-uniform distribution profiles
+        (eg., larger amount of percentile values for upper percentiles, such as for precipitation)
+    :param start: starting quantile (only used if cdfs is None)
+    :param end: final quantile (only used if cdfs is None)
+    :param output_cdfs: output the actual cdf values (which may still differ from input
+    :return:
+    """
 
     if type(bins) is list:
         cdfs = np.array(bins)
@@ -103,8 +129,6 @@ def calc_quantiles(vals,bins = 50,axis=-1,stable_start_point = True,stable_end_p
     lengths = np.sum(np.isnan(vals) == False,axis=axis,keepdims  = True,dtype=int)
 
     pos = [ np.array( (lengths-1) * cdf, dtype=int) for cdf in cdfs]
-
-
 
     # pos = []
     # for cdf in cdfs[:-1]:
