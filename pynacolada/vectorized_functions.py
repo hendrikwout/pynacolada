@@ -163,7 +163,10 @@ def calc_quantiles(vals,bins = 50,axis=-1,stable_start_point = True,stable_end_p
     quantiles = np.take_along_axis(sorted_vals,pos,axis = axis) 
 #     print(cdfs)
     
-    return (quantiles,quantiles*0+np.array(cdfs).reshape([1]*(len(quantiles.shape)-1)+[np.array(cdfs).shape[-1]])) 
+    if output_cdfs:
+        return (quantiles,quantiles*0+np.array(cdfs).reshape([1]*(len(quantiles.shape)-1)+[np.array(cdfs).shape[-1]]))
+    else:
+        return quantiles
 
 def biascorrect_quantiles(series_biased,series_reference,**kwargs):
     # ,profile='exponential',bins=50,end=0.9999,
