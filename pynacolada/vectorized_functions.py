@@ -128,6 +128,7 @@ def calc_quantiles(
 
     pos = [ np.array( (lengths-1) * cdf, dtype=int) for cdf in cdfs]
 
+    import pdb; pdb.set_trace()
     # pos = []
     # for cdf in cdfs[:-1]:
     #     #pos.append(np.minimum(np.array(lengths * ibin / bins,dtype=int),lengths-1))
@@ -143,7 +144,6 @@ def calc_quantiles(
 #     print(cdfs)
 
 
-    import pdb; pdb.set_trace()
     if output_cdfs:
         return (quantiles,quantiles*0+np.array(cdfs).reshape([1]*(len(quantiles.shape)-1)+[np.array(cdfs).shape[-1]]))
     else:
