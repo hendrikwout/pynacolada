@@ -124,7 +124,8 @@ def calc_quantiles(
 
 
     sorted_vals = np.sort(vals,axis=axis)
-    lengths = np.sum(np.isnan(vals) == False,axis=axis,keepdims  = True,dtype=int)
+    lengths = np.sum((np.isnan(vals) == False),axis=axis,keepdims  = True,dtype=int)
+    import pdb; pdb.set_trace()
 
     pos = [ np.array( (lengths-1) * cdf, dtype=int) for cdf in cdfs]
 
@@ -138,7 +139,6 @@ def calc_quantiles(
     if stable_start_point:
         pos[0] = pos[1]
 
-    import pdb; pdb.set_trace()
     pos = np.concatenate(pos,axis=axis)
     quantiles = np.take_along_axis(sorted_vals,pos,axis = axis)
 #     print(cdfs)
