@@ -70,27 +70,30 @@ def moving_average(a, n=3) :
     for i in range(math.ceil(-n/2),0): 
             ret[...,i] = (cumsum[...,-1] - cumsum[...,-1+i-math.floor(n/2)])/(-(i-math.floor(n/2))) 
  
-    return ret[:] 
+    return ret[:]
 
-def calc_quantiles(vals,bins = 50,axis=-1,stable_start_point = False,stable_end_point=False,cdfs=None,profile=None,start=None,end=None,output_cdfs=False):
+def calc_quantiles(vals,bins = 50,axis=-1,stable_start_point = True,stable_end_point=True,cdfs=None,profile=None,start=0.,end=0.999,output_cdfs=True):
     # a special way of filtering nans, since we need to conserve the dimension length for vectorized operation
 
-    if start is None:
-        start = 1./(2*bins)
-    if end is None:
-        end   = 1. - 1./(2*bins)
+    if type(bins) is list:
+        cdfs = np.array(bins)
+    else:
+        if start is None:
+            start = 1./(2*bins)
+        if end is None:
+            end   = 1. - 1./(2*bins)
 
-    if profile == 'uniform':
-        # cdfs = [ibin / bins for ibin in range(0,bins+1)]
-        cdfs = np.linspace(start,end,bins)
-    elif profile == 'exponential':
-        xvals = np.linspace(np.log(1.-end),np.log(1.-start),bins)[::-1]
-        cdfs = [ (1.-np.exp(x)) for x in xvals]
-    elif profile is not None:
-        raise ValueError ('profile not inplemented')
-    
-    if cdfs is None:
-        raise ValueError ('No cdfs could be obtained')
+        if profile == 'uniform':
+            # cdfs = [ibin / bins for ibin in range(0,bins+1)]
+            cdfs = np.linspace(start,end,bins)
+        elif profile == 'exponential':
+            xvals = np.linspace(np.log(1.-end),np.log(1.-start),bins)[::-1]
+            cdfs = [ (1.-np.exp(x)) for x in xvals]
+        elif profile is not None:
+            raise ValueError ('profile not inplemented')
+
+        if cdfs is None:
+            raise ValueError ('No cdfs could be obtained')
 
     # cdfwindow = 12*40
     # splitby = 12*5
@@ -102,7 +105,7 @@ def calc_quantiles(vals,bins = 50,axis=-1,stable_start_point = False,stable_end_
     pos = [ np.array( (lengths-1) * cdf, dtype=int) for cdf in cdfs]
 
 
-    
+
     # pos = []
     # for cdf in cdfs[:-1]:
     #     #pos.append(np.minimum(np.array(lengths * ibin / bins,dtype=int),lengths-1))
@@ -114,13 +117,14 @@ def calc_quantiles(vals,bins = 50,axis=-1,stable_start_point = False,stable_end_
         pos[0] = pos[1]
 
     pos = np.concatenate(pos,axis=axis)
-    quantiles = np.take_along_axis(sorted_vals,pos,axis = axis) 
+    quantiles = np.take_along_axis(sorted_vals,pos,axis = axis)
 #     print(cdfs)
 
     if output_cdfs:
         return (quantiles,quantiles*0+np.array(cdfs).reshape([1]*(len(quantiles.shape)-1)+[np.array(cdfs).shape[-1]]))
     else:
         return quantiles
+
 
 def biascorrect_quantiles(series_biased,series_reference,**kwargs):
     # ,profile='exponential',bins=50,end=0.9999,
