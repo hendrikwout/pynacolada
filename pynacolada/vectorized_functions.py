@@ -101,9 +101,7 @@ def calc_quantiles(
     :return:
     """
 
-    if type(bins) is list:
-        cdfs = np.array(bins)
-    else:
+    if cdfs is not None:
         if start is None:
             start = 1./(2*bins)
         if end is None:
@@ -118,8 +116,8 @@ def calc_quantiles(
         elif profile is not None:
             raise ValueError ('profile not inplemented')
 
-        if cdfs is None:
-            raise ValueError ('No cdfs could be obtained')
+    if cdfs is None:
+        raise ValueError ('No cdfs could be obtained')
 
     # cdfwindow = 12*40
     # splitby = 12*5
