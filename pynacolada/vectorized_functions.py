@@ -138,12 +138,12 @@ def calc_quantiles(
     if stable_start_point:
         pos[0] = pos[1]
 
+    import pdb; pdb.set_trace()
     pos = np.concatenate(pos,axis=axis)
     quantiles = np.take_along_axis(sorted_vals,pos,axis = axis)
 #     print(cdfs)
 
 
-    import pdb; pdb.set_trace()
     if output_cdfs:
         return (quantiles,quantiles*0+np.array(cdfs).reshape([1]*(len(quantiles.shape)-1)+[np.array(cdfs).shape[-1]]))
     else:
