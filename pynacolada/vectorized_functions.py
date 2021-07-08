@@ -209,11 +209,9 @@ def interpolate_delaunay_linear(values,xylist,uvlist,remove_duplicate_points=Fal
         outeraxisshaperavel *= facdim
     valuesstack.shape = [outeraxisshaperavel] + [valuesstack.shape[-1]] 
     
-    # import pdb; pdb.set_trace()
     valout = np.einsum('pnj,nj->pn', np.take(valuesstack, vtx,axis=-1), wts)
     valout[:,np.any(wts < 0, axis=1)] = fill_value
     valout.shape = [element for element in values.shape[:-len(xylist[0].shape)]]+[element for element in uvshape ]
-    # import pdb;pdb.set_trace()
 
     #new axis are added to conform the output to 4 dimenions
     if add_newaxes:
