@@ -81,7 +81,11 @@ def apply_func_wrapper(
             raise ValueError('type of input query ' + query + 'not implemented')
     else:
         read_lib_dataarrays = lib_dataarrays.copy()
-    groups_in_loop = read_lib_dataarrays.reset_index().groupby(divide_into_groups)
+    print(divide_into_groups)
+    if len(divide_into_groups) > 0:
+        groups_in_loop = read_lib_dataarrays.reset_index().groupby(divide_into_groups)
+    else:
+        groups_in_loop = [[(0,),read_lib_dataarrays.reset_index()]]
     print('Looping over data array input groups: ', list(groups_in_loop))
     for idx, group in tqdm(groups_in_loop):
 
@@ -351,6 +355,19 @@ def apply_func_wrapper(
 class collection (object):
     def __init__(self,archives,*args,**kwargs):
         self.archives =  archives
+
+    def get_lib_dataarrays(self):
+        lib_dataarrays = pd.DataFrame()
+        for archive in self.archives:
+            lib_dataarrays = lib_dataarrays.append(archive.lib_dataarrays).sort_index()
+        return lib_dataarrays
+
+    def get_dataarrays(self):
+        dataarrays = {}
+        for archive in self.archives:
+            dataarrays = {**dataarrays, **archive.dataarrays}
+        return dataarrays
+
     def apply_func(
             self,
             func,
@@ -367,12 +384,8 @@ class collection (object):
         else:
             write_mode = 'add_to_current_archive'
 
-        lib_dataarrays = pd.DataFrame()
-        dataarrays = {}
-        for archive in self.archives:
-            lib_dataarrays = lib_dataarrays.append(archive.lib_dataarrays)
-            dataarrays = {**dataarrays,**archive.dataarrays}
-
+        lib_dataarrays = self.get_lib_dataarrays()
+        dataarrays = self.get_dataarrays()
         apply_func_wrapper(
             func,
             lib_dataarrays = lib_dataarrays,
