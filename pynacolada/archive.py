@@ -81,11 +81,13 @@ def apply_func_wrapper(
             raise ValueError('type of input query ' + query + 'not implemented')
     else:
         read_lib_dataarrays = lib_dataarrays.copy()
-    print(divide_into_groups)
-    if len(divide_into_groups) > 0:
-        groups_in_loop = read_lib_dataarrays.reset_index().groupby(divide_into_groups)
-    else:
-        groups_in_loop = [[(0,),read_lib_dataarrays.reset_index()]]
+
+
+    if len(divide_into_groups) == 0:
+        print('creating dummy group that encompasses the whole library')
+        divide_into_groups = ['dummy_group']
+        read_lib_dataarrays['dummy_group'] = ""
+    groups_in_loop = read_lib_dataarrays.reset_index().groupby(divide_into_groups)
     print('Looping over data array input groups: ', list(groups_in_loop))
     for idx, group in tqdm(groups_in_loop):
 
