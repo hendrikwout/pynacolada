@@ -437,7 +437,7 @@ class archive (object):
         for index,lib_dataarray in lib_dataarays_out.iterrows():
             archive_out.add_dataarray(self.dataarrays[index])
 
-    def delete_dataarrays_on_disk(self,query==None):
+    def delete_dataarrays_on_disk(self,query==None,update_pickle = True):
         if query is not None:
             read_lib_dataarrays = self.lib_dataarrays.query(query).copy()
         else:
@@ -445,12 +445,14 @@ class archive (object):
         for idx,row in read_lib_dataarrays.iterrows():
             CMD ='rm '+row.absolute_path
             os.system(CMD)
-            if 'available' not in self.lib_dataarrays.columns:
-                self.lib_dataarrays['available'] = ""
-                self.lib_dataarrays['available'] = True
+            # if 'available' not in self.lib_dataarrays.columns:
+            #     self.lib_dataarrays['available'] = ""
+            #     self.lib_dataarrays['available'] = True
             self.lib_dataarrays.loc[idx]['available'] = False
+        if udpate_pickle:
+            self.update(force_overwrite_pickle =True)
 
-    def remove(self,index,delete_on_disk=False):
+    def remove(self,index,delete_on_disk=False,update_pickle=True):
         self.dataarrays[index].close()
         del self.dataarrays[index]
         if delete_on_disk:
@@ -465,12 +467,19 @@ class archive (object):
             
         self.lib_dataarrays.drop(index=index,inplace=True)
 
-    def close(self):
+
+        if udpate_pickle:
+            self.update(force_overwrite_pickle=True)
+
+
+    def close(self,delete_archive=False):
         lib_dataarrays_temp = self.lib_dataarrays.copy()
         for index,columns in lib_dataarrays_temp.iterrows():
-            self.remove(index=index)
+            self.remove(index=index,delete_on_disk=(delete_archive==True))
 
         del lib_dataarrays_temp
+        if delete_archive:
+            os.system('rm '+self.path_pickle)
 
     def add_from_dataset(self,Dataset_or_filepath,variables=None,**kwargs):
         if type(Dataset_or_filepath).__name__ == 'str':
