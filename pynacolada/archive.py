@@ -377,6 +377,7 @@ class collection (object):
             func,
             archive_out = None,
             add_archive_out_to_collection=True,
+            update_pickle=True,
             **kwargs
     ):
 
@@ -395,6 +396,7 @@ class collection (object):
             lib_dataarrays = lib_dataarrays,
             dataarrays = dataarrays,
             archive_out=archive_out,
+            update_pickle=update_pickle,
             **kwargs
         )
 
@@ -1335,7 +1337,7 @@ class archive (object):
                 # if ( ('absolute_path' in row.keys()) and (type(row['absolute_path']) == str)):
                 #     extra_attributes_plus_path['absolute_path'] =row['absolute_path']
 
-                self.remove(idx)
+                self.remove(idx,update_pickle=False)
                 self.add_dataarray(dataarray_temp,**attributes_temp)
 
         # for key,value in extra_attributes.items():
@@ -1383,7 +1385,7 @@ class archive (object):
  
                     os.system('rm '+fnout)
                     self.dataarrays[idx].to_netcdf(fnout);print('file written to: '+fnout)
-                    self.remove(idx)
+                    self.remove(idx,update_pickle=False)
                     self.add_dataarray(fnout)
                     #self.dataarrays[idx]
 
@@ -1581,7 +1583,7 @@ class archive (object):
 
 
         for idx,columns in self.lib_dataarrays.iterrows():
-            self.remove(idx)
+            self.remove(idx,update_pickle=False)
         for idx,columns in read_lib_dataarrays.iterrows():
             absolute_path = None
             # import pdb; pdb.set_trace()
