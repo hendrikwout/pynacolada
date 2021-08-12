@@ -455,7 +455,7 @@ class archive (object):
             #     self.lib_dataarrays['available'] = ""
             #     self.lib_dataarrays['available'] = True
             self.lib_dataarrays.loc[idx]['available'] = False
-        if udpate_pickle:
+        if update_pickle:
             self.update(force_overwrite_pickle =True)
 
     def remove(self,index,delete_on_disk=False,update_pickle=True):
