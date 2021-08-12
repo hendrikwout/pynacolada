@@ -437,7 +437,7 @@ class archive (object):
         for index,lib_dataarray in lib_dataarays_out.iterrows():
             archive_out.add_dataarray(self.dataarrays[index])
 
-    def delete_dataarrays_on_disk(self,query==None,update_pickle = True):
+    def delete_dataarrays_on_disk(self,query=None,update_pickle = True):
         if query is not None:
             read_lib_dataarrays = self.lib_dataarrays.query(query).copy()
         else:
