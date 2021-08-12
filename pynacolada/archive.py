@@ -237,7 +237,7 @@ def apply_func_wrapper(
                         if (key not in attributes_dataarrays_out[ifile]) and \
                                 ((inherit_attributes == True) or (key in inherit_attributes)) and \
                                 (key not in ['absolute_path_as_cache', 'absolute_path_for_reading', 'absolute_path',
-                                             'path']):
+                                             'path','available']):
                             attributes_dataarrays_out[ifile][key] = value
 
                 # !!
@@ -314,8 +314,7 @@ def apply_func_wrapper(
                             'this is a workaround in case we get a single dataarray instead of tuple of dataarrays from the wrapper function. This needs revision')
                         idataarray = 0
                         for key, value in attributes_dataarrays_out[idataarray].items():
-                            if key not in ['variable', 'absolute_path_for_reading', 'absolute_path_as_cache',
-                                           'absolute_path', 'path']:
+                            if key not in archive_out.not_dataarray_attributes:
                                 if type(value) == bool:
                                     temp_dataarrays.attrs[key] = int(value)
                                 else:
@@ -405,7 +404,7 @@ class collection (object):
 
 class archive (object):
     def __init__(self,path=None,*args,**kwargs):
-        self.lib_dataarrays = pd.DataFrame(index=empty_multiindex(['variable','source','time','space']),columns = ['path','absolute_path']).iloc[1:]
+        self.lib_dataarrays = pd.DataFrame(index=empty_multiindex(['variable','source','time','space']),columns = ['path','absolute_path','available']).iloc[1:]
 
         self.settings_keys = ['file_pattern','mode']
         print('Creating generic functions to set attributes')
@@ -414,6 +413,9 @@ class archive (object):
             self.__dict__['set_'+key] = lambda value: self.__setattr__(key,value)
         print('Loading default settings')
         self.file_pattern = '"variable"_"source"_"time"_"space".nc'
+        self.not_dataarray_attributes = ['variable', 'absolute_path', 'absolute_path_as_cache',
+                                         'absolute_path_for_reading', 'path', 'available']
+
         self.mode = 'active'
         self.dataarrays = {}
         self.coordinates = {}
@@ -434,6 +436,19 @@ class archive (object):
         archive_out = archive()
         for index,lib_dataarray in lib_dataarays_out.iterrows():
             archive_out.add_dataarray(self.dataarrays[index])
+
+    def delete_dataarrays_on_disk(self,query==None):
+        if query is not None:
+            read_lib_dataarrays = self.lib_dataarrays.query(query).copy()
+        else:
+            read_lib_dataarrays = self.lib_dataarrays.copy()
+        for idx,row in read_lib_dataarrays.iterrows():
+            CMD ='rm '+row.absolute_path
+            os.system(CMD)
+            if 'available' not in self.lib_dataarrays.columns:
+                self.lib_dataarrays['available'] = ""
+                self.lib_dataarrays['available'] = True
+            self.lib_dataarrays.loc[idx]['available'] = False
 
     def remove(self,index,delete_on_disk=False):
         self.dataarrays[index].close()
@@ -554,6 +569,7 @@ class archive (object):
             kwargs['absolute_path'] = os.path.abspath(filepath)
             kwargs['absolute_path_for_reading'] = os.path.abspath(filepath_for_reading)
             kwargs['absolute_path_as_cache'] = (None if filepath_as_cache is None else os.path.abspath(filepath_as_cache))
+            kwargs['available'] = True
         else:
             DataArray = DataArray_or_filepath
 
@@ -681,6 +697,8 @@ class archive (object):
             #     self.lib_dataarrays['dataarray_pointer'] = None
             if 'path' not in self.lib_dataarrays.columns:
                 self.lib_dataarrays['path'] = None
+            if 'available' not in self.lib_dataarrays.columns:
+                self.lib_dataarrays['available'] = None
 
             self.lib_dataarrays.loc[index] = None
             for key,value in dict_columns.items():
@@ -694,7 +712,8 @@ class archive (object):
                     'absolute_path_as_cache',
                     'absolute_path_for_reading',
                     'absolute_path',
-                    'path']:
+                    'path',
+                    'available']:
                     self.dataarrays[index].attrs[key] = value
 
             self.lib_dataarrays.sort_index(inplace=True)
@@ -1008,6 +1027,7 @@ class archive (object):
             func,
             #lib_dataarrays = self.lib_dataarrays
             archive_out = None,
+            update_pickle = True,
             *args,
             **kwargs):
         #apply_groups_in = {'variable':['aridity'],'source':[None]}
@@ -1045,6 +1065,8 @@ class archive (object):
             **kwargs,
         )
 
+        if update_pickle:
+            archive_out.update(force_overwrite_pickle =True)
         if write_mode == 'create_new_archive':
             return archive_out
 
@@ -1178,7 +1200,7 @@ class archive (object):
                         print('this is a workaround in case we get a single dataarray instead of tuple of dataarrays from the wrapper function. This needs revision')
                         idataarray = 0
                         for key,value in attributes[idataarray].items():
-                            if key not in ['variable','absolute_path','absolute_path_as_cache','absolute_path_for_reading','path']:
+                            if key not in self.not_dataarray_attributes:
                                 temp_dataarrays.attrs[key] = value
                             if key == 'variable':
                                 temp_dataarrays.name = value
@@ -1189,7 +1211,7 @@ class archive (object):
                     else:
                         for idataarray in range(len(temp_dataarrays)):
                             for key,value in attributes[idataarray].items():
-                                if key not in ['variable','absolute_path_as_cache','absolute_path_for_reading','absolute_path','path']:
+                                if key not in self.not_dataarray_attributes:
                                     temp_dataarrays[idataarray].attrs[key] = value
                                 if key == 'variable':
                                     temp_dataarrays[idataarray].name = value
@@ -1201,6 +1223,7 @@ class archive (object):
 
                   for ixr_out,filename_out in enumerate(filenames_out):
                       archive_out.add_dataarray(filename_out)
+
         if write_mode == 'create_new_archive':
             return archive_out
 
@@ -1337,6 +1360,7 @@ class archive (object):
                             'absolute_path_for_reading',
                             'absolute_path_as_cache',
                             'path',
+                            'available'
                             #'dataarray_pointer',
                         ]:
                             if type(value) == bool:
