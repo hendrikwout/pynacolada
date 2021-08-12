@@ -47,6 +47,7 @@ def apply_func_wrapper(
    post_apply=None,
    initialize_array=None,
    copy_coordinates=False,
+   update_pickle=True,
    #lib_dataarrays = self.lib_dataarrays
    **kwargs,
 ):
@@ -352,7 +353,7 @@ def apply_func_wrapper(
             for idataarray in range(len(dataarrays_group_in)):
                 dataarrays_group_in[idataarray].close()
 
-            if kwargs['update_pickle']:
+            if update_pickle:
                 archive_out.update(force_overwrite_pickle =True)
 
 
