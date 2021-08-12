@@ -352,6 +352,9 @@ def apply_func_wrapper(
             for idataarray in range(len(dataarrays_group_in)):
                 dataarrays_group_in[idataarray].close()
 
+            if kwargs['update_pickle']:
+                archive_out.update(force_overwrite_pickle =True)
+
 
 class collection (object):
     def __init__(self,archives,*args,**kwargs):
@@ -468,7 +471,7 @@ class archive (object):
         self.lib_dataarrays.drop(index=index,inplace=True)
 
 
-        if udpate_pickle:
+        if update_pickle:
             self.update(force_overwrite_pickle=True)
 
 
@@ -1071,11 +1074,10 @@ class archive (object):
             lib_dataarrays = self.lib_dataarrays,
             dataarrays = self.dataarrays,
             archive_out = archive_out,
+            update_pickle=update_pickle,
             **kwargs,
         )
 
-        if update_pickle:
-            archive_out.update(force_overwrite_pickle =True)
         if write_mode == 'create_new_archive':
             return archive_out
 
