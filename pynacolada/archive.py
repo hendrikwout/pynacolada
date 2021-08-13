@@ -426,7 +426,7 @@ class collection (object):
 
 
 class archive (object):
-    def __init__(self,path=None,*args,**kwargs):
+    def __init__(self,path=None,file_pattern='"variable"_"source"_"time"_"space".nc', *args,**kwargs):
         self.lib_dataarrays = pd.DataFrame(index=empty_multiindex(['variable','source','time','space']),columns = ['path','absolute_path','available']).iloc[1:]
 
         self.settings_keys = ['file_pattern','mode']
@@ -435,7 +435,7 @@ class archive (object):
             print('creating function self.set_'+key)
             self.__dict__['set_'+key] = lambda value: self.__setattr__(key,value)
         print('Loading default settings')
-        self.file_pattern = '"variable"_"source"_"time"_"space".nc'
+        self.file_pattern = file_pattern
         self.not_dataarray_attributes = ['variable', 'absolute_path', 'absolute_path_as_cache',
                                          'absolute_path_for_reading', 'path', 'available']
 
@@ -1527,8 +1527,8 @@ class archive (object):
             path_settings = temp_path_pickle+'.yaml'
         elif not os.path.isfile(path_settings):
             raise IOError('Settings file '+path_settings+ ' not found.')
-
-        if (not os.path.isfile(temp_path_pickle)) and initialize_if_missing:
+        print(temp_path_pickle)
+        if (not os.path.isfile(temp_path_pickle)) or initialize_if_missing:
             if 'file_pattern' in kwargs.keys():
                 self.update(temp_path_pickle,file_pattern=kwargs['file_pattern'])
             else:
