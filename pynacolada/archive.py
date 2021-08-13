@@ -1459,6 +1459,7 @@ class archive (object):
             cache_to_tempdir=False,
             cache_to_ram=False,
             reset_space=False,
+            initialize_if_missing,
             **kwargs):
 
 
@@ -1520,14 +1521,15 @@ class archive (object):
 
         temp_path_pickle = lib_dirname+'/'+lib_basename
 
-
-
         
         print('apply settings according to yaml file and kwargs')
         if path_settings is None:
             path_settings = temp_path_pickle+'.yaml'
-        elif not os.path.isfile(path_settings):
+        elif not os.path.isfile(path_settings) and not initialize_if_missing:
             raise IOError('Settings file '+path_settings+ ' not found.')
+
+        elif (not os.path.isfile(path_settings)) and initialize_if_missing:
+            self.update(temp_path_pickle)
 
         if os.path.isfile(path_settings):
             print('settings file found')
@@ -1587,8 +1589,7 @@ class archive (object):
                     path = os.path.relpath(filename,os.path.dirname(temp_path_pickle))
                     print('Opening file : '+filename)
                     self.add_dataarray(filename,skip_unavailable=skip_unavailable, release_dataarray_pointer = True, cache_to_tempdir=False,path=path,cache_to_ram=cache_to_ram,reset_space=reset_space,**extra_attributes)
-        self.path_pickle = temp_path_pickle
-        
+
         # import pdb; pdb.set_trace()
         if type(query) == str:
             read_lib_dataarrays = self.lib_dataarrays.query(query,engine='python').copy()
@@ -1596,10 +1597,6 @@ class archive (object):
             read_lib_dataarrays = query(self.lib_dataarrays)
         else:
             read_lib_dataarrays = self.lib_dataarrays.copy()
-
-
-
-
 
         for idx,columns in self.lib_dataarrays.iterrows():
             self.remove(idx,update_pickle=False)
