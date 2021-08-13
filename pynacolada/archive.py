@@ -1523,7 +1523,6 @@ class archive (object):
 
         
         print('apply settings according to yaml file and kwargs')
-        import pdb; pdb.set_trace()
         if path_settings is None:
             path_settings = temp_path_pickle+'.yaml'
         elif not os.path.isfile(path_settings):
