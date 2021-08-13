@@ -30,26 +30,27 @@ def empty_multiindex(names):
     return pd.MultiIndex.from_tuples(tuples=[(None,) * len(names)], names=names)
 
 def apply_func_wrapper(
-   func,
-   lib_dataarrays,
-   dataarrays,
-   archive_out,
-   xarray_function_wrapper=apply_func,
-   dataarrays_wrapper = lambda *x: (*x,),
-   groupby=None,
-   apply_groups_in=[],
-   apply_groups_out=[],
-   divide_into_groups_extra = [],
-   mode = 'numpy_output_to_disk_in_chunks',
-   inherit_attributes = False,
-   query=None,
-   extra_attributes={},
-   post_apply=None,
-   initialize_array=None,
-   copy_coordinates=False,
-   update_pickle=True,
-   #lib_dataarrays = self.lib_dataarrays
-   **kwargs,
+    func,
+    lib_dataarrays,
+    dataarrays,
+    archive_out,
+    xarray_function_wrapper=apply_func,
+    dataarrays_wrapper = lambda *x: (*x,),
+    groupby=None,
+    apply_groups_in=[],
+    apply_groups_out=[],
+    divide_into_groups_extra = [],
+    mode = 'numpy_output_to_disk_in_chunks',
+    inherit_attributes = False,
+    query=None,
+    extra_attributes={},
+    post_apply=None,
+    initialize_array=None,
+    copy_coordinates=False,
+    update_pickle=True,
+    force_recalculate=False,
+    #lib_dataarrays = self.lib_dataarrays
+    **kwargs,
 ):
 
     """
@@ -214,8 +215,13 @@ def apply_func_wrapper(
                     dataarray.close()
                     del dataarray
 
+
+
+            # building attributes of output dataarrays
             ifile = 0
             attributes_dataarrays_out = []
+            filenames_out = []
+            dataarrays_out_already_available = []
             for idx_group_out, row in table_this_group_out.iterrows():
                 attributes_dataarrays_out.append({})
 
@@ -264,97 +270,108 @@ def apply_func_wrapper(
 
                 for key, value in extra_attributes.items():
                     attributes_dataarrays_out[ifile][key] = value
-                ifile += 1
 
-            if mode in ['numpy_output_to_disk_in_chunks', 'numpy_output_to_disk_no_chunks']:
-                if (archive_out.file_pattern is None):
-                    raise ValueError("I don't know how to write the data file to disk. Please set to file_pattern")
-                filenames_out = []
-                ifile = 0
-                for idx_group_out, row in table_this_group_out.iterrows():
+                index_keys = ['variable','source','time','space']
+                index_output = []
+                for key in index_keys:
+                    if index_out.append(attributes_dataarrays_out[ifile][key])
+
+                dataarrays_out_already_available.append(index_out in archive_out.lib_dataarrays_index)
+
+                if mode in ['numpy_output_to_disk_in_chunks', 'numpy_output_to_disk_no_chunks']:
+                    if (archive_out.file_pattern is None):
+                        raise ValueError("I don't know how to write the data file to disk. Please set to file_pattern")
+
                     filename_out = os.path.dirname(archive_out.path_pickle) + '/' + ''.join(np.array(list(
                         zip(archive_out.file_pattern.split('"')[::2],
                             [attributes_dataarrays_out[ifile][key] for key in archive_out.file_pattern.split('"')[1::2]] + [
                                 '']))).ravel())
-                    if filename_out in archive_out.lib_dataarrays.absolute_path.unique():
+
+                    if filename_out in archive_out.lib_dataarrays.absolute_path.unique() and not (dataarrays_out_already_available[ifile]):
                         raise ValueError(
-                            'filename ' + filename_out + ' already exists in the output library. Consider revising the output file_pattern.')
+                            'filename ' + filename_out + ' already exists and not already managed/within the output archive. Consider revising the output file_pattern.')
                     filenames_out.append(filename_out)
 
-                    ifile += 1
-
-            if mode == 'xarray':
-                print('making a temporary dataarray copy to prevent data hanging around into memory afterwards')
-                dataarrays_group_in_copy = [dataarray.copy(deep=False) for dataarray in dataarrays_group_in]
-                temp_dataarrays = func(*dataarrays_wrapper(*tuple(dataarrays_group_in_copy)))
-                # temp_dataarrays = func(*dataarrays_wrapper(*tuple(dataarrays_group_in)))
-
-                for idataarray, dataarray in enumerate(temp_dataarrays):
-                    for key, value in attributes_dataarrays_out[idataarray].items():
-                        if key == 'variable':
-                            dataarray.name = value
-                        else:
-                            dataarray.attrs[key] = value
-                    archive_out.add_dataarray(dataarray)  # attributes_dataarrays_out[idataarray])
-                for idataarray in range(len(dataarrays_group_in_copy)):
-                    dataarrays_group_in_copy[idataarray].close()
-                for itemp_dataarray in range(len(temp_dataarrays)):
-                    temp_dataarrays[itemp_dataarray].close()
-
-            elif mode in ['numpy_output_to_disk_in_chunks', 'numpy_output_to_disk_no_chunks']:
-
-                if mode == 'numpy_output_to_disk_in_chunks':
-                    xarray_function_wrapper(func, dataarrays_wrapper(*tuple(dataarrays_group_in)),
-                                            filenames_out=filenames_out, attributes=attributes_dataarrays_out, release=True,
-                                            initialize_array=initialize_array, copy_coordinates=copy_coordinates, **kwargs)
-                elif mode == 'numpy_output_to_disk_no_chunks':
-                    temp_dataarrays = xarray_function_wrapper(func, dataarrays_wrapper(*tuple(dataarrays_group_in)),
-                                                              **kwargs)
-                    if type(temp_dataarrays) != tuple:
-                        print(
-                            'this is a workaround in case we get a single dataarray instead of tuple of dataarrays from the wrapper function. This needs revision')
-                        idataarray = 0
-                        for key, value in attributes_dataarrays_out[idataarray].items():
-                            if key not in archive_out.not_dataarray_attributes:
-                                if type(value) == bool:
-                                    temp_dataarrays.attrs[key] = int(value)
-                                else:
-                                    temp_dataarrays.attrs[key] = value
-                            if key == 'variable':
-                                temp_dataarrays.name = value
-                        # import pdb;pdb.set_trace()
-                        os.system('rm ' + filenames_out[idataarray])
-                        if post_apply is not None:
-                            post_apply(temp_dataarrays)
-                        os.system('mkdir -p ' + os.path.dirname(filenames_out[idataarray]))
-                        temp_dataarrays.to_netcdf(filenames_out[idataarray])
-                        temp_dataarrays.close()
-                    else:
-                        for idataarray in range(len(temp_dataarrays)):
-                            for key, value in attributes_dataarrays_out[idataarray].items():
-                                if key not in ['variable', 'absolute_path_for_reading', 'absolute_path_as_cache',
-                                               'absolute_path', 'path']:
-                                    temp_dataarrays[idataarray].attrs[key] = value
-                                if key == 'variable':
-                                    temp_dataarrays[idataarray].name = value
-
-                        for idataarray in range(len(temp_dataarrays)):
-                            if post_apply is not None:
-                                post_apply(temp_dataarrays[idataarray])
-                            os.system('rm ' + filenames_out[idataarray])
-                            os.system('mkdir -p ' + os.path.dirname(filenames_out[idataarray]))
-                            temp_dataarrays[idataarray].to_netcdf(filenames_out[idataarray])
-                            temp_dataarrays[idataarray].close()
-
-                for ixr_out, filename_out in enumerate(filenames_out):
-                    archive_out.add_dataarray(filename_out)
+                ifile += 1
+            all_dataarrays_out_already_available = np.prod(dataarrays_out_already_available)
+            if all_dataarrays_out_already_available and not force_recalculate:
+                logging.info('All output data is already available in the output archive and force_recalculate is switched False. Skipping group',idx)
             else:
-                ValueError('mode ' + mode + ' not implemented')
-            for idataarray in range(len(dataarrays_group_in)):
-                dataarrays_group_in[idataarray].close()
+                if force_recalculate and all_dataarrays_out_already_available:
+                    logging.info('all output dataarrays were available but force_recalulate is set True, so I force recaculation')
 
-            if update_pickle:
-                archive_out.update(force_overwrite_pickle =True)
+                if mode == 'xarray':
+                    print('making a temporary dataarray copy to prevent data hanging around into memory afterwards')
+                    dataarrays_group_in_copy = [dataarray.copy(deep=False) for dataarray in dataarrays_group_in]
+                    temp_dataarrays = func(*dataarrays_wrapper(*tuple(dataarrays_group_in_copy)))
+                    # temp_dataarrays = func(*dataarrays_wrapper(*tuple(dataarrays_group_in)))
+
+                    for idataarray, dataarray in enumerate(temp_dataarrays):
+                        for key, value in attributes_dataarrays_out[idataarray].items():
+                            if key == 'variable':
+                                dataarray.name = value
+                            else:
+                                dataarray.attrs[key] = value
+                        archive_out.add_dataarray(dataarray)  # attributes_dataarrays_out[idataarray])
+                    for idataarray in range(len(dataarrays_group_in_copy)):
+                        dataarrays_group_in_copy[idataarray].close()
+                    for itemp_dataarray in range(len(temp_dataarrays)):
+                        temp_dataarrays[itemp_dataarray].close()
+
+                elif mode in ['numpy_output_to_disk_in_chunks', 'numpy_output_to_disk_no_chunks']:
+
+                    if mode == 'numpy_output_to_disk_in_chunks':
+                        xarray_function_wrapper(func, dataarrays_wrapper(*tuple(dataarrays_group_in)),
+                                                filenames_out=filenames_out, attributes=attributes_dataarrays_out, release=True,
+                                                initialize_array=initialize_array, copy_coordinates=copy_coordinates, **kwargs)
+                    elif mode == 'numpy_output_to_disk_no_chunks':
+                        temp_dataarrays = xarray_function_wrapper(func, dataarrays_wrapper(*tuple(dataarrays_group_in)),
+                                                                  **kwargs)
+                        if type(temp_dataarrays) != tuple:
+                            print(
+                                'this is a workaround in case we get a single dataarray instead of tuple of dataarrays from the wrapper function. This needs revision')
+                            idataarray = 0
+                            for key, value in attributes_dataarrays_out[idataarray].items():
+                                if key not in archive_out.not_dataarray_attributes:
+                                    if type(value) == bool:
+                                        temp_dataarrays.attrs[key] = int(value)
+                                    else:
+                                        temp_dataarrays.attrs[key] = value
+                                if key == 'variable':
+                                    temp_dataarrays.name = value
+                            # import pdb;pdb.set_trace()
+                            os.system('rm ' + filenames_out[idataarray])
+                            if post_apply is not None:
+                                post_apply(temp_dataarrays)
+                            os.system('mkdir -p ' + os.path.dirname(filenames_out[idataarray]))
+                            temp_dataarrays.to_netcdf(filenames_out[idataarray])
+                            temp_dataarrays.close()
+                        else:
+                            for idataarray in range(len(temp_dataarrays)):
+                                for key, value in attributes_dataarrays_out[idataarray].items():
+                                    if key not in ['variable', 'absolute_path_for_reading', 'absolute_path_as_cache',
+                                                   'absolute_path', 'path']:
+                                        temp_dataarrays[idataarray].attrs[key] = value
+                                    if key == 'variable':
+                                        temp_dataarrays[idataarray].name = value
+
+                            for idataarray in range(len(temp_dataarrays)):
+                                if post_apply is not None:
+                                    post_apply(temp_dataarrays[idataarray])
+                                os.system('rm ' + filenames_out[idataarray])
+                                os.system('mkdir -p ' + os.path.dirname(filenames_out[idataarray]))
+                                temp_dataarrays[idataarray].to_netcdf(filenames_out[idataarray])
+                                temp_dataarrays[idataarray].close()
+
+                    for ixr_out, filename_out in enumerate(filenames_out):
+                        archive_out.add_dataarray(filename_out)
+                else:
+                    ValueError('mode ' + mode + ' not implemented')
+                for idataarray in range(len(dataarrays_group_in)):
+                    dataarrays_group_in[idataarray].close()
+
+                if update_pickle:
+                    archive_out.update(force_overwrite_pickle =True)
 
 
 class collection (object):
@@ -1043,14 +1060,14 @@ class archive (object):
             #lib_dataarrays = self.lib_dataarrays
             archive_out = None,
             update_pickle = True,
+            force_recalculate=False,
             *args,
             **kwargs):
         #apply_groups_in = {'variable':['aridity'],'source':[None]}
         #apply_groups_out={'variable':['aridity'],'source':[lambda labels: labels[0].replace('historical','rcp45'),lambda labels: labels[0].replace('historical','rcp85')]}
         #archive_out = pcd.archive()
         #mode='xarray'
-        
-        
+
         if (archive_out is None) and (self.path_pickle is None) and (mode != 'xarray'):
             raise ValueError('Please specify how the data should be written '
                     'out. In case you want to create a new archive returned by '
@@ -1078,6 +1095,7 @@ class archive (object):
             dataarrays = self.dataarrays,
             archive_out = archive_out,
             update_pickle=update_pickle,
+            force_recalculate=force_recalculate,
             **kwargs,
         )
 
