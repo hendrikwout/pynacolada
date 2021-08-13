@@ -276,7 +276,7 @@ def apply_func_wrapper(
                 for key in index_keys:
                     index_out.append(attributes_dataarrays_out[ifile][key])
 
-                dataarrays_out_already_available.append(index_out in archive_out.lib_dataarrays.index)
+                dataarrays_out_already_available.append(index_out == archive_out.lib_dataarrays.index)
 
                 if mode in ['numpy_output_to_disk_in_chunks', 'numpy_output_to_disk_no_chunks']:
                     if (archive_out.file_pattern is None):
