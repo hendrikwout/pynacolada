@@ -1459,7 +1459,7 @@ class archive (object):
             cache_to_tempdir=False,
             cache_to_ram=False,
             reset_space=False,
-            initialize_if_missing,
+            initialize_if_missing=True,
             **kwargs):
 
 
@@ -1529,7 +1529,11 @@ class archive (object):
             raise IOError('Settings file '+path_settings+ ' not found.')
 
         elif (not os.path.isfile(path_settings)) and initialize_if_missing:
-            self.update(temp_path_pickle)
+            if 'file_pattern' in kwargs.keys():
+                self.update(temp_path_pickle,file_pattern=kwargs['file_pattern'])
+            else:
+                self.update(temp_path_pickle)
+
 
         if os.path.isfile(path_settings):
             print('settings file found')
