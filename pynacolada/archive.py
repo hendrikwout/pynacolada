@@ -274,7 +274,7 @@ def apply_func_wrapper(
                 index_keys = ['variable','source','time','space']
                 index_output = []
                 for key in index_keys:
-                    if index_out.append(attributes_dataarrays_out[ifile][key])
+                    index_out.append(attributes_dataarrays_out[ifile][key])
 
                 dataarrays_out_already_available.append(index_out in archive_out.lib_dataarrays_index)
 
