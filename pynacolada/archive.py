@@ -1528,7 +1528,10 @@ class archive (object):
         elif not os.path.isfile(path_settings):
             raise IOError('Settings file '+path_settings+ ' not found.')
         print(temp_path_pickle)
-        if (not os.path.isfile(temp_path_pickle)) or initialize_if_missing:
+        if os.path.isfile(temp_path_pickle):
+            self.path_pickle = temp_path_pickle
+
+        if (not os.path.isfile(temp_path_pickle)) and initialize_if_missing:
             if 'file_pattern' in kwargs.keys():
                 self.update(temp_path_pickle,file_pattern=kwargs['file_pattern'])
             else:
