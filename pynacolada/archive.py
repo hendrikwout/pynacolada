@@ -272,7 +272,7 @@ def apply_func_wrapper(
                     attributes_dataarrays_out[ifile][key] = value
 
                 index_keys = ['variable','source','time','space']
-                index_output = []
+                index_out = []
                 for key in index_keys:
                     index_out.append(attributes_dataarrays_out[ifile][key])
 
