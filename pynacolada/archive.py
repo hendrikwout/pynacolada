@@ -1526,10 +1526,10 @@ class archive (object):
         import pdb; pdb.set_trace()
         if path_settings is None:
             path_settings = temp_path_pickle+'.yaml'
-        elif not os.path.isfile(path_settings) and not initialize_if_missing:
+        elif not os.path.isfile(path_settings):
             raise IOError('Settings file '+path_settings+ ' not found.')
 
-        elif (not os.path.isfile(path_settings)) and initialize_if_missing:
+        if (not os.path.isfile(temp_path_pickle)) and initialize_if_missing:
             if 'file_pattern' in kwargs.keys():
                 self.update(temp_path_pickle,file_pattern=kwargs['file_pattern'])
             else:
