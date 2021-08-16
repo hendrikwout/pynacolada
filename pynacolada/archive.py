@@ -276,7 +276,7 @@ def apply_func_wrapper(
                 for key in index_keys:
                     index_out.append(attributes_dataarrays_out[ifile][key])
 
-                dataarrays_out_already_available.append(index_out == archive_out.lib_dataarrays.index)
+                dataarrays_out_already_available.append(tuple(index_out) in archive_out.lib_dataarrays.index)
 
                 if mode in ['numpy_output_to_disk_in_chunks', 'numpy_output_to_disk_no_chunks']:
                     if (archive_out.file_pattern is None):
@@ -286,7 +286,7 @@ def apply_func_wrapper(
                         zip(archive_out.file_pattern.split('"')[::2],
                             [attributes_dataarrays_out[ifile][key] for key in archive_out.file_pattern.split('"')[1::2]] + [
                                 '']))).ravel())
-
+                    import pdb; pdb.set_trace()
                     if filename_out in archive_out.lib_dataarrays.absolute_path.unique() and not (dataarrays_out_already_available[ifile]):
                         raise ValueError(
                             'filename ' + filename_out + ' already exists and not already managed/within the output archive. Consider revising the output file_pattern.')
