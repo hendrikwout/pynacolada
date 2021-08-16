@@ -7,6 +7,7 @@ import numpy as np
 import datetime as dt
 import itertools
 import yaml
+import logging
 import sys
 from tqdm import tqdm
 import tempfile
