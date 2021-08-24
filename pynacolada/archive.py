@@ -65,15 +65,10 @@ def apply_func_wrapper(
     """
     apply_groups_in_df = parse_to_dataframe(apply_groups_in)
     apply_groups_out_df = parse_to_dataframe(apply_groups_out)
-    print('START============apply_groups_in_df=======================')
-    print(apply_groups_in_df)
-    print('END============apply_groups_in_df=======================')
-
-
 
     divide_into_groups = []
     for name in lib_dataarrays.index.names:
-        if (name not in apply_groups_in_df.columns): # or (apply_groups_in_df[name].isna().sum() == 1):
+        if (name not in apply_groups_in_df.columns):
             divide_into_groups.append(name)
     for name in divide_into_groups_extra:
         if name not in divide_into_groups:
