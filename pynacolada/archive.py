@@ -287,7 +287,9 @@ def apply_func_wrapper(
                         zip(archive_out.file_pattern.split('"')[::2],
                             [attributes_dataarrays_out[ifile][key] for key in archive_out.file_pattern.split('"')[1::2]] + [
                                 '']))).ravel())
-                    if filename_out in archive_out.lib_dataarrays.absolute_path.unique() and not (dataarrays_out_already_available[ifile]):
+                    # index_out =
+                    # if archive_out.lib_dataarrays.index[df['absolute_path'] == filename].tolist() == index_out
+                    if (filename_out in archive_out.lib_dataarrays.absolute_path.unique()) and (not dataarrays_out_already_available[ifile]):
                         raise ValueError(
                             'filename ' + filename_out + ' already exists and not already managed/within the output archive. Consider revising the output file_pattern.')
                     filenames_out.append(filename_out)
@@ -460,22 +462,31 @@ class archive (object):
         for index,lib_dataarray in lib_dataarays_out.iterrows():
             archive_out.add_dataarray(self.dataarrays[index])
 
-    def delete_dataarrays_on_disk(self,query=None,update_pickle = True):
+    def remove(self,query=None,update_pickle = True,dataarrays=True,records=False):
+
+        if (not dataarrays) and records:
+            raise ValueError('the dataarrays on the disk is maintained by this archive.'
+            'Not removing them while removing them from the database will lead to orphaned files. Aborting... ')
+
         if query is not None:
             read_lib_dataarrays = self.lib_dataarrays.query(query).copy()
         else:
             read_lib_dataarrays = self.lib_dataarrays.copy()
         for idx,row in read_lib_dataarrays.iterrows():
-            CMD ='rm '+row.absolute_path
-            os.system(CMD)
-            # if 'available' not in self.lib_dataarrays.columns:
-            #     self.lib_dataarrays['available'] = ""
-            #     self.lib_dataarrays['available'] = True
-            self.lib_dataarrays.loc[idx]['available'] = False
+            if dataarrays:
+                CMD ='rm '+row.absolute_path
+                os.system(CMD)
+                # if 'available' not in self.lib_dataarrays.columns:
+                #     self.lib_dataarrays['available'] = ""
+                #     self.lib_dataarrays['available'] = True
+            if records:
+                self.lib_dataarrays = self.lib_dataarrays.drop(idx)
+            else:
+                self.lib_dataarrays.loc[idx]['available'] = False
         if update_pickle:
             self.update(force_overwrite_pickle =True)
 
-    def remove(self,index,delete_on_disk=False,update_pickle=True):
+    def remove_by_index(self,index,delete_on_disk=False,update_pickle=True):
         self.dataarrays[index].close()
         del self.dataarrays[index]
         if delete_on_disk:
@@ -487,7 +498,7 @@ class archive (object):
         if (self.lib_dataarrays.loc[index].absolute_path_as_cache is not None) and (np.isnan(self.lib_dataarrays.loc[index].absolute_path_as_cache == False)) :
             CMD = 'rm '+self.lib_dataarrays.loc[index].absolute_path_as_cache
             print('removing cached file:',CMD)
-            
+
         self.lib_dataarrays.drop(index=index,inplace=True)
 
 
@@ -498,7 +509,7 @@ class archive (object):
     def close(self,delete_archive=False):
         lib_dataarrays_temp = self.lib_dataarrays.copy()
         for index,columns in lib_dataarrays_temp.iterrows():
-            self.remove(index=index,delete_on_disk=(delete_archive==True))
+            self.remove_by_index(index=index,delete_on_disk=(delete_archive==True))
 
         del lib_dataarrays_temp
         if delete_archive:
@@ -913,7 +924,7 @@ class archive (object):
                   #      index_array_out_tuple_ordered =  tuple([attributes[ifile][key] for key in archive_out.lib_dataarrays.index.names])
                   #      if index_array_out_tuple_ordered in archive_out.dataarrays.keys():
                   #          print('forcing to overwrite data for ',index_array_out_tuple_ordered,)
-                  #          self.remove(index_array_out_tuple_ordered,delete_on_disk=True)
+                  #          self.remove_by_index(index_array_out_tuple_ordered,delete_on_disk=True)
                   #      ifile +=1
                   
 
@@ -1217,7 +1228,7 @@ class archive (object):
                   for ixr_out,filename_out in enumerate(filenames_out):
                       index_array_out_tuple_ordered =  tuple([attributes[ixr_out][key] for key in archive_out.lib_dataarrays.index.names])
                       if index_array_out_tuple_ordered in archive_out.dataarrays.keys():
-                          self.remove(index_array_out_tuple_ordered,delete_on_disk=True)
+                          self.remove_by_index(index_array_out_tuple_ordered,delete_on_disk=True)
                   
 
                   for filename_out in filenames_out:
@@ -1337,7 +1348,7 @@ class archive (object):
                 # # this should become part of a save procedure updating the attributes of the netcdf on disc
                 # if ('absolute_path' in row.keys()) and ('ncvariable' in row.keys()):
                 #     variable=idx[self.lib_dataarrays.index.names.index('variable')]
-                #     self.remove(idx)
+                #     self.remove_by_index(idx)
                 #     ncin = nc4.open_dataset(row['absolute_path'])
                 #     for attribute_key,attribute_value in extra_attributes.items():
                 #         ncin[idx[self.lib_dataarrays.index.names.index('variable')]].setncattr(attribute_key,attribute_value)
@@ -1356,7 +1367,7 @@ class archive (object):
                 # if ( ('absolute_path' in row.keys()) and (type(row['absolute_path']) == str)):
                 #     extra_attributes_plus_path['absolute_path'] =row['absolute_path']
 
-                self.remove(idx,update_pickle=False)
+                self.remove_by_index(idx,update_pickle=False)
                 self.add_dataarray(dataarray_temp,**attributes_temp)
 
         # for key,value in extra_attributes.items():
@@ -1404,7 +1415,7 @@ class archive (object):
  
                     os.system('rm '+fnout)
                     self.dataarrays[idx].to_netcdf(fnout);print('file written to: '+fnout)
-                    self.remove(idx,update_pickle=False)
+                    self.remove_by_index(idx,update_pickle=False)
                     self.add_dataarray(fnout)
                     #self.dataarrays[idx]
 
@@ -1606,7 +1617,7 @@ class archive (object):
             read_lib_dataarrays = self.lib_dataarrays.copy()
 
         for idx,columns in self.lib_dataarrays.iterrows():
-            self.remove(idx,update_pickle=False)
+            self.remove_by_index(idx,update_pickle=False)
         for idx,columns in read_lib_dataarrays.iterrows():
             absolute_path = None
             # import pdb; pdb.set_trace()
