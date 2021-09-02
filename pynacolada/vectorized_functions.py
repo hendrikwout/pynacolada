@@ -8,6 +8,94 @@ import math
 import numpy as np
 from scipy.spatial import Delaunay
 
+
+def extend_grid_longitude(longitude,x=None):
+    """
+    purpose: extend longitude to have a full -180 to 360 domain. This makes selection of locations and domains more easy.
+
+    """
+
+    select_longitude_left = longitude >= 170
+    select_longitude_right = longitude < 10.
+    longitude_extended = np.concatenate(
+        [longitude[select_longitude_left] - 360.,
+         longitude,
+         longitude[select_longitude_right] + 360.
+         ],
+        axis=-1)
+    if x is not None:
+        x_extended = np.concatenate([
+            x[..., select_longitude_left],
+            x,
+            x[..., select_longitude_right]],
+            axis=-1)
+        return longitude_extended,x_extended
+    else:
+        return longitude_extended
+
+def extend_crop_interpolate(x, meshgrid_input,meshgrid_output):
+    """
+    purpose: perform area selection. One can always choose longitude ranges between -180 and 360 degrees.
+
+    """
+
+    grid_input_latitude_spacing = np.abs(np.median(np.ravel(meshgrid_input[0][1:] - meshgrid_input[0][:-1])))
+    grid_input_longitude_spacing = np.abs(np.median(np.ravel(meshgrid_input[1][:,1:] - meshgrid_input[1][:,:-1])))
+
+    latitude_bottom = np.min(meshgrid_output[0]) - grid_input_latitude_spacing
+    latitude_top = np.max(meshgrid_output[0]) + grid_coarse_latitude_spacing
+
+    longitude_left = np.min(meshgrid_output[1]) - grid_coarse_longitude_spacing
+    longitude_right = np.max(meshgrid_output[1]) + grid_coarse_longitude_spacing
+
+    longitude_extended,longitude_extended_index = \
+        extend_grid_longitude(longitude,np.arange(len(longitude)))
+
+    longitude_crop_index = np.where(
+        (longitude_extended >= longitude_left) &
+        (longitude_extended <= longitude_right)
+    )[0]
+    longitude_crop = longitude_extended[longitude_crop_index]
+
+    latitude_crop_index = np.where(
+        (latitude >= latitude_bottom) &
+        (latitude <= latitude_top)
+    )[0]
+    latitude_crop = latitude[latitude_crop_index]
+
+    logging.warning(
+        'Warning. Making a small gridshift to avoid problems in case of coinciding input and output grid locations in the Delaunay triangulation')
+    latitude_crop_workaround = np.clip(np.float64(latitude_crop + 0.000001814),
+                                       -90., 90)
+    longitude_crop_workaround = np.float64(longitude_crop + 0.00001612)
+    meshgrid_coarse_crop = np.meshgrid(
+        latitude_crop_workaround,
+        longitude_crop_workaround,
+        indexing='ij')
+
+    # x_crop = x[...,latitude_crop_index,:][...,longitude_crop_index]
+    x_crop = x.take(latitude_crop_index, axis=-2).take(longitude_crop_index,
+                                                       axis=-1)
+    x_interpolated = pcd.vectorized_functions.interpolate_delaunay_linear(
+        x_crop,
+        meshgrid_coarse_crop,
+        meshgrid_fine,
+        remove_duplicate_points=True,
+        dropnans=True,
+        add_newaxes=False
+    )
+    # x_interpolated = pcd.vectorized_functions.interpolate_delaunay_linear(
+    #     x_extended,
+    #     meshgrid_coarse,
+    #     meshgrid_fine,
+    #     remove_duplicate_points=True,
+    #     dropnans=True,
+    #     add_newaxes=False )
+    return x_interpolate
+
+
+
+
 def moving_average(a, n=3) : 
     cumsum = np.cumsum(a, dtype=float,axis=-1) 
     ret = np.zeros_like(cumsum)*np.nan 
