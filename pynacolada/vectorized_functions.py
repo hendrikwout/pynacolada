@@ -6,7 +6,9 @@ purpose: vectorized functions that can be used with apply_func
 
 import math
 import numpy as np
+import logging
 from scipy.spatial import Delaunay
+
 
 
 def extend_grid_longitude(longitude,x=None):
@@ -39,7 +41,6 @@ def extend_crop_interpolate(x, grid_input,grid_output):
 
     """
 
-    import pdb; pdb.set_trace()
     grid_input_latitude_spacing = np.abs(np.median(np.ravel(grid_input[0][1:] - grid_input[0][:-1])))
     grid_input_longitude_spacing = np.abs(np.median(np.ravel(grid_input[1][...,1:] - grid_input[1][...,:-1])))
 
@@ -59,10 +60,10 @@ def extend_crop_interpolate(x, grid_input,grid_output):
     longitude_crop = longitude_extended[longitude_crop_index]
 
     latitude_crop_index = np.where(
-        (latitude >= latitude_bottom) &
-        (latitude <= latitude_top)
+        (grid_input[0] >= latitude_bottom) &
+        (grid_input[0] <= latitude_top)
     )[0]
-    latitude_crop = latitude[latitude_crop_index]
+    latitude_crop = grid_input[0][latitude_crop_index]
 
     logging.warning(
         'Warning. Making a small gridshift to avoid problems in case of coinciding input and output grid locations in the Delaunay triangulation')
@@ -76,16 +77,17 @@ def extend_crop_interpolate(x, grid_input,grid_output):
 
 
     # x_crop = x[...,latitude_crop_index,:][...,longitude_crop_index]
-    x_crop = x.isel(latitude=latitude_crop_index, longitude=longitude_crop_index,
-                                                       axis=-1).values
-    x_interpolated = pcd.vectorized_functions.interpolate_delaunay_linear(
-        x_crop,
+    x_crop = x.isel(latitude=latitude_crop_index, longitude=longitude_crop_index).values
+    import pdb; pdb.set_trace()
+    x_interpolated = interpolate_delaunay_linear(
+        x_crop[np.newaxis,...],
         meshgrid_input_crop,
         np.meshgrid(*grid_output,indexing='ij'),
         remove_duplicate_points=True,
         dropnans=True,
         add_newaxes=False
     )
+    import pdb; pdb.set_trace()
     # x_interpolated = pcd.vectorized_functions.interpolate_delaunay_linear(
     #     x_extended,
     #     meshgrid_coarse,
