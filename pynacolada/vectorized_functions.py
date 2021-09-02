@@ -44,10 +44,10 @@ def extend_crop_interpolate(x, meshgrid_input,meshgrid_output):
     grid_input_longitude_spacing = np.abs(np.median(np.ravel(meshgrid_input[1][:,1:] - meshgrid_input[1][:,:-1])))
 
     latitude_bottom = np.min(meshgrid_output[0]) - grid_input_latitude_spacing
-    latitude_top = np.max(meshgrid_output[0]) + grid_coarse_latitude_spacing
+    latitude_top = np.max(meshgrid_output[0]) + grid_input_latitude_spacing
 
-    longitude_left = np.min(meshgrid_output[1]) - grid_coarse_longitude_spacing
-    longitude_right = np.max(meshgrid_output[1]) + grid_coarse_longitude_spacing
+    longitude_left = np.min(meshgrid_output[1]) - grid_input_longitude_spacing
+    longitude_right = np.max(meshgrid_output[1]) + grid_input_longitude_spacing
 
     longitude_extended,longitude_extended_index = \
         extend_grid_longitude(longitude,np.arange(len(longitude)))
@@ -69,7 +69,7 @@ def extend_crop_interpolate(x, meshgrid_input,meshgrid_output):
     latitude_crop_workaround = np.clip(np.float64(latitude_crop + 0.000001814),
                                        -90., 90)
     longitude_crop_workaround = np.float64(longitude_crop + 0.00001612)
-    meshgrid_coarse_crop = np.meshgrid(
+    meshgrid_input_crop = np.meshgrid(
         latitude_crop_workaround,
         longitude_crop_workaround,
         indexing='ij')
@@ -79,7 +79,7 @@ def extend_crop_interpolate(x, meshgrid_input,meshgrid_output):
                                                        axis=-1)
     x_interpolated = pcd.vectorized_functions.interpolate_delaunay_linear(
         x_crop,
-        meshgrid_coarse_crop,
+        meshgrid_input_crop,
         meshgrid_fine,
         remove_duplicate_points=True,
         dropnans=True,
