@@ -78,7 +78,6 @@ def extend_crop_interpolate(x, grid_input,grid_output):
 
     # x_crop = x[...,latitude_crop_index,:][...,longitude_crop_index]
     x_crop = x.isel(latitude=latitude_crop_index, longitude=longitude_crop_index).values
-    import pdb; pdb.set_trace()
     x_interpolated = interpolate_delaunay_linear(
         x_crop[np.newaxis,...],
         meshgrid_input_crop,
