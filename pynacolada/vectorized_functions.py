@@ -39,6 +39,7 @@ def extend_crop_interpolate(x, meshgrid_input,meshgrid_output):
 
     """
 
+    import pdb; pdb.set_trace()
     grid_input_latitude_spacing = np.abs(np.median(np.ravel(meshgrid_input[0][1:] - meshgrid_input[0][:-1])))
     grid_input_longitude_spacing = np.abs(np.median(np.ravel(meshgrid_input[1][:,1:] - meshgrid_input[1][:,:-1])))
 
@@ -74,7 +75,6 @@ def extend_crop_interpolate(x, meshgrid_input,meshgrid_output):
         indexing='ij')
 
     # x_crop = x[...,latitude_crop_index,:][...,longitude_crop_index]
-    import pdb; pdb.set_trace()
     x_crop = x.take(latitude_crop_index, axis=-2).take(longitude_crop_index,
                                                        axis=-1)
     x_interpolated = pcd.vectorized_functions.interpolate_delaunay_linear(
