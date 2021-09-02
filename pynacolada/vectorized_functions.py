@@ -33,24 +33,24 @@ def extend_grid_longitude(longitude,x=None):
     else:
         return longitude_extended
 
-def extend_crop_interpolate(x, meshgrid_input,meshgrid_output):
+def extend_crop_interpolate(x, grid_input,grid_output):
     """
     purpose: perform area selection. One can always choose longitude ranges between -180 and 360 degrees.
 
     """
 
     import pdb; pdb.set_trace()
-    grid_input_latitude_spacing = np.abs(np.median(np.ravel(meshgrid_input[0][1:] - meshgrid_input[0][:-1])))
-    grid_input_longitude_spacing = np.abs(np.median(np.ravel(meshgrid_input[1][:,1:] - meshgrid_input[1][:,:-1])))
+    grid_input_latitude_spacing = np.abs(np.median(np.ravel(grid_input[0][1:] - grid_input[0][:-1])))
+    grid_input_longitude_spacing = np.abs(np.median(np.ravel(grid_input[1][...,1:] - grid_input[1][...,:-1])))
 
-    latitude_bottom = np.min(meshgrid_output[0]) - grid_input_latitude_spacing
-    latitude_top = np.max(meshgrid_output[0]) + grid_input_latitude_spacing
+    latitude_bottom = np.min(grid_output[0]) - grid_input_latitude_spacing
+    latitude_top = np.max(grid_output[0]) + grid_input_latitude_spacing
 
-    longitude_left = np.min(meshgrid_output[1]) - grid_input_longitude_spacing
-    longitude_right = np.max(meshgrid_output[1]) + grid_input_longitude_spacing
+    longitude_left = np.min(grid_output[1]) - grid_input_longitude_spacing
+    longitude_right = np.max(grid_output[1]) + grid_input_longitude_spacing
 
     longitude_extended,longitude_extended_index = \
-        extend_grid_longitude(longitude,np.arange(len(longitude)))
+        extend_grid_longitude(grid_input[1],np.arange(len(grid_input[1])))
 
     longitude_crop_index = np.where(
         (longitude_extended >= longitude_left) &
@@ -74,13 +74,14 @@ def extend_crop_interpolate(x, meshgrid_input,meshgrid_output):
         longitude_crop_workaround,
         indexing='ij')
 
+
     # x_crop = x[...,latitude_crop_index,:][...,longitude_crop_index]
-    x_crop = x.take(latitude_crop_index, axis=-2).take(longitude_crop_index,
-                                                       axis=-1)
+    x_crop = x.isel(latitude=latitude_crop_index, longitude=longitude_crop_index,
+                                                       axis=-1).values
     x_interpolated = pcd.vectorized_functions.interpolate_delaunay_linear(
         x_crop,
         meshgrid_input_crop,
-        meshgrid_fine,
+        np.meshgrid(*grid_output,indexing='ij'),
         remove_duplicate_points=True,
         dropnans=True,
         add_newaxes=False
