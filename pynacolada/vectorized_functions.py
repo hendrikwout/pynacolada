@@ -67,7 +67,7 @@ def extend_crop_interpolate(x, grid_input,grid_output):
 
     # x_crop = x[...,latitude_crop_index,:][...,longitude_crop_index]
     x_crop = x.isel(latitude=latitude_crop_index, longitude=longitude_crop_index).values
-    impo
+    import pdb; pdb.set_trace()
     if (len(grid_output[0] == len(latitude_crop))) and \
        (not np.any(np.abs(grid_output[0] - latitude_crop) >
                     (grid_input_latitude_spacing/10.))) and \
