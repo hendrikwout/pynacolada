@@ -67,12 +67,12 @@ def extend_crop_interpolate(x, grid_input,grid_output):
 
     # x_crop = x[...,latitude_crop_index,:][...,longitude_crop_index]
     x_crop = x.isel(latitude=latitude_crop_index, longitude=longitude_crop_index).values
-    if (len(grid_output[0] == len(latitude_crop)) and \
-            (not np.any(np.abs(grid_output[0] - latitude_crop.values) >
-                         (grid_input_latitude_spacing/10.))) and
-       (len(grid_output[1] == len(longitude_crop)) and \
-            ( not np.any(np.abs(grid_output[0] - longitude_crop.values) >
-                          (grid_input_longitude_spacing / 10.))):
+    if (len(grid_output[0] == len(latitude_crop))) and \
+       (not np.any(np.abs(grid_output[0] - latitude_crop.values) >
+                    (grid_input_latitude_spacing/10.))) and \
+       (len(grid_output[1] == len(longitude_crop))) and \
+       ( not np.any(np.abs(grid_output[0] - longitude_crop.values) >
+                     (grid_input_longitude_spacing / 10.))):
        logging.info('output grid is identical to cropped input grid. '
        'Skipping interpolation and returning cropped field directly.')
         x_interpolated = x_crop
