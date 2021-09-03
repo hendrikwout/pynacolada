@@ -65,9 +65,9 @@ def extend_crop_interpolate(x, grid_input,grid_output):
     latitude_crop = grid_input[0][latitude_crop_index]
 
 
+    import pdb; pdb.set_trace()
     # x_crop = x[...,latitude_crop_index,:][...,longitude_crop_index]
     x_crop = x.isel(latitude=latitude_crop_index, longitude=longitude_crop_index).values
-    import pdb; pdb.set_trace()
     if (len(grid_output[0]) == len(latitude_crop)) and \
        (not np.any(np.abs(grid_output[0] - latitude_crop) >
                     (grid_input_latitude_spacing/10.))) and \
@@ -97,7 +97,6 @@ def extend_crop_interpolate(x, grid_input,grid_output):
             dropnans=True,
             add_newaxes=False
         )[0]
-    import pdb; pdb.set_trace()
     # x_interpolated = pcd.vectorized_functions.interpolate_delaunay_linear(
     #     x_extended,
     #     meshgrid_coarse,
@@ -227,11 +226,9 @@ def interpolate_delaunay_linear(values,xylist,uvlist,remove_duplicate_points=Fal
         outeraxisshaperavel *= facdim
     valuesstack.shape = [outeraxisshaperavel] + [valuesstack.shape[-1]] 
     
-    # import pdb; pdb.set_trace()
     valout = np.einsum('pnj,nj->pn', np.take(valuesstack, vtx,axis=-1), wts)
     valout[:,np.any(wts < 0, axis=1)] = fill_value
     valout.shape = [element for element in values.shape[:-len(xylist[0].shape)]]+[element for element in uvshape ]
-    # import pdb;pdb.set_trace()
 
     #new axis are added to conform the output to 4 dimenions
     if add_newaxes:
