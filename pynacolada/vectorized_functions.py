@@ -38,17 +38,16 @@ def extend_grid_longitude(longitude,x=None):
 def extend_crop_interpolate(x, grid_input,grid_output):
     """
     purpose: perform area selection. One can always choose longitude ranges between -180 and 360 degrees.
-
     """
 
     grid_input_latitude_spacing = np.abs(np.median(np.ravel(grid_input[0][1:] - grid_input[0][:-1])))
     grid_input_longitude_spacing = np.abs(np.median(np.ravel(grid_input[1][...,1:] - grid_input[1][...,:-1])))
 
-    latitude_bottom = np.min(grid_output[0]) - grid_input_latitude_spacing
-    latitude_top = np.max(grid_output[0]) + grid_input_latitude_spacing
+    latitude_bottom = np.min(grid_output[0]) - grid_input_latitude_spacing/2.
+    latitude_top = np.max(grid_output[0]) + grid_input_latitude_spacing/2.
 
-    longitude_left = np.min(grid_output[1]) - grid_input_longitude_spacing
-    longitude_right = np.max(grid_output[1]) + grid_input_longitude_spacing
+    longitude_left = np.min(grid_output[1]) - grid_input_longitude_spacing/2.
+    longitude_right = np.max(grid_output[1]) + grid_input_longitude_spacing/2.
 
     longitude_extended,longitude_extended_index = \
         extend_grid_longitude(grid_input[1],np.arange(len(grid_input[1])))
@@ -65,27 +64,36 @@ def extend_crop_interpolate(x, grid_input,grid_output):
     )[0]
     latitude_crop = grid_input[0][latitude_crop_index]
 
-    logging.warning(
-        'Warning. Making a small gridshift to avoid problems in case of coinciding input and output grid locations in the Delaunay triangulation')
-    latitude_crop_workaround = np.clip(np.float64(latitude_crop + 0.000001814),
-                                       -90., 90)
-    longitude_crop_workaround = np.float64(longitude_crop + 0.00001612)
-    meshgrid_input_crop = np.meshgrid(
-        latitude_crop_workaround,
-        longitude_crop_workaround,
-        indexing='ij')
-
 
     # x_crop = x[...,latitude_crop_index,:][...,longitude_crop_index]
     x_crop = x.isel(latitude=latitude_crop_index, longitude=longitude_crop_index).values
-    x_interpolated = interpolate_delaunay_linear(
-        x_crop[np.newaxis,...],
-        meshgrid_input_crop,
-        np.meshgrid(*grid_output,indexing='ij'),
-        remove_duplicate_points=True,
-        dropnans=True,
-        add_newaxes=False
-    )
+    if (len(grid_output[0] == len(latitude_crop)) and \
+            (not np.any(np.abs(grid_output[0] - latitude_crop.values) > (grid_input_latitude_spacing/10.))) and
+       (len(grid_output[1] == len(longitude_crop)) and \
+            ( not np.any(np.abs(grid_output[0] - longitude_crop.values) > (grid_input_longitude_spacing / 10.))):
+       logging.info('output grid is identical to cropped input grid. '
+       'Skipping interpolation and returning cropped field directly.')
+        x_interpolated = x_crop
+    else:
+        logging.warning(
+        'Warning. Making a small gridshift to avoid problems in case of coinciding input and output grid locations in the Delaunay triangulation')
+        latitude_crop_workaround = np.clip(np.float64(latitude_crop + 0.000001814),
+        -90., 90)
+        longitude_crop_workaround = np.float64(longitude_crop + 0.00001612)
+        meshgrid_input_crop = np.meshgrid(
+           latitude_crop_workaround,
+           longitude_crop_workaround,
+           indexing='ij'
+        )
+
+        x_interpolated = interpolate_delaunay_linear(
+            x_crop[np.newaxis,...],
+            meshgrid_input_crop,
+            np.meshgrid(*grid_output,indexing='ij'),
+            remove_duplicate_points=True,
+            dropnans=True,
+            add_newaxes=False
+        )[0]
     import pdb; pdb.set_trace()
     # x_interpolated = pcd.vectorized_functions.interpolate_delaunay_linear(
     #     x_extended,
@@ -94,7 +102,7 @@ def extend_crop_interpolate(x, grid_input,grid_output):
     #     remove_duplicate_points=True,
     #     dropnans=True,
     #     add_newaxes=False )
-    return x_interpolate
+    return x_interpolated
 
 
 
