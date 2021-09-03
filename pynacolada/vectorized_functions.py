@@ -73,7 +73,7 @@ def extend_crop_interpolate(x, grid_input,grid_output):
        (len(grid_output[1] == len(longitude_crop))) and \
        ( not np.any(np.abs(grid_output[0] - longitude_crop.values) >
                      (grid_input_longitude_spacing / 10.))):
-       logging.info('output grid is identical to cropped input grid. '
+        logging.info('output grid is identical to cropped input grid. '
        'Skipping interpolation and returning cropped field directly.')
         x_interpolated = x_crop
     else:
