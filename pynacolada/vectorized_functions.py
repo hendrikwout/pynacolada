@@ -19,19 +19,29 @@ def extend_grid_longitude(longitude,x=None):
     """
 
     select_longitude_left = longitude >= 170
-    select_longitude_right = longitude < 10.
-    longitude_extended = np.concatenate(
-        [longitude[select_longitude_left] - 360.,
-         longitude,
-         longitude[select_longitude_right] + 360.
-         ],
-        axis=-1)
+    longitude_list = []
     if x is not None:
-        x_extended = np.concatenate([
-            x[..., select_longitude_left],
-            x,
-            x[..., select_longitude_right]],
-            axis=-1)
+        x_list = []
+    longitude_left =longitude[select_longitude_left] - 360
+    if longitude_left.shape != (0,):
+        longitude_list.append(longitude_left)
+        if x is not None:
+            x_list.append(x[..., select_longitude_left])
+
+    longitude_list.append(longitude)
+    if x is not None:
+        x_list.append(x)
+
+    select_longitude_right = longitude < 10.
+    longitude_right =longitude[select_longitude_right] + 360
+    if longitude_right.shape != (0,):
+        longitude_list.append(longitude_right)
+        if x is not None:
+            x_list.append(x[..., select_longitude_right])
+
+    longitude_extended = np.concatenate( longitude_list, axis=-1)
+    if x is not None:
+        x_extended = np.concatenate(x_list, axis=-1)
         return longitude_extended,x_extended
     else:
         return longitude_extended
@@ -47,44 +57,71 @@ def extend_crop_interpolate(x, grid_input,grid_output,interpolation=True,return_
     grid_output_latitude_spacing = np.abs(np.median(np.ravel(grid_output[0][1:] - grid_output[0][:-1])))
     grid_output_longitude_spacing = np.abs(np.median(np.ravel(grid_output[1][...,1:] - grid_output[1][...,:-1])))
 
-    latitude_bottom = np.min(grid_output[0]) - grid_input_latitude_spacing + grid_output_latitude_spacing/2.
-    latitude_top = np.max(grid_output[0]) + grid_input_latitude_spacing - grid_output_latitude_spacing/2.
+    latitude_bottom_input = np.min(grid_output[0])- grid_input_latitude_spacing + grid_output_latitude_spacing/2.
+    latitude_top_input = np.max(grid_output[0]) + grid_input_latitude_spacing - grid_output_latitude_spacing/2
 
-    longitude_left = np.min(grid_output[1]) - grid_input_longitude_spacing/2.
-    longitude_right = np.max(grid_output[1]) + grid_input_longitude_spacing/2.
-
-    longitude_extended,longitude_extended_index = \
+    grid_input_longitude_extended,grid_input_longitude_extended_index = \
         extend_grid_longitude(grid_input[1],np.arange(len(grid_input[1])))
 
-    longitude_crop_index = np.where(
-        (longitude_extended >= longitude_left) &
-        (longitude_extended <= longitude_right)
-    )[0]
-    longitude_crop = longitude_extended[longitude_crop_index]
+    longitude_left_input  = np.min(grid_output[1]) - grid_input_longitude_spacing/2.
+    longitude_right_input = np.max(grid_output[1]) + grid_input_longitude_spacing/2.
 
-    latitude_crop_index = np.where(
-        (grid_input[0] >= latitude_bottom) &
-        (grid_input[0] <= latitude_top)
+    longitude_crop_input_index = np.where(
+        (grid_input_longitude_extended >= longitude_left_input) &
+        (grid_input_longitude_extended <= longitude_right_input)
     )[0]
-    latitude_crop = grid_input[0][latitude_crop_index]
+    longitude_crop_input = grid_input_longitude_extended[longitude_crop_input_index]
+
+    latitude_crop_input_index = np.where(
+        (grid_input[0] >= latitude_bottom_input) &
+        (grid_input[0] <= latitude_top_input)
+    )[0]
+    latitude_crop_input = grid_input[0][latitude_crop_input_index]
 
     if type(x) is xr.DataArray:
-    # x_crop = x[...,latitude_crop_index,:][...,longitude_crop_index]
-        x_crop = x.isel(latitude=latitude_crop_index, longitude=longitude_crop_index).values
+    # x_crop = x[...,latitude_crop_input_index,:][...,longitude_crop_input_index]
+        x_crop = x.isel(latitude=latitude_crop_input_index, longitude=longitude_crop_input_index).values
     else:
-        x_crop = x.take(latitude_crop_index,axis=-2).take(longitude_crop_index,axis=-1)
+        x_crop = x.take(latitude_crop_input_index,axis=-2).take(longitude_crop_input_index,axis=-1)
+
+    longitude_left_output = np.max([
+        np.min(longitude_crop_input),
+        np.min(grid_output[1]) - grid_input_longitude_spacing/2.
+    ])
+    longitude_right_output = np.min([
+        np.max(longitude_crop_input),
+        np.max(grid_output[1]) + grid_input_longitude_spacing/2.
+    ])
+
+    latitude_bottom_output = np.max([
+        np.min(latitude_crop_input),
+        np.min(grid_output[0])- grid_input_latitude_spacing + grid_output_latitude_spacing/2.
+    ])
+    latitude_top_output = np.min([
+        np.max(latitude_crop_input),
+        np.max(grid_output[0]) + grid_input_latitude_spacing - grid_output_latitude_spacing/2
+    ])
+
+    grid_output_revised = []
+    grid_output_revised.append(
+        grid_output[0][(grid_output[0] > latitude_bottom_output) & (grid_output[0] < latitude_top_output)]
+    )
+    grid_output_revised.append(
+        grid_output[1][(grid_output[1] > longitude_left_output) & (grid_output[1] < longitude_right_output)]
+    )
 
     if (not interpolation) or (\
-           (len(grid_output[0]) == len(latitude_crop)) and \
-           (not np.any(np.abs(grid_output[0] - latitude_crop) >
+           (len(grid_output_revised[0]) == len(latitude_crop_input)) and \
+           (not np.any(np.abs(grid_output_revised[0] - latitude_crop_input) >
                         (grid_input_latitude_spacing/10.))) and \
-           (len(grid_output[1]) == len(longitude_crop)) and \
-           ( not np.any(np.abs(grid_output[1] - longitude_crop) >
+           (len(grid_output_revised[1]) == len(longitude_crop_input)) and \
+           ( not np.any(np.abs(grid_output_revised[1] - longitude_crop_input) >
                          (grid_input_longitude_spacing / 10.)))
         ):
         if not interpolation:
             logging.info("I'm keeping original grid and spacing, so skipping "
                          "interpolation and returning cropped field directly.")
+            grid_output_revised = (latitude_crop_input,longitude_crop_input)
         else:
             logging.info('output grid is identical to cropped input grid. '
        'Skipping interpolation and returning cropped field directly.')
@@ -92,19 +129,20 @@ def extend_crop_interpolate(x, grid_input,grid_output,interpolation=True,return_
     else:
         logging.warning(
         'Warning. Making a small gridshift to avoid problems in case of coinciding input and output grid locations in the Delaunay triangulation')
-        latitude_crop_workaround = np.clip(np.float64(latitude_crop + 0.000001814),
+        latitude_crop_input_workaround = np.clip(np.float64(latitude_crop_input + 0.000001814),
         -90., 90)
-        longitude_crop_workaround = np.float64(longitude_crop + 0.00001612)
+        longitude_crop_input_workaround = np.float64(longitude_crop_input + 0.00001612)
         meshgrid_input_crop = np.meshgrid(
-           latitude_crop_workaround,
-           longitude_crop_workaround,
+           latitude_crop_input_workaround,
+           longitude_crop_input_workaround,
            indexing='ij'
         )
 
+        import pdb; pdb.set_trace()
         x_interpolated = interpolate_delaunay_linear(
             x_crop[np.newaxis,...],
             meshgrid_input_crop,
-            np.meshgrid(*grid_output,indexing='ij'),
+            np.meshgrid(*grid_output_revised,indexing='ij'),
             remove_duplicate_points=True,
             dropnans=True,
             add_newaxes=False
@@ -117,14 +155,17 @@ def extend_crop_interpolate(x, grid_input,grid_output,interpolation=True,return_
     #     dropnans=True,
     #     add_newaxes=False )
     if return_grid_output:
-        return x_interpolated,(latitude_crop,longitude_crop)
+        return x_interpolated,grid_output_revised#(latitude_output,longitude_output)
     else:
+        if (len(grid_output_revised[0]) != len(grid_output[0])) or \
+                np.any(grid_output_revised[0] != grid_output[0]) or \
+           (len(grid_output_revised[1]) != len(grid_output[1])) or \
+                np.any(grid_output_revised[1] != grid_output[1]):
+            raise ValueError('Predifined output grid is different from actual output grid, '
+                             'so you may need that output. Please set return_output_grid to true.')
         return x_interpolated
 
-
-
-
-def moving_average(a, n=3) : 
+def moving_average(a, n=3) :
     cumsum = np.cumsum(a, dtype=float,axis=-1) 
     ret = np.zeros_like(cumsum)*np.nan 
     ret[...,math.ceil(n/2):math.ceil(-n/2)] = cumsum[...,n:] - cumsum[...,:-n] 
