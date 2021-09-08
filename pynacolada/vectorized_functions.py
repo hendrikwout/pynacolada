@@ -46,9 +46,9 @@ def extend_grid_longitude(longitude,x=None):
     else:
         return longitude_extended
 
-def extend_crop_interpolate(x, grid_input,grid_output,interpolation=True,return_grid_output=False):
+def extend_crop_interpolate(x, grid_input,grid_output,interpolation=True,return_grid_output=False,debug=False):
     """
-    purpose: perform area selection. One can always choose longitude ranges between -180 and 360 degrees.
+    purpose: perform area cropping,. One can always choose longitude ranges between -180 and 360 degrees.
     """
 
     grid_input_latitude_spacing = np.abs(np.median(np.ravel(grid_input[0][1:] - grid_input[0][:-1])))
@@ -57,14 +57,14 @@ def extend_crop_interpolate(x, grid_input,grid_output,interpolation=True,return_
     grid_output_latitude_spacing = np.abs(np.median(np.ravel(grid_output[0][1:] - grid_output[0][:-1])))
     grid_output_longitude_spacing = np.abs(np.median(np.ravel(grid_output[1][...,1:] - grid_output[1][...,:-1])))
 
-    latitude_bottom_input = np.min(grid_output[0])- grid_input_latitude_spacing + grid_output_latitude_spacing/2.
-    latitude_top_input = np.max(grid_output[0]) + grid_input_latitude_spacing - grid_output_latitude_spacing/2
+    latitude_bottom_input = np.min(grid_output[0]) - grid_input_latitude_spacing #+ grid_output_latitude_spacing/2.
+    latitude_top_input = np.max(grid_output[0]) + grid_input_latitude_spacing #- grid_output_latitude_spacing/2.
 
     grid_input_longitude_extended,grid_input_longitude_extended_index = \
         extend_grid_longitude(grid_input[1],np.arange(len(grid_input[1])))
 
-    longitude_left_input  = np.min(grid_output[1]) - grid_input_longitude_spacing/2.
-    longitude_right_input = np.max(grid_output[1]) + grid_input_longitude_spacing/2.
+    longitude_left_input  = np.min(grid_output[1]) - grid_input_longitude_spacing #+ grid_output_longitude_spacing/2.
+    longitude_right_input = np.max(grid_output[1]) + grid_input_longitude_spacing #- grid_output_longitude_spacing/2.
 
     longitude_crop_input_index = np.where(
         (grid_input_longitude_extended >= longitude_left_input) &
@@ -84,22 +84,24 @@ def extend_crop_interpolate(x, grid_input,grid_output,interpolation=True,return_
     else:
         x_crop = x.take(latitude_crop_input_index,axis=-2).take(longitude_crop_input_index,axis=-1)
 
+
+
     longitude_left_output = np.max([
         np.min(longitude_crop_input),
-        np.min(grid_output[1]) - grid_input_longitude_spacing/2.
+        np.min(grid_output[1]) - grid_output_longitude_spacing/2.
     ])
     longitude_right_output = np.min([
         np.max(longitude_crop_input),
-        np.max(grid_output[1]) + grid_input_longitude_spacing/2.
+        np.max(grid_output[1]) + grid_output_longitude_spacing/2.
     ])
 
     latitude_bottom_output = np.max([
         np.min(latitude_crop_input),
-        np.min(grid_output[0])- grid_input_latitude_spacing + grid_output_latitude_spacing/2.
+        np.min(grid_output[0]) - grid_output_latitude_spacing/2. #grid_input_latitude_spacing #+ grid_output_latitude_spacing/2.
     ])
     latitude_top_output = np.min([
         np.max(latitude_crop_input),
-        np.max(grid_output[0]) + grid_input_latitude_spacing - grid_output_latitude_spacing/2
+        np.max(grid_output[0]) + grid_output_latitude_spacing/2. #grid_input_latitude_spacing #- grid_output_latitude_spacing/2
     ])
 
     grid_output_revised = []
@@ -138,15 +140,18 @@ def extend_crop_interpolate(x, grid_input,grid_output,interpolation=True,return_
            indexing='ij'
         )
 
-        import pdb; pdb.set_trace()
+        if len(x_crop.shape) == 2:
+            x_crop = x_crop[np.newaxis]
         x_interpolated = interpolate_delaunay_linear(
-            x_crop[np.newaxis,...],
+            x_crop,
             meshgrid_input_crop,
             np.meshgrid(*grid_output_revised,indexing='ij'),
             remove_duplicate_points=True,
             dropnans=True,
             add_newaxes=False
         )[0]
+        if debug:
+            import pdb; pdb.set_trace()
     # x_interpolated = pcd.vectorized_functions.interpolate_delaunay_linear(
     #     x_extended,
     #     meshgrid_coarse,
