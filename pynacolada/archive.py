@@ -297,7 +297,7 @@ def apply_func_wrapper(
                 ifile += 1
             all_dataarrays_out_already_available = np.prod(dataarrays_out_already_available)
             if all_dataarrays_out_already_available and not force_recalculate:
-                logging.info('All output data is already available in the output archive and force_recalculate is switched False. Skipping group',idx)
+                logging.info('All output data is already available in the output archive and force_recalculate is switched False. Skipping group "'+str(idx)+'"')
             else:
                 if force_recalculate and all_dataarrays_out_already_available:
                     logging.info('all output dataarrays were available but force_recalulate is set True, so I force recaculation')
