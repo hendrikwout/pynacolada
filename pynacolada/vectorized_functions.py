@@ -46,9 +46,22 @@ def extend_grid_longitude(longitude,x=None):
     else:
         return longitude_extended
 
-def extend_crop_interpolate(x, grid_input,grid_output,interpolation=True,return_grid_output=False,debug=False):
+def extend_crop_interpolate(
+        x,
+        grid_input,
+        grid_output,
+        interpolation=True,
+        return_grid_output=False,
+        debug=False,
+        border_pixels=5
+    ):
     """
-    purpose: perform area cropping,. One can always choose longitude ranges between -180 and 360 degrees.
+    purpose:
+        perform area cropping. But also auto-extending so that
+        one can always choose longitude ranges between -180 and 360 degrees.
+
+    input arguments:
+        border_pixels: include extra number of pixels at the borders of the domain to ensure consistent interpolation
     """
 
     grid_input_latitude_spacing = np.abs(np.median(np.ravel(grid_input[0][1:] - grid_input[0][:-1])))
@@ -57,14 +70,15 @@ def extend_crop_interpolate(x, grid_input,grid_output,interpolation=True,return_
     grid_output_latitude_spacing = np.abs(np.median(np.ravel(grid_output[0][1:] - grid_output[0][:-1])))
     grid_output_longitude_spacing = np.abs(np.median(np.ravel(grid_output[1][...,1:] - grid_output[1][...,:-1])))
 
-    latitude_bottom_input = np.min(grid_output[0]) - grid_input_latitude_spacing #+ grid_output_latitude_spacing/2.
-    latitude_top_input = np.max(grid_output[0]) + grid_input_latitude_spacing #- grid_output_latitude_spacing/2.
+
+    latitude_bottom_input = np.min(grid_output[0]) - grid_input_latitude_spacing*border_pixels #+ grid_output_latitude_spacing/2.
+    latitude_top_input = np.max(grid_output[0]) + grid_input_latitude_spacing*border_pixels #- grid_output_latitude_spacing/2.
 
     grid_input_longitude_extended,grid_input_longitude_extended_index = \
         extend_grid_longitude(grid_input[1],np.arange(len(grid_input[1])))
 
-    longitude_left_input  = np.min(grid_output[1]) - grid_input_longitude_spacing #+ grid_output_longitude_spacing/2.
-    longitude_right_input = np.max(grid_output[1]) + grid_input_longitude_spacing #- grid_output_longitude_spacing/2.
+    longitude_left_input  = np.min(grid_output[1]) - grid_input_longitude_spacing*border_pixels #+ grid_output_longitude_spacing/2.
+    longitude_right_input = np.max(grid_output[1]) + grid_input_longitude_spacing*border_pixels #- grid_output_longitude_spacing/2.
 
     longitude_crop_input_index = np.where(
         (grid_input_longitude_extended >= longitude_left_input) &
