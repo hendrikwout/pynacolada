@@ -12,7 +12,7 @@ import xarray as xr
 
 
 
-def extend_grid_longitude(longitude,x=None):
+def extend_grid_longitude(longitude,x=None,return_index=False):
     """
     purpose: extend longitude to have a full -180 to 360 domain. This makes selection of locations and domains more easy.
 
@@ -22,6 +22,12 @@ def extend_grid_longitude(longitude,x=None):
     longitude_list = []
     if x is not None:
         x_list = []
+        x_list = []
+
+    longitude_index_list = []
+    select_longitude_left_index = np.where(select_longitude_left)[0]
+    longitude_index_list.append(select_longitude_left_index)
+
     longitude_left =longitude[select_longitude_left] - 360
     if longitude_left.shape != (0,):
         longitude_list.append(longitude_left)
@@ -32,6 +38,8 @@ def extend_grid_longitude(longitude,x=None):
     if x is not None:
         x_list.append(x)
 
+    longitude_index_list.append(np.array(range(len(longitude))))
+
     select_longitude_right = longitude < 10.
     longitude_right =longitude[select_longitude_right] + 360
     if longitude_right.shape != (0,):
@@ -39,12 +47,26 @@ def extend_grid_longitude(longitude,x=None):
         if x is not None:
             x_list.append(x[..., select_longitude_right])
 
+    select_longitude_right_index = np.where(select_longitude_right)[0]
+    longitude_index_list.append(select_longitude_right_index)
+
     longitude_extended = np.concatenate( longitude_list, axis=-1)
+    longitude_index_extended = np.concatenate( longitude_list, axis=-1)
+    output = [longitude_extended,]
+
     if x is not None:
         x_extended = np.concatenate(x_list, axis=-1)
-        return longitude_extended,x_extended
+        output.append(x_extended)
+
+    if return_index == True:
+        longitude_extended_index = np.concatenate(longitude_index_list, axis=-1)
+        output.append(longitude_extended_index)
+
+    if len(output) >1:
+        return tuple(output)
     else:
-        return longitude_extended
+        return output[0]
+
 
 def extend_crop_interpolate(
         x,
@@ -70,21 +92,23 @@ def extend_crop_interpolate(
     grid_output_latitude_spacing = np.abs(np.median(np.ravel(grid_output[0][1:] - grid_output[0][:-1])))
     grid_output_longitude_spacing = np.abs(np.median(np.ravel(grid_output[1][...,1:] - grid_output[1][...,:-1])))
 
-
     latitude_bottom_input = np.min(grid_output[0]) - grid_input_latitude_spacing*border_pixels #+ grid_output_latitude_spacing/2.
     latitude_top_input = np.max(grid_output[0]) + grid_input_latitude_spacing*border_pixels #- grid_output_latitude_spacing/2.
 
     grid_input_longitude_extended,grid_input_longitude_extended_index = \
-        extend_grid_longitude(grid_input[1],np.arange(len(grid_input[1])))
+        extend_grid_longitude(grid_input[1],return_index=True)
 
     longitude_left_input  = np.min(grid_output[1]) - grid_input_longitude_spacing*border_pixels #+ grid_output_longitude_spacing/2.
     longitude_right_input = np.max(grid_output[1]) + grid_input_longitude_spacing*border_pixels #- grid_output_longitude_spacing/2.
 
-    longitude_crop_input_index = np.where(
-        (grid_input_longitude_extended >= longitude_left_input) &
+    select_longitude_crop_input_index = \
+        (grid_input_longitude_extended >= longitude_left_input) & \
         (grid_input_longitude_extended <= longitude_right_input)
-    )[0]
-    longitude_crop_input = grid_input_longitude_extended[longitude_crop_input_index]
+
+    longitude_crop_input_index = \
+        grid_input_longitude_extended_index[ select_longitude_crop_input_index ]
+
+    longitude_crop_input = grid_input_longitude_extended[select_longitude_crop_input_index]
 
     latitude_crop_input_index = np.where(
         (grid_input[0] >= latitude_bottom_input) &
@@ -97,7 +121,6 @@ def extend_crop_interpolate(
         x_crop = x.isel(latitude=latitude_crop_input_index, longitude=longitude_crop_input_index).values
     else:
         x_crop = x.take(latitude_crop_input_index,axis=-2).take(longitude_crop_input_index,axis=-1)
-
 
 
     longitude_left_output = np.max([
@@ -343,7 +366,6 @@ def lookup_nearest(x_fix, y_fix, x_var):
     #     x_fix.reshape(list(x_fix.shape[:])+[1])-\
     #     x_var.reshape(list(x_var.shape[:-1])+[1,x_var.shape[-1]]) # 1,1,1001,151
     distances = np.abs(x_fix - np.expand_dims(x_var,axis=-1))
-
 
     x_indices_closest = np.expand_dims(np.argmin(np.abs(distances),axis=-1) ,axis=-1)
     y_var_closest = np.take_along_axis(y_fix,x_indices_closest,axis=-1) 
