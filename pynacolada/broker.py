@@ -1,5 +1,6 @@
 import logging
 from . import archive,collection
+import os
 
 
 class broker (object):
@@ -11,7 +12,7 @@ class broker (object):
     def propagate_arguments_to_parents(self):
         logging.info('BEGIN --- propagate arguments to parent processes --- ')
         for ibroker_requires, broker_requires in enumerate(self.requires):
-            for key in broker_requires.keys():
+            for key in list(broker_requires.keys()):
                 if (broker_requires[key] is None) or (type(broker_requires[key]) is int):
                     iselect= (0 if (broker_requires[key] is None) else broker_requires[key])
                     if key in self.provides[iselect].keys():
@@ -40,7 +41,7 @@ class broker (object):
             if setting in kwargs.keys():
                 self.__dict__[setting] = kwargs[setting]
 
-    def retrieve_input(self,args):
+    def retrieve_input(self):
         logging.info('--- BEGIN Collecting or generating coarse input data -- ')
         for ibroker_requires, broker_requires in enumerate(self.requires):
 
@@ -126,12 +127,12 @@ class broker (object):
                 values_input = [ item['archive'] for item in self.requires]
                 self.provides[ibroker_provides]['archive'] = broker_provides['archive'](values_input)
 
-        if args.reset_archive > 0 :
+        if self.reset_archive > 0 :
             logging.info('Resetting archive of current broker')
             for broker_current in self.provides:
                 if 'archive' in broker_current.keys():
                     if type(broker_current['archive']) is str:
-                        archive_out = archive(args.root + '/' + broker_current['archive'])
+                        archive_out = archive(broker_current['root'] + '/' + broker_current['archive'])
                         archive_out.remove(records=True)
                         archive_out.close()
                     elif type(broker_current['archive']) is archive:
@@ -139,12 +140,12 @@ class broker (object):
                         broker_current['archive'].close()
 
         self.parent_collection = collection(
-            [pcd.archive(args.root_requires + '/' + broker_requires['archive']) for broker_requires in
+            [archive(broker_requires['root'] + '/' + broker_requires['archive']) for broker_requires in
              self.requires]
         )
         logging.info('--- END Collecting or generating coarse input data --- ')
 
-    def apply_func(self,*args,**kwargs):
+    def apply_func(self,apply_groups_out_extra=None,*args,**kwargs):
         #for ibroker_provides, broker_provides in enumerate(self.provides):
         archive_out_filename =self.provides[0]['root'] + '/' + self.provides[0]['archive']
         lockfile = archive_out_filename + '_lock'
@@ -155,26 +156,27 @@ class broker (object):
             sleep(10)
 
 
-        requests_parents = [
-            broker_requires.copy() for broker_requires in broker.requires
-        ]
-        requests_parents = [broker_requires.copy() for broker_requires in broker['requires']]
+        requests_parents = [broker_requires.copy() for broker_requires in self.requires]
 
         for irequest_parent,request_parent in enumerate(requests_parents):
             for key,value in list(request_parent.items()):
                 if \
                         (key in ['archive','process','executing_subprocess','stderr','stdout']) or \
-                            (key not in broker_parent_collection.get_lib_dataarrays().columns and \
-                        key not in broker_parent_collection.get_lib_dataarrays().index.names) or \
+                            (key not in self.parent_collection.get_lib_dataarrays().columns and \
+                        key not in self.parent_collection.get_lib_dataarrays().index.names) or \
                         type(value) is type(lambda x: x):
                     del requests_parents[irequest_parent][key]
 
-        apply_groups_out = dict(self.provides[0])
-        del apply_groups_out['archive']
+        apply_groups_out = self.provides.copy()
+        for igroups_out in range(len(apply_groups_out)):
+            for key in ['archive','root','chain']:
+                if key in apply_groups_out[igroups_out]:
+                    del apply_groups_out[igroups_out][key]
+        import pdb; pdb.set_trace()
         self.parent_collection.apply_func(
             self.operator,
-            apply_groups_in = request_parents,
-            apply_groups_out=[apply_groups_out],
+            apply_groups_in = requests_parents,
+            apply_groups_out=apply_groups_out,
             archive_out = archive_out_filename,
             force_recalculate = (self.force_recalculate> 0),
             *args,
@@ -183,7 +185,7 @@ class broker (object):
 
         logging.info('Dumping return_request as last line in stdout being used for processes depending on it')
         request_return = dict(apply_groups_out)
-        request_return['archive'] = broker.provides[0]['archive']
+        request_return['archive'] = self.provides[0]['archive']
         for key, value in list(request_return.items()):
             if type(value) is type(lambda x:x):
                 del request_return[key]
