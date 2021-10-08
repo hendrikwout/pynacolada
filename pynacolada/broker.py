@@ -178,8 +178,8 @@ class broker (object):
             apply_groups_in = requests_parents,
             apply_groups_out=apply_groups_out,
             archive_out = archive_out_filename,
-            force_recalculate = (self.force_recalculate> 0),
             *args,
+            **self.operator_properties,
             **kwargs)
         os.system('rm '+lockfile)
 
