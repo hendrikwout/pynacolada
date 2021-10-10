@@ -183,7 +183,7 @@ class broker (object):
         os.system('rm '+lockfile)
 
         logging.info('Dumping return_request as last line in stdout being used for processes depending on it')
-
+        request_return = dict()
         for apply_groups_out in apply_groups_out_list:
             for key in apply_groups_out.keys():
                 if key not in request_return.keys():
