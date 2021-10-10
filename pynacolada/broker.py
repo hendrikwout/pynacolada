@@ -169,10 +169,10 @@ class broker (object):
 
         apply_groups_out_list = list()
         for igroups_out in range(len(self.provides)):
-            apply_groups_out_list.append(dict())
             for key in self.provides[igroups_out].keys():
+                apply_groups_out_list.append(dict())
                 if key not in ['archive','root','chain']:
-                    apply_groups_out_list[key].append(self.provides[igroups_out][key])
+                    apply_groups_out_list[igroups_out][key] = self.provides[igroups_out][key])
         self.parent_collection.apply_func(
             self.operator,
             apply_groups_in = requests_parents,
