@@ -167,15 +167,15 @@ class broker (object):
                         type(value) is type(lambda x: x):
                     del requests_parents[irequest_parent][key]
 
-        apply_groups_out = self.provides.copy()
-        for igroups_out in range(len(apply_groups_out)):
+        apply_groups_out_list = self.provides.copy()
+        for igroups_out in range(len(apply_groups_out_list)):
             for key in ['archive','root','chain']:
-                if key in apply_groups_out[igroups_out]:
-                    del apply_groups_out[igroups_out][key]
+                if key in apply_groups_out_list[igroups_out]:
+                    del apply_groups_out_list[igroups_out][key]
         self.parent_collection.apply_func(
             self.operator,
             apply_groups_in = requests_parents,
-            apply_groups_out=apply_groups_out,
+            apply_groups_out=apply_groups_out_list,
             archive_out = archive_out_filename,
             *args,
             **self.operator_properties,
@@ -184,7 +184,14 @@ class broker (object):
 
         logging.info('Dumping return_request as last line in stdout being used for processes depending on it')
         import pdb; pdb.set_trace()
-        request_return = dict(apply_groups_out)
+        request_return = dict()
+
+        for apply_groups_out in apply_groups_out_list:
+            for key in apply_groups_out.keys():
+                if key not in request_return.keys():
+                    request_return[key] = []
+                request_return[key].append(apply_groups_out[key])
+
         request_return['archive'] = self.provides[0]['archive']
         for key, value in list(request_return.items()):
             if type(value) is type(lambda x:x):
