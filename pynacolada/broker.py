@@ -198,4 +198,5 @@ class broker (object):
             for ivalue,value in enumerate(values):
                 if type(value) is type(lambda x:x):
                     del request_return[key][ivalue]
+        import pdb; pdb.set_trace()
         return str(request_return).replace(' ','')
