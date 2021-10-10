@@ -183,8 +183,6 @@ class broker (object):
         os.system('rm '+lockfile)
 
         logging.info('Dumping return_request as last line in stdout being used for processes depending on it')
-        import pdb; pdb.set_trace()
-        request_return = dict()
 
         for apply_groups_out in apply_groups_out_list:
             for key in apply_groups_out.keys():
@@ -192,6 +190,7 @@ class broker (object):
                     request_return[key] = []
                 request_return[key].append(apply_groups_out[key])
 
+        import pdb; pdb.set_trace()
         request_return['archive'] = self.provides[0]['archive']
         for key, value in list(request_return.items()):
             if type(value) is type(lambda x:x):
