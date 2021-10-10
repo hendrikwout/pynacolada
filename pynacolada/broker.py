@@ -194,7 +194,8 @@ class broker (object):
 
         import pdb; pdb.set_trace()
         request_return['archive'] = self.provides[0]['archive']
-        for key, value in list(request_return.items()):
-            if type(value) is type(lambda x:x):
-                del request_return[key]
+        for key, values in list(request_return.items()):
+            for ivalue,value in enumerate(values):
+                if type(value) is type(lambda x:x):
+                    del request_return[key][ivalue]
         return str(request_return).replace(' ','')
