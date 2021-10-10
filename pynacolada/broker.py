@@ -172,7 +172,6 @@ class broker (object):
             for key in ['archive','root','chain']:
                 if key in apply_groups_out[igroups_out]:
                     del apply_groups_out[igroups_out][key]
-        import pdb; pdb.set_trace()
         self.parent_collection.apply_func(
             self.operator,
             apply_groups_in = requests_parents,
@@ -184,6 +183,7 @@ class broker (object):
         os.system('rm '+lockfile)
 
         logging.info('Dumping return_request as last line in stdout being used for processes depending on it')
+        import pdb; pdb.set_trace()
         request_return = dict(apply_groups_out)
         request_return['archive'] = self.provides[0]['archive']
         for key, value in list(request_return.items()):
