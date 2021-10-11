@@ -198,7 +198,7 @@ class broker (object):
                     apply_groups_out[key] = []
                     if type(self.provides[key]) is list:
                         for iapply_groups_out in range(len(self.provides[key])):
-                            apply_groups_out[key].append(self.provides[key][igroups_out])
+                            apply_groups_out[key].append(self.provides[key][iapply_groups_out])
                     else:
                         apply_groups_out[key].append(self.provides[key])
 
@@ -230,7 +230,7 @@ class broker (object):
                     if type(self.provides[key]) == list:
                         for ireturn_request in range(len(self.provides[key])):
                             if type(self.provides[key][igroups_out]) != type(lambda x:x):
-                                return_request[key].append(self.provides[key][igroups_out])
+                                return_request[key].append(self.provides[key][ireturn_request])
                     else:
                         if type(self.provides[key]) != type(lambda x: x):
                             return_request[key].append(self.provides[key])
