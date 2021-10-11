@@ -187,17 +187,12 @@ class broker (object):
         logging.info('Dumping return_request as last line in stdout being used for processes depending on it')
         request_return = dict()
         for apply_groups_out in apply_groups_out_list:
-            for key in apply_groups_out.keys():
-                if key not in request_return.keys():
-                    request_return[key] = []
-                request_return[key].append(apply_groups_out[key])
+                for key in apply_groups_out.keys():
+                    if type(apply_groups_out[key]) != type(lambda x:x):
+                            if key not in request_return.keys():
+                            request_return[key] = []
+                        request_return[key].append(apply_groups_out[key])
 
-        import pdb; pdb.set_trace()
         request_return['archive'] = self.provides[0]['archive']
-        for key, values in list(request_return.items()):
-            for ivalue,value in reversed(enumerate(values)):
-                if type(value) == type(lambda x:x):
-                    print('delete',key,ivalue)
-                    del request_return[key][ivalue]
         import pdb; pdb.set_trace()
         return str(request_return).replace(' ','')
