@@ -105,6 +105,7 @@ class broker (object):
                 logging.info('- stdout: ' + self.requires[ibroker_requires]['stdout'].name)
                 logging.info('- stderr: ' + self.requires[ibroker_requires]['stderr'].name)
                 print(parent_execute + parent_arguments)
+                import pdb; pdb.set_trace()
                 self.requires[ibroker_requires]['executing_subprocess'] = \
                     Popen(
                         parent_execute + parent_arguments,
