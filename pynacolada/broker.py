@@ -175,12 +175,20 @@ class broker (object):
                         type(value) is type(lambda x: x):
                     del requests_parents[irequest_parent][key]
 
-        apply_groups_out_list = list()
-        for igroups_out in range(len(self.provides)):
-            apply_groups_out_list.append(dict())
-            for key in self.provides[igroups_out].keys():
-                if key not in ['archive','root','chain']:
-                    apply_groups_out_list[igroups_out][key] = self.provides[igroups_out][key]
+        if type(self.provides) is list():
+            apply_groups_out = list()
+            for igroups_out in range(len(self.provides)):
+                apply_groups_out.append(dict())
+                for key in self.provides[igroups_out].keys():
+                    if key not in ['archive','root','chain']:
+                        apply_groups_out[igroups_out][key] = self.provides[igroups_out][key]
+        else:
+            apply_groups_out = dict()
+            for key in self.provides.keys():
+                if key not in ['archive', 'root', 'chain']:
+                    self.apply_groups_out[key] = []
+                    for iapply_groups_out in range(len(self.provides[key])):
+                        apply_groups_out[key].append(self.provides[key][igroups_out])
 
         self.parent_collection.apply_func(
             self.operator,
