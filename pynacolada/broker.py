@@ -161,7 +161,6 @@ class broker (object):
 
     def apply_func(self,apply_groups_out_extra=None,*args,**kwargs):
         #for ibroker_provides, broker_provides in enumerate(self.provides):
-        import pdb; pdb.set_trace()
         if type(self.provides ) == list:
             archive_out_filename =self.provides[0]['root'] + '/' + self.provides[0]['archive']
         else:
