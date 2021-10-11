@@ -129,6 +129,7 @@ class broker (object):
                 values_input = [ item['archive'] for item in self.requires]
                 self.provides[ibroker_provides]['archive'] = broker_provides['archive'](values_input)
 
+        import pdb; pdb.set_trace()
         if self.reset_archive > 0 :
             logging.info('Resetting archive of current broker')
             for broker_current in self.provides:
