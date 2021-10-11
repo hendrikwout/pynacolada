@@ -189,7 +189,7 @@ class broker (object):
         for apply_groups_out in apply_groups_out_list:
                 for key in apply_groups_out.keys():
                     if type(apply_groups_out[key]) != type(lambda x:x):
-                            if key not in request_return.keys():
+                        if key not in request_return.keys():
                             request_return[key] = []
                         request_return[key].append(apply_groups_out[key])
 
