@@ -195,7 +195,7 @@ class broker (object):
             apply_groups_out = dict()
             for key in self.provides.keys():
                 if key not in ['archive', 'root', 'chain']:
-                    self.apply_groups_out[key] = []
+                    apply_groups_out[key] = []
                     for iapply_groups_out in range(len(self.provides[key])):
                         apply_groups_out[key].append(self.provides[key][igroups_out])
 
