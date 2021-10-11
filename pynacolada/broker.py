@@ -121,7 +121,6 @@ class broker (object):
                 return_from_subprocess = open(self.requires[ibroker_requires]['stdout'].name,'r').readlines()[-1][:-1]
                 print('retrieving from parent process '+self.requires[ibroker_requires]['stdout'].name+': '+return_from_subprocess)
 
-                import pdb; pdb.set_trace()
                 self.requires[ibroker_requires].update(literal_eval(return_from_subprocess))
 
         for ibroker_provides, broker_provides in enumerate(self.provides):
@@ -129,7 +128,6 @@ class broker (object):
                 values_input = [ item['archive'] for item in self.requires]
                 self.provides[ibroker_provides]['archive'] = broker_provides['archive'](values_input)
 
-        import pdb; pdb.set_trace()
         if self.reset_archive > 0 :
             logging.info('Resetting archive of current broker')
             for broker_current in self.provides:
@@ -177,7 +175,6 @@ class broker (object):
                 if key not in ['archive','root','chain']:
                     apply_groups_out_list[igroups_out][key] = self.provides[igroups_out][key]
 
-        import pdb; pdb.set_trace()
         self.parent_collection.apply_func(
             self.operator,
             apply_groups_in = requests_parents,
@@ -202,5 +199,4 @@ class broker (object):
                return_request[key] = list_values_unique
 
             return_request['archive'] = self.provides[0]['archive']
-        import pdb; pdb.set_trace()
         return str(return_request).replace(' ','')
