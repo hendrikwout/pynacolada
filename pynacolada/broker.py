@@ -2,6 +2,9 @@ import logging
 from . import archive,collection
 import os
 import numpy as np
+import tempfile
+from ast import literal_eval
+from subprocess import Popen, PIPE
 
 
 class broker (object):
@@ -88,7 +91,7 @@ class broker (object):
                 ]
                 for key in arguments_propagate_reduce_to_parent:
                     parent_execute.append('--' + key)
-                    parent_execute.append(max(self.__dict__[key]-1, 0))
+                    parent_execute.append(str(max(self.__dict__[key]-1, 0)))
 
                 # p = Popen(parent_arguments , stdout=PIPE, stderr=PIPE)
 
@@ -96,7 +99,7 @@ class broker (object):
                     if arg == "":
                         parent_execute[iarg] = '""'
                 # logging.info('Executing parent process:'+ (' '.join(parent_execute))+'"'+ '" "'.join(parent_arguments))
-                loggin.info('parent_execute: ', parent_execute)
+                logging.info('parent_execute: ', parent_execute)
                 logging.info('parent_arguments: ', parent_arguments)
                 tempbasename = tempfile.mktemp(prefix=broker_requires['process'].split('/')[-1] + '_')
                 self.requires[ibroker_requires]['stderr'] = open(tempbasename + '_e.log', 'w')
