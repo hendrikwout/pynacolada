@@ -229,7 +229,7 @@ class broker (object):
                     return_request[key] = []
                     if type(self.provides[key]) == list:
                         for ireturn_request in range(len(self.provides[key])):
-                            if type(self.provides[key][igroups_out]) != type(lambda x:x):
+                            if type(self.provides[key][ireturn_request]) != type(lambda x:x):
                                 return_request[key].append(self.provides[key][ireturn_request])
                     else:
                         if type(self.provides[key]) != type(lambda x: x):
