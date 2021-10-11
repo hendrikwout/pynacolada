@@ -193,7 +193,7 @@ class broker (object):
         self.parent_collection.apply_func(
             self.operator,
             apply_groups_in = requests_parents,
-            apply_groups_out=apply_groups_out_list,
+            apply_groups_out=apply_groups_out,
             archive_out = archive_out_filename,
             *args,
             **self.operator_properties,
