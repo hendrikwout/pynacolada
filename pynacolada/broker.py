@@ -175,7 +175,7 @@ class broker (object):
                         type(value) is type(lambda x: x):
                     del requests_parents[irequest_parent][key]
 
-        if type(self.provides) is list():
+        if type(self.provides) is list:
             apply_groups_out = list()
             for igroups_out in range(len(self.provides)):
                 apply_groups_out.append(dict())
@@ -201,11 +201,28 @@ class broker (object):
         os.system('rm '+lockfile)
 
         logging.info('Dumping return_request as last line in stdout being used for processes depending on it')
-        return_request = apply_groups_out_list.copy()
-        for iapply_groups_out,apply_groups_out in list(enumerate(apply_groups_out_list)):
-            for key, value in list(apply_groups_out.items()):
-                if type(value) == type(lambda x:x):
-                    del return_request[iapply_groups_out][key]
+
+        if type(self.provides) is list:
+            return_request = list()
+            for igroups_out in range(len(self.provides)):
+                return_request.append(dict())
+                for key in self.provides[igroups_out].keys():
+                    if key not in ['root','chain']:
+                        if type(self.provides[igroups_out][key]) is not type(lambda x:x):
+                            return_request[igroups_out][key] = self.provides[igroups_out][key]
+        else:
+            return_request = dict()
+            for key in self.provides.keys():
+
+                if key not in ['root', 'chain']:
+                    self.return_request[key] = []
+                    for ireturn_request in range(len(self.provides[key])):
+                        if type(self.provides[key][igroups_out]) != type(lambda x:x):
+                            return_request[key].append(self.provides[key][igroups_out])
+                        if len(return_request[key]) == 0:
+                            del return_request[key]
+
+        import pdb; pdb.set_trace()
 
         # for apply_groups_out in apply_groups_out_list:
         #         for key in apply_groups_out.keys():
