@@ -15,21 +15,22 @@ class broker (object):
 
     def propagate_arguments_to_parents(self):
         logging.info('BEGIN --- propagate arguments to parent processes --- ')
-        for ibroker_requires, broker_requires in enumerate(self.requires):
-            for key in list(broker_requires.keys()):
-                if (broker_requires[key] is None) or (type(broker_requires[key]) is int):
-                    iselect= (0 if (broker_requires[key] is None) else broker_requires[key])
-                    if key in self.provides[iselect].keys():
-                        self.requires[ibroker_requires][key] = self.provides[iselect][key]
-                    # elif key in vars(args).keys():
-                    #     self.requires[ibroker_requires][key] = vars(args)[key]
-                    else:
-                        del self.requires[ibroker_requires][key]
-                elif type(broker_requires[key]) is type(lambda x:x):
-                    pass_parameters = []
-                    for ibroker_provides, broker_provides in enumerate(self.provides):
-                        pass_parameters.append(broker_provides[key])
-                    self.requires[ibroker_requires][key] = self.requires[ibroker_requires][key](pass_parameters)
+        if type(self.provides) is not list:
+            for ibroker_requires, broker_requires in enumerate(self.requires):
+                for key in list(broker_requires.keys()):
+                    if (broker_requires[key] is None) or (type(broker_requires[key]) is int):
+                        iselect= (0 if (broker_requires[key] is None) else broker_requires[key])
+                        if key in self.provides[iselect].keys():
+                            self.requires[ibroker_requires][key] = self.provides[iselect][key]
+                        # elif key in vars(args).keys():
+                        #     self.requires[ibroker_requires][key] = vars(args)[key]
+                        else:
+                            del self.requires[ibroker_requires][key]
+                    elif type(broker_requires[key]) is type(lambda x:x):
+                        pass_parameters = []
+                        for ibroker_provides, broker_provides in enumerate(self.provides):
+                            pass_parameters.append(broker_provides[key])
+                        self.requires[ibroker_requires][key] = self.requires[ibroker_requires][key](pass_parameters)
         logging.info('END --- propagate arguments to parent processes --- ')
 
     def global_settings(self,**kwargs):
