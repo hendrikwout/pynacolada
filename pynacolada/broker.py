@@ -161,7 +161,10 @@ class broker (object):
 
     def apply_func(self,apply_groups_out_extra=None,*args,**kwargs):
         #for ibroker_provides, broker_provides in enumerate(self.provides):
-        archive_out_filename =self.provides[0]['root'] + '/' + self.provides[0]['archive']
+        if type(self.provides ) == list:
+            archive_out_filename =self.provides[0]['root'] + '/' + self.provides[0]['archive']
+        else:
+            archive_out_filename = self.provides['root'] + '/' + self.provides['archive']
         lockfile = archive_out_filename + '_lock'
         if self.reset_lock > 0:
             os.system('rm ' + lockfile)
