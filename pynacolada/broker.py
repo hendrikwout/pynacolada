@@ -196,8 +196,11 @@ class broker (object):
             for key in self.provides.keys():
                 if key not in ['archive', 'root', 'chain']:
                     apply_groups_out[key] = []
-                    for iapply_groups_out in range(len(self.provides[key])):
-                        apply_groups_out[key].append(self.provides[key][igroups_out])
+                    if type(self.provides[key]) is list:
+                        for iapply_groups_out in range(len(self.provides[key])):
+                            apply_groups_out[key].append(self.provides[key][igroups_out])
+                    else:
+                        apply_groups_out[key].append(self.provides[key])
 
         self.parent_collection.apply_func(
             self.operator,
@@ -222,14 +225,18 @@ class broker (object):
         else:
             return_request = dict()
             for key in self.provides.keys():
-
                 if key not in ['root', 'chain']:
                     self.return_request[key] = []
-                    for ireturn_request in range(len(self.provides[key])):
-                        if type(self.provides[key][igroups_out]) != type(lambda x:x):
-                            return_request[key].append(self.provides[key][igroups_out])
-                        if len(return_request[key]) == 0:
-                            del return_request[key]
+                    if type(self.provides[key]) == list:
+                        for ireturn_request in range(len(self.provides[key])):
+                            if type(self.provides[key][igroups_out]) != type(lambda x:x):
+                                return_request[key].append(self.provides[key][igroups_out])
+                    else:
+                        if type(self.provides[key]) != type(lambda x: x):
+                            return_request[key].append(self.provides[key])
+
+                    if len(return_request[key]) == 0:
+                        del return_request[key]
 
         import pdb; pdb.set_trace()
 
