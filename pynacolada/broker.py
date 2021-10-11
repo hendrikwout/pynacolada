@@ -130,13 +130,18 @@ class broker (object):
                 # if (len(self.requires) == 1) and len(list_return) > 1:
 
                 self.requires[ibroker_requires].update(literal_eval(return_from_subprocess))
+        if type(self.provides) == list:
+            for ibroker_provides, broker_provides in enumerate(self.provides):
+                if ('archive' in broker_provides) and (type(broker_provides['archive']) is type(lambda x:x)):
+                    values_input = [ item['archive'] for item in self.requires]
+                    self.provides[ibroker_provides]['archive'] = broker_provides['archive'](values_input)
+        else:
+            broker_provides = self.provides
+            if ('archive' in broker_provides) and (type(broker_provides['archive']) is type(lambda x: x)):
+                values_input = [item['archive'] for item in self.requires]
+                self.provides['archive'] = broker_provides['archive'](values_input)
 
-        for ibroker_provides, broker_provides in enumerate(self.provides):
-            if ('archive' in broker_provides) and (type(broker_provides['archive']) is type(lambda x:x)):
-                values_input = [ item['archive'] for item in self.requires]
-                self.provides[ibroker_provides]['archive'] = broker_provides['archive'](values_input)
-
-        if self.reset_archive > 0 :
+    if self.reset_archive > 0 :
             logging.info('Resetting archive of current broker')
             for broker_current in self.provides:
                 if 'archive' in broker_current.keys():
