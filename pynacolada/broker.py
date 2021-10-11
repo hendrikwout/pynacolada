@@ -173,7 +173,7 @@ class broker (object):
             for key in self.provides[igroups_out].keys():
                 if key not in ['archive','root','chain']:
                     apply_groups_out_list[igroups_out][key] = self.provides[igroups_out][key]
-        import pdb; pdb.set_trace()
+
         self.parent_collection.apply_func(
             self.operator,
             apply_groups_in = requests_parents,
