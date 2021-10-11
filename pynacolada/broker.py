@@ -202,6 +202,7 @@ class broker (object):
                     else:
                         apply_groups_out[key] = self.provides[key]
 
+        import pdb; pdb.set_trace()
         self.parent_collection.apply_func(
             self.operator,
             apply_groups_in = requests_parents,
@@ -238,7 +239,6 @@ class broker (object):
                             return_request[key] = self.provides[key]
 
 
-        import pdb; pdb.set_trace()
 
         # for apply_groups_out in apply_groups_out_list:
         #         for key in apply_groups_out.keys():
