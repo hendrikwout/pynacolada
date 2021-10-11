@@ -79,7 +79,7 @@ class broker (object):
                 arguments_propagate_to_parent = ['conda_environment_export', 'dummy']
                 for argument in arguments_propagate_to_parent:
                     parent_arguments.append('--' + key)
-                    parant_arguments.append(self.__dict__[key] if (self.__dict__[key] != '') else '""')
+                    parent_arguments.append(self.__dict__[key] if (self.__dict__[key] != '') else '""')
 
                 arguments_propagate_reduce_to_parent = [
                     'reset_archive',
