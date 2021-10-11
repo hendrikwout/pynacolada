@@ -231,12 +231,12 @@ class broker (object):
                         for ireturn_request in range(len(self.provides[key])):
                             if type(self.provides[key][ireturn_request]) != type(lambda x:x):
                                 return_request[key].append(self.provides[key][ireturn_request])
+                        if len(return_request[key]) == 0:
+                            del return_request[key]
                     else:
                         if type(self.provides[key]) != type(lambda x: x):
                             return_request[key] = self.provides[key]
 
-                    if len(return_request[key]) == 0:
-                        del return_request[key]
 
         import pdb; pdb.set_trace()
 
