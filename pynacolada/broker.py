@@ -77,7 +77,7 @@ class broker (object):
 
                 logging.info('propagate environment settings')
                 arguments_propagate_to_parent = ['conda_environment_export', 'dummy']
-                for argument in arguments_propagate_to_parent:
+                for key in arguments_propagate_to_parent:
                     parent_arguments.append('--' + key)
                     parent_arguments.append(self.__dict__[key] if (self.__dict__[key] != '') else '""')
 
