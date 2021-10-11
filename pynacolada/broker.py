@@ -192,7 +192,7 @@ class broker (object):
                         if key not in return_request.keys():
                             return_request[key] = []
                         return_request[key].append(apply_groups_out[key])
-        for key,list_values in return_request.keys():
+        for key,list_values in return_request.items():
             list_values_unique = list(np.unique(list_values))
             if len(list_values_unique) == 1 :
                return_request[key] = list_values_unique
