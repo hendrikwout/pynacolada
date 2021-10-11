@@ -226,7 +226,7 @@ class broker (object):
             return_request = dict()
             for key in self.provides.keys():
                 if key not in ['root', 'chain']:
-                    self.return_request[key] = []
+                    return_request[key] = []
                     if type(self.provides[key]) == list:
                         for ireturn_request in range(len(self.provides[key])):
                             if type(self.provides[key][igroups_out]) != type(lambda x:x):
