@@ -191,6 +191,7 @@ class broker (object):
 
         logging.info('Dumping return_request as last line in stdout being used for processes depending on it')
         return_request = dict()
+        import pdb; pdb.set_trace()
         for apply_groups_out in apply_groups_out_list:
                 for key in apply_groups_out.keys():
                     if type(apply_groups_out[key]) != type(lambda x:x):
