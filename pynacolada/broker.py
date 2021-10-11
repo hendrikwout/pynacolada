@@ -1,6 +1,7 @@
 import logging
 from . import archive,collection
 import os
+import numpy as np
 
 
 class broker (object):
