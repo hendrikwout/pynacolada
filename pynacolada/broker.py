@@ -121,6 +121,7 @@ class broker (object):
                 return_from_subprocess = open(self.requires[ibroker_requires]['stdout'].name,'r').readlines()[-1][:-1]
                 print('retrieving from parent process '+self.requires[ibroker_requires]['stdout'].name+': '+return_from_subprocess)
 
+                import pdb; pdb.set_trace()
                 self.requires[ibroker_requires].update(literal_eval(return_from_subprocess))
 
         for ibroker_provides, broker_provides in enumerate(self.provides):
