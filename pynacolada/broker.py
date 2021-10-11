@@ -109,7 +109,6 @@ class broker (object):
                 logging.info('- stdout: ' + self.requires[ibroker_requires]['stdout'].name)
                 logging.info('- stderr: ' + self.requires[ibroker_requires]['stderr'].name)
                 print(parent_execute + parent_arguments)
-                import pdb; pdb.set_trace()
                 self.requires[ibroker_requires]['executing_subprocess'] = \
                     Popen(
                         parent_execute + parent_arguments,
@@ -128,6 +127,7 @@ class broker (object):
 
                 # list_return = literal_eval(return_from_subprocess)
                 # if (len(self.requires) == 1) and len(list_return) > 1:
+                import pdb; pdb.set_trace()
 
                 self.requires[ibroker_requires].update(literal_eval(return_from_subprocess))
         if type(self.provides) == list:
@@ -202,7 +202,6 @@ class broker (object):
                     else:
                         apply_groups_out[key] = self.provides[key]
 
-        import pdb; pdb.set_trace()
         self.parent_collection.apply_func(
             self.operator,
             apply_groups_in = requests_parents,
