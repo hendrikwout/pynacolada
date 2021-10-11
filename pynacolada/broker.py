@@ -190,18 +190,23 @@ class broker (object):
         os.system('rm '+lockfile)
 
         logging.info('Dumping return_request as last line in stdout being used for processes depending on it')
-        return_request = dict()
+        return_request = apply_groups_out_list.copy()
+        for iapply_groups_out,apply_groups_out in list(enumerate(apply_groups_out_list)):
+            for key, value in list(apply_groups_out.items()):
+                if type(value) == type(lambda x:x):
+                    del return_request[iapply_groups_out][key]
         import pdb; pdb.set_trace()
-        for apply_groups_out in apply_groups_out_list:
-                for key in apply_groups_out.keys():
-                    if type(apply_groups_out[key]) != type(lambda x:x):
-                        if key not in return_request.keys():
-                            return_request[key] = []
-                        return_request[key].append(apply_groups_out[key])
-        for key,list_values in list(return_request.items()):
-            list_values_unique = list(np.unique(list_values))
-            if len(list_values_unique) == 1 :
-               return_request[key] = list_values_unique
 
-            return_request['archive'] = self.provides[0]['archive']
+        # for apply_groups_out in apply_groups_out_list:
+        #         for key in apply_groups_out.keys():
+        #             if type(apply_groups_out[key]) != type(lambda x:x):
+        #                 if key not in return_request.keys():
+        #                     return_request[key] = []
+        #                 return_request[key].append(apply_groups_out[key])
+        # for key,list_values in list(return_request.items()):
+        #     list_values_unique = list(np.unique(list_values))
+        #     if len(list_values_unique) == 1 :
+        #        return_request[key] = list_values_unique
+
+        #     return_request['archive'] = self.provides[0]['archive']
         return str(return_request).replace(' ','')
