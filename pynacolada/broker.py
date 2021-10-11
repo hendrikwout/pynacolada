@@ -125,6 +125,9 @@ class broker (object):
                 return_from_subprocess = open(self.requires[ibroker_requires]['stdout'].name,'r').readlines()[-1][:-1]
                 print('retrieving from parent process '+self.requires[ibroker_requires]['stdout'].name+': '+return_from_subprocess)
 
+                # list_return = literal_eval(return_from_subprocess)
+                # if (len(self.requires) == 1) and len(list_return) > 1:
+
                 self.requires[ibroker_requires].update(literal_eval(return_from_subprocess))
 
         for ibroker_provides, broker_provides in enumerate(self.provides):
@@ -195,7 +198,6 @@ class broker (object):
             for key, value in list(apply_groups_out.items()):
                 if type(value) == type(lambda x:x):
                     del return_request[iapply_groups_out][key]
-        import pdb; pdb.set_trace()
 
         # for apply_groups_out in apply_groups_out_list:
         #         for key in apply_groups_out.keys():
