@@ -141,7 +141,7 @@ class broker (object):
                 values_input = [item['archive'] for item in self.requires]
                 self.provides['archive'] = broker_provides['archive'](values_input)
 
-    if self.reset_archive > 0 :
+        if self.reset_archive > 0 :
             logging.info('Resetting archive of current broker')
             for broker_current in self.provides:
                 if 'archive' in broker_current.keys():
