@@ -192,7 +192,11 @@ class broker (object):
                         if key not in request_return.keys():
                             request_return[key] = []
                         request_return[key].append(apply_groups_out[key])
+        for key,list_values in return_request.keys():
+            list_values_unique = list(np.unique(list_values))
+            if len(list_values_unique) == 1 :
+               return_request[key] = list_values_unique
 
-        request_return['archive'] = self.provides[0]['archive']
+            request_return['archive'] = self.provides[0]['archive']
         import pdb; pdb.set_trace()
         return str(request_return).replace(' ','')
