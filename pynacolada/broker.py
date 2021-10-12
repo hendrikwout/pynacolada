@@ -100,8 +100,8 @@ class broker (object):
                     if arg == "":
                         parent_execute[iarg] = '""'
                 # logging.info('Executing parent process:'+ (' '.join(parent_execute))+'"'+ '" "'.join(parent_arguments))
-                logging.info('parent_execute: ', parent_execute)
-                logging.info('parent_arguments: ', parent_arguments)
+                # logging.info('parent_execute: ', parent_execute)
+                # logging.info('parent_arguments: ', parent_arguments)
                 tempbasename = tempfile.mktemp(prefix=broker_requires['process'].split('/')[-1] + '_')
                 self.requires[ibroker_requires]['stderr'] = open(tempbasename + '_e.log', 'w')
                 self.requires[ibroker_requires]['stdout'] = open(tempbasename + '_o.log', 'w')
