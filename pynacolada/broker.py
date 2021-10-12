@@ -142,15 +142,25 @@ class broker (object):
 
         if self.reset_archive > 0 :
             logging.info('Resetting archive of current broker')
-            for broker_current in self.provides:
-                if 'archive' in broker_current.keys():
-                    if type(broker_current['archive']) is str:
-                        archive_out = archive(broker_current['root'] + '/' + broker_current['archive'])
+            if type(self.provides) is list:
+                for broker_current in self.provides:
+                    if 'archive' in broker_current.keys():
+                        if type(broker_current['archive']) is str:
+                            archive_out = archive(broker_current['root'] + '/' + broker_current['archive'])
+                            archive_out.remove(records=True)
+                            archive_out.close()
+                        elif type(broker_current['archive']) is archive:
+                            broker_current['archive'].remove(records=True)
+                            broker_current['archive'].close()
+            else:
+                if 'archive' in self.broker.keys():
+                    if type(self.broker['archive']) is str:
+                        archive_out = archive(self.broker['root'] + '/' + self.broker['archive'])
                         archive_out.remove(records=True)
                         archive_out.close()
-                    elif type(broker_current['archive']) is archive:
-                        broker_current['archive'].remove(records=True)
-                        broker_current['archive'].close()
+                    elif type(self.broker['archive']) is archive:
+                        self.broker['archive'].remove(records=True)
+                        self.broker['archive'].close()
 
         self.parent_collection = collection(
             [archive(broker_requires['root'] + '/' + broker_requires['archive']) for broker_requires in
