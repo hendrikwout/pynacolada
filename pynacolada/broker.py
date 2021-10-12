@@ -126,11 +126,16 @@ class broker (object):
                 return_from_subprocess = open(self.requires[ibroker_requires]['stdout'].name,'r').readlines()[-1][:-1]
                 print('retrieving from parent process '+self.requires[ibroker_requires]['stdout'].name+': '+return_from_subprocess)
 
-                import pdb; pdb.set_trace()
                 # list_return = literal_eval(return_from_subprocess)
                 # if (len(self.requires) == 1) and len(list_return) > 1:
 
-                self.requires[ibroker_requires].update(literal_eval(return_from_subprocess))
+                return_from_subprocess_dict = literal_eval(return_from_subprocess)
+                for key,value in return_from_subprocess_dict.items():
+                    if (type(value) is list) and (len(value) <= 1):
+                        return_from_subprocess_dict[key] = return_from_subprocess_dict[key][0]
+
+                import pdb; pdb.set_trace()
+                self.requires[ibroker_requires].update(return_from_subprocess_dict)
         if type(self.provides) == list:
             for ibroker_provides, broker_provides in enumerate(self.provides):
                 if ('archive' in broker_provides) and (type(broker_provides['archive']) is type(lambda x:x)):
