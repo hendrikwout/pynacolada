@@ -109,7 +109,6 @@ class broker (object):
                 logging.info('- stdout: ' + self.requires[ibroker_requires]['stdout'].name)
                 logging.info('- stderr: ' + self.requires[ibroker_requires]['stderr'].name)
                 print(parent_execute + parent_arguments)
-                import pdb; pdb.set_trace()
                 self.requires[ibroker_requires]['executing_subprocess'] = \
                     Popen(
                         parent_execute + parent_arguments,
@@ -134,7 +133,6 @@ class broker (object):
                     if (type(value) is list) and (len(value) <= 1):
                         return_from_subprocess_dict[key] = return_from_subprocess_dict[key][0]
 
-                import pdb; pdb.set_trace()
                 self.requires[ibroker_requires].update(return_from_subprocess_dict)
         if type(self.provides) == list:
             for ibroker_provides, broker_provides in enumerate(self.provides):
