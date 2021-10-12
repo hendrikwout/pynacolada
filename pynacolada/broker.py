@@ -127,7 +127,6 @@ class broker (object):
 
                 # list_return = literal_eval(return_from_subprocess)
                 # if (len(self.requires) == 1) and len(list_return) > 1:
-                import pdb; pdb.set_trace()
 
                 self.requires[ibroker_requires].update(literal_eval(return_from_subprocess))
         if type(self.provides) == list:
