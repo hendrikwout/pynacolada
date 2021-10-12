@@ -153,14 +153,14 @@ class broker (object):
                             broker_current['archive'].remove(records=True)
                             broker_current['archive'].close()
             else:
-                if 'archive' in self.broker.keys():
-                    if type(self.broker['archive']) is str:
-                        archive_out = archive(self.broker['root'] + '/' + self.broker['archive'])
+                if 'archive' in self.provides.keys():
+                    if type(self.provides['archive']) is str:
+                        archive_out = archive(self.provides['root'] + '/' + self.provides['archive'])
                         archive_out.remove(records=True)
                         archive_out.close()
-                    elif type(self.broker['archive']) is archive:
-                        self.broker['archive'].remove(records=True)
-                        self.broker['archive'].close()
+                    elif type(self.provides['archive']) is archive:
+                        self.provides['archive'].remove(records=True)
+                        self.provides['archive'].close()
 
         self.parent_collection = collection(
             [archive(broker_requires['root'] + '/' + broker_requires['archive']) for broker_requires in
