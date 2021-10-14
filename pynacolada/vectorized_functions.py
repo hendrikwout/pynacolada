@@ -201,7 +201,7 @@ def extend_crop_interpolate(
     #     add_newaxes=False )
     return_value = []
     if x is not None:
-        return_value.append(x)
+        return_value.append(x_interpolated)
 
 
     if return_grid_output:
@@ -220,7 +220,6 @@ def extend_crop_interpolate(
         return_value =  return_value[0]
     else:
         return_value = tuple(return_value)
-    import pdb; pdb.set_trace()
     return return_value
 
 
