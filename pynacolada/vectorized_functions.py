@@ -165,7 +165,7 @@ def extend_crop_interpolate(
         else:
             logging.info('output grid is identical to cropped input grid. '
        'Skipping interpolation and returning cropped field directly.')
-        if x is not None:
+        if x != None:
             x_interpolated = x_crop
     else:
         logging.warning(
