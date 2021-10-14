@@ -165,7 +165,7 @@ def extend_crop_interpolate(
         else:
             logging.info('output grid is identical to cropped input grid. '
        'Skipping interpolation and returning cropped field directly.')
-        if x != None:
+        if x is not None:
             x_interpolated = x_crop
     else:
         logging.warning(
@@ -179,7 +179,7 @@ def extend_crop_interpolate(
            indexing='ij'
         )
 
-        if x != None:
+        if x is not None:
             if len(x_crop.shape) == 2:
                 x_crop = x_crop[np.newaxis]
             x_interpolated = interpolate_delaunay_linear(
@@ -200,7 +200,7 @@ def extend_crop_interpolate(
     #     dropnans=True,
     #     add_newaxes=False )
     return_value = []
-    if x != None:
+    if x is not None:
         return_value.append(x)
 
 
