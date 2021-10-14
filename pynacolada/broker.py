@@ -19,9 +19,12 @@ class broker (object):
             for ibroker_requires, broker_requires in enumerate(self.requires):
                 for key in list(broker_requires.keys()):
                     if (broker_requires[key] is None) or (type(broker_requires[key]) is int):
-                        iselect= (0 if (broker_requires[key] is None) else broker_requires[key])
-                        if key in self.provides[iselect].keys():
-                            self.requires[ibroker_requires][key] = self.provides[iselect][key]
+                        if key in self.provides.keys():
+                            if type(self.provides[key]) is list:
+                                iselect = (0 if (broker_requires[key] is None) else broker_requires[key])
+                                self.requires[ibroker_requires][key] = self.provides[key][iselect]
+                            else:
+                                self.requires[ibroker_requires][key] = self.provides[key]
                         # elif key in vars(args).keys():
                         #     self.requires[ibroker_requires][key] = vars(args)[key]
                         else:
