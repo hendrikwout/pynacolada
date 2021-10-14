@@ -116,11 +116,12 @@ def extend_crop_interpolate(
     )[0]
     latitude_crop_input = grid_input[0][latitude_crop_input_index]
 
-    if type(x) is xr.DataArray:
-    # x_crop = x[...,latitude_crop_input_index,:][...,longitude_crop_input_index]
-        x_crop = x.isel(latitude=latitude_crop_input_index, longitude=longitude_crop_input_index).values
-    else:
-        x_crop = x.take(latitude_crop_input_index,axis=-2).take(longitude_crop_input_index,axis=-1)
+    if x is not None:
+        if type(x) is xr.DataArray:
+        # x_crop = x[...,latitude_crop_input_index,:][...,longitude_crop_input_index]
+            x_crop = x.isel(latitude=latitude_crop_input_index, longitude=longitude_crop_input_index).values
+        else:
+            x_crop = x.take(latitude_crop_input_index,axis=-2).take(longitude_crop_input_index,axis=-1)
 
 
     longitude_left_output = np.max([
@@ -164,7 +165,8 @@ def extend_crop_interpolate(
         else:
             logging.info('output grid is identical to cropped input grid. '
        'Skipping interpolation and returning cropped field directly.')
-        x_interpolated = x_crop
+        if x is not None:
+            x_interpolated = x_crop
     else:
         logging.warning(
         'Warning. Making a small gridshift to avoid problems in case of coinciding input and output grid locations in the Delaunay triangulation')
@@ -177,16 +179,17 @@ def extend_crop_interpolate(
            indexing='ij'
         )
 
-        if len(x_crop.shape) == 2:
-            x_crop = x_crop[np.newaxis]
-        x_interpolated = interpolate_delaunay_linear(
-            x_crop,
-            meshgrid_input_crop,
-            np.meshgrid(*grid_output_revised,indexing='ij'),
-            remove_duplicate_points=True,
-            dropnans=True,
-            add_newaxes=False
-        )[0]
+        if x != None:
+            if len(x_crop.shape) == 2:
+                x_crop = x_crop[np.newaxis]
+            x_interpolated = interpolate_delaunay_linear(
+                x_crop,
+                meshgrid_input_crop,
+                np.meshgrid(*grid_output_revised,indexing='ij'),
+                remove_duplicate_points=True,
+                dropnans=True,
+                add_newaxes=False
+            )[0]
         if debug:
             import pdb; pdb.set_trace()
     # x_interpolated = pcd.vectorized_functions.interpolate_delaunay_linear(
@@ -196,8 +199,13 @@ def extend_crop_interpolate(
     #     remove_duplicate_points=True,
     #     dropnans=True,
     #     add_newaxes=False )
+    return_value = []
+    if x != None:
+        return_value.append(x)
+
+
     if return_grid_output:
-        return x_interpolated,grid_output_revised#(latitude_output,longitude_output)
+        return_value.append(grid_output_revised)#(latitude_output,longitude_output)
     else:
         if (len(grid_output_revised[0]) != len(grid_output[0])) or \
                 np.any(grid_output_revised[0] != grid_output[0]) or \
@@ -205,7 +213,13 @@ def extend_crop_interpolate(
                 np.any(grid_output_revised[1] != grid_output[1]):
             raise ValueError('Predifined output grid is different from actual output grid, '
                              'so you may need that output. Please set return_output_grid to true.')
-        return x_interpolated
+    if len(return_value) == 0:
+        return None
+    elif len(return_value) == 1:
+        return return_value[0]
+    else:
+        return tuple(return_value)
+
 
 def moving_average(a, n=3) :
     cumsum = np.cumsum(a, dtype=float,axis=-1) 
