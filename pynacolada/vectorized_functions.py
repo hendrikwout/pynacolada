@@ -213,12 +213,15 @@ def extend_crop_interpolate(
                 np.any(grid_output_revised[1] != grid_output[1]):
             raise ValueError('Predifined output grid is different from actual output grid, '
                              'so you may need that output. Please set return_output_grid to true.')
+
     if len(return_value) == 0:
-        return None
+        return_value = None
     elif len(return_value) == 1:
-        return return_value[0]
+        return_value =  return_value[0]
     else:
-        return tuple(return_value)
+        return_value = tuple(return_value)
+    import pdb; pdb.set_trace()
+    return return_value
 
 
 def moving_average(a, n=3) :
