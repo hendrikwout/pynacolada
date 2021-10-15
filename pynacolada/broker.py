@@ -137,8 +137,7 @@ class broker (object):
                         return_from_subprocess_dict[key] = return_from_subprocess_dict[key][0]
 
                 self.requires[ibroker_requires].update(return_from_subprocess_dict)
-                #broker['requires'][ibroker_requires]['archive'] = pcd.archive(
-            args.root_requires + '/' + broker_requires['archive'])
+                #broker['requires'][ibroker_requires]['archive'] = pcd.archive( args.root_requires + '/' + broker_requires['archive'])
         if type(self.provides) == list:
             for ibroker_provides, broker_provides in enumerate(self.provides):
                 if ('archive' in broker_provides) and (type(broker_provides['archive']) is type(lambda x:x)):
