@@ -177,7 +177,9 @@ class broker (object):
         )
         logging.info('--- END Collecting or generating coarse input data --- ')
 
-    def apply_func(self,apply_groups_out_extra=None,*args,**kwargs):
+    def apply_func(self,apply_groups_out_extra=None,sources=None,debug=False,*args,**kwargs):
+        if sources == None:
+            sources = self.requires
         #for ibroker_provides, broker_provides in enumerate(self.provides):
         if type(self.provides ) == list:
             archive_out_filename =self.provides[0]['root'] + '/' + self.provides[0]['archive']
@@ -191,7 +193,7 @@ class broker (object):
             sleep(10)
 
 
-        requests_parents = [broker_requires.copy() for broker_requires in self.requires]
+        requests_parents = [broker_requires.copy() for broker_requires in sources]
 
         for irequest_parent,request_parent in enumerate(requests_parents):
             for key,value in list(request_parent.items()):
@@ -219,6 +221,8 @@ class broker (object):
                             apply_groups_out[key].append(self.provides[key][iapply_groups_out])
                     else:
                         apply_groups_out[key] = self.provides[key]
+        if debug == True:
+            import pdb; pdb.set_trace()
 
         self.parent_collection.apply_func(
             self.operator,
