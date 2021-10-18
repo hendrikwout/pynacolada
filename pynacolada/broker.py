@@ -177,7 +177,7 @@ class broker (object):
         )
         logging.info('--- END Collecting or generating coarse input data --- ')
 
-    def apply_func(self,apply_groups_out_extra=None,sources=None,debug=False,*args,**kwargs):
+    def apply_func(self,apply_groups_out_extra=None,sources=None,return_exclude_keys=[],debug=False,*args,**kwargs):
         if sources == None:
             sources = self.requires
         #for ibroker_provides, broker_provides in enumerate(self.provides):
@@ -251,12 +251,14 @@ class broker (object):
                     if type(self.provides[key]) == list:
                         return_request[key] = []
                         for ireturn_request in range(len(self.provides[key])):
-                            if type(self.provides[key][ireturn_request]) != type(lambda x:x):
+                            if (type(self.provides[key][ireturn_request]) != type(lambda x:x)) and \
+                                    (self.provides[key][ireturn_request] not in return_exclude_keys):
                                 return_request[key].append(self.provides[key][ireturn_request])
                         if len(return_request[key]) == 0:
                             del return_request[key]
                     else:
-                        if type(self.provides[key]) != type(lambda x: x):
+                        if (type(self.provides[key]) != type(lambda x: x)) and \
+                               (self.provides[key] not in return_exclude_keys):
                             return_request[key] = self.provides[key]
 
 
