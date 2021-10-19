@@ -7,7 +7,7 @@ purpose: vectorized functions that can be used with apply_func
 import math
 import numpy as np
 import logging
-from scipy.spatial import Delaunay
+#from scipy.spatial import Delaunay
 import xarray as xr
 
 
