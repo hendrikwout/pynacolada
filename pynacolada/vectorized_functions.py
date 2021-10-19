@@ -7,7 +7,6 @@ purpose: vectorized functions that can be used with apply_func
 import math
 import numpy as np
 import logging
-#from scipy.spatial import Delaunay
 import xarray as xr
 
 
@@ -327,7 +326,8 @@ def interpolate_delaunay_linear(values,xylist,uvlist,remove_duplicate_points=Fal
     uvstack.shape = (axis0shape,uvstack.shape[-1]) 
     # print(uvstack.shape)
     # print(xystack.shape) 
-    tri = Delaunay(xystack) 
+    from scipy.spatial import Delaunay
+    tri = Delaunay(xystack)
     # print(uvstack.shape)  
     simplex = tri.find_simplex(uvstack) 
     vertices = np.take(tri.simplices, simplex, axis=0) 
