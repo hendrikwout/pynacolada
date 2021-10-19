@@ -250,16 +250,21 @@ class broker (object):
                 if key not in ['root', 'chain']:
                     if type(self.provides[key]) == list:
                         return_request[key] = []
+                        if debug == True:
+                            import pdb; pdb.set_trace()
                         for ireturn_request in range(len(self.provides[key])):
                             if (type(self.provides[key][ireturn_request]) != type(lambda x:x)) and \
-                                    (self.provides[key][ireturn_request] not in return_exclude_keys):
+                                    (key not in return_exclude_keys):
                                 return_request[key].append(self.provides[key][ireturn_request])
                         if len(return_request[key]) == 0:
                             del return_request[key]
                     else:
+                        if debug == True:
+                            import pdb; pdb.set_trace()
                         if (type(self.provides[key]) != type(lambda x: x)) and \
-                               (self.provides[key] not in return_exclude_keys):
+                               (key not in return_exclude_keys):
                             return_request[key] = self.provides[key]
+
 
 
 
