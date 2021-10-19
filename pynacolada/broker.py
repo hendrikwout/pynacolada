@@ -222,10 +222,10 @@ class broker (object):
                     else:
                         apply_groups_out[key] = self.provides[key]
 
-        for irequest_parent,request_parent in list(enumerate(requests_parents)):
-            for key in list(requests_parents[irequest_parent]):
-                if key not in self.parent_collection.get_lib_dataarrays().index.names:# ['variable','source','time','space']:
-                    del requests_parents[irequest_parent][key]
+        # for irequest_parent,request_parent in list(enumerate(requests_parents)):
+        #     for key in list(requests_parents[irequest_parent]):
+        #         if key not in self.parent_collection.get_lib_dataarrays().index.names:# ['variable','source','time','space']:
+        #             del requests_parents[irequest_parent][key]
         if debug == True:
             import pdb; pdb.set_trace()
 
