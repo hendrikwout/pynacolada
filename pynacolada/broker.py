@@ -101,9 +101,10 @@ class broker (object):
                 for iarg, arg in enumerate(parent_arguments):
                     if type(arg) == str:
                         parent_arguments[iarg] = "'"+parent_arguments[iarg]+"'"
-                for iarg, arg in enumerate(parent_execute):
-                    if type(arg) == str:
-                        parent_execute[iarg] = "'" + parent_execute[iarg] + "'"
+                # for iarg, arg in enumerate(parent_execute):
+                #     if type(arg) == str:
+                #         parent_execute[iarg] = "'" + parent_execute[iarg] + "'"
+
                 # logging.info('Executing parent process:'+ (' '.join(parent_execute))+'"'+ '" "'.join(parent_arguments))
                 # logging.info('parent_execute: ', parent_execute)
                 # logging.info('parent_arguments: ', parent_arguments)
