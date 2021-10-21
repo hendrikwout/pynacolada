@@ -49,7 +49,7 @@ class broker (object):
             if setting in kwargs.keys():
                 self.__dict__[setting] = kwargs[setting]
 
-    def retrieve_input(self):
+    def retrieve_input(self,debug=False):
         logging.info('--- BEGIN Collecting or generating coarse input data -- ')
         for ibroker_requires, broker_requires in enumerate(self.requires):
 
@@ -98,7 +98,8 @@ class broker (object):
                     parent_execute.append(str(max(self.__dict__[key]-1, 0)))
 
                 # p = Popen(parent_arguments , stdout=PIPE, stderr=PIPE)
-
+                if debug == True:
+                    import pdb; pdb.set_trace()
                 for iarg, arg in enumerate(parent_execute):
                     if arg == "":
                         parent_execute[iarg] = '""'
