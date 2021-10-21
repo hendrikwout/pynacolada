@@ -86,7 +86,7 @@ class broker (object):
                 arguments_propagate_to_parent = ['conda_environment_export', 'dummy']
                 for key in arguments_propagate_to_parent:
                     parent_arguments.append('--' + key)
-                    parent_arguments.append(self.__dict__[key] if (self.__dict__[key] != '') else '""')
+                    parent_arguments.append(self.__dict__[key])
 
                 arguments_propagate_reduce_to_parent = [
                     'reset_archive',
@@ -100,7 +100,7 @@ class broker (object):
                 # p = Popen(parent_arguments , stdout=PIPE, stderr=PIPE)
                 if debug == True:
                     import pdb; pdb.set_trace()
-                for iarg, arg in enumerate(parent_execute):
+                for iarg, arg in enumerate(parent_arguments):
                     if arg == "":
                         parent_execute[iarg] = '""'
                 # logging.info('Executing parent process:'+ (' '.join(parent_execute))+'"'+ '" "'.join(parent_arguments))
