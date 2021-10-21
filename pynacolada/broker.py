@@ -98,11 +98,11 @@ class broker (object):
                     parent_execute.append(str(max(self.__dict__[key]-1, 0)))
 
                 # p = Popen(parent_arguments , stdout=PIPE, stderr=PIPE)
-                if debug == True:
-                    import pdb; pdb.set_trace()
                 for iarg, arg in enumerate(parent_arguments):
                     if arg == "":
                         parent_execute[iarg] = '""'
+                if debug == True:
+                    import pdb; pdb.set_trace()
                 # logging.info('Executing parent process:'+ (' '.join(parent_execute))+'"'+ '" "'.join(parent_arguments))
                 # logging.info('parent_execute: ', parent_execute)
                 # logging.info('parent_arguments: ', parent_arguments)
