@@ -101,8 +101,8 @@ class broker (object):
                 for iarg, arg in enumerate(parent_arguments):
                     if arg == "":
                         parent_execute[iarg] = '""'
-                if debug == True:
-                    import pdb; pdb.set_trace()
+                    if debug == True:
+                        import pdb; pdb.set_trace()
                 # logging.info('Executing parent process:'+ (' '.join(parent_execute))+'"'+ '" "'.join(parent_arguments))
                 # logging.info('parent_execute: ', parent_execute)
                 # logging.info('parent_arguments: ', parent_arguments)
