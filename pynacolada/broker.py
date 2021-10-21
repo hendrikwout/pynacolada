@@ -99,11 +99,11 @@ class broker (object):
 
                 # p = Popen(parent_arguments , stdout=PIPE, stderr=PIPE)
                 for iarg, arg in enumerate(parent_arguments):
-                    if arg == "":
-                        parent_arguments[iarg] = "''"
+                    if type(arg) == str:
+                        parent_arguments[iarg] = "'"+parent_arguments[iarg]+"'"
                 for iarg, arg in enumerate(parent_execute):
-                    if arg == "":
-                        parent_execute[iarg] = "''"
+                    if type(arg) == str:
+                        parent_execute[iarg] = "'" + parent_execute[iarg] + "'"
                 # logging.info('Executing parent process:'+ (' '.join(parent_execute))+'"'+ '" "'.join(parent_arguments))
                 # logging.info('parent_execute: ', parent_execute)
                 # logging.info('parent_arguments: ', parent_arguments)
