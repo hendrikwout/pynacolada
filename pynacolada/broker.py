@@ -87,6 +87,9 @@ class broker (object):
                 for key in arguments_propagate_to_parent:
                     parent_arguments.append('--' + key)
                     parent_arguments.append(self.__dict__[key])
+                    if type(parent_argument[-1]) is str:
+                        parent_argument[-1] = '"'+parent_argument[-1]+'"'
+
 
                 arguments_propagate_reduce_to_parent = [
                     'reset_archive',
@@ -99,12 +102,11 @@ class broker (object):
 
                 # p = Popen(parent_arguments , stdout=PIPE, stderr=PIPE)
                 for iarg, arg in enumerate(parent_arguments):
-                    if type(arg) == str:
-                        parent_arguments[iarg] = "'"+parent_arguments[iarg]+"'"
-                # for iarg, arg in enumerate(parent_execute):
-                #     if type(arg) == str:
-                #         parent_execute[iarg] = "'" + parent_execute[iarg] + "'"
-
+                    if arg == "":
+                        parent_arguments[iarg] = "''"
+                for iarg, arg in enumerate(parent_execute):
+                    if arg == "":
+                        parent_execute[iarg] = "''"
                 # logging.info('Executing parent process:'+ (' '.join(parent_execute))+'"'+ '" "'.join(parent_arguments))
                 # logging.info('parent_execute: ', parent_execute)
                 # logging.info('parent_arguments: ', parent_arguments)
