@@ -87,8 +87,8 @@ class broker (object):
                 for key in arguments_propagate_to_parent:
                     parent_arguments.append('--' + key)
                     parent_arguments.append(self.__dict__[key])
-                    if type(parent_argument[-1]) is str:
-                        parent_argument[-1] = '"'+parent_argument[-1]+'"'
+                    if type(parent_arguments[-1]) is str:
+                        parent_arguments[-1] = '"'+parent_arguments[-1]+'"'
 
 
                 arguments_propagate_reduce_to_parent = [
