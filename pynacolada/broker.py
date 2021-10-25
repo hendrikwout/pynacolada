@@ -159,6 +159,7 @@ class broker (object):
                             values_input.append(item['archive'])
                         else:
                             values_input.append(None)
+                    import pdb; pdb.set_trace()
                     self.provides[ibroker_provides]['archive'] = broker_provides['archive'](values_input)
         else:
             broker_provides = self.provides
