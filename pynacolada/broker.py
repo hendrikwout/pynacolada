@@ -126,10 +126,8 @@ class broker (object):
                     with open(history_filename, 'r') as history_file:
                         history_dict = yaml.load(history_file)
 
-                if self.requires[ibroker_requires]['process_arguments'] in history_dict.keys():
-                    self.requires[ibroker_requires]['match_history'] = history_dict[parent_arguments]['return_from_subprocess_eval']
-
-                else:
+                if (self.requires[ibroker_requires]['process_arguments'] not in history_dict.keys()) or \
+                        ((self.force_recalculate -1)> 0) or ((self.reset_archive - 1) > 0):
                     self.requires[ibroker_requires]['stderr'] = open(tempbasename + '_e.log', 'w')
                     self.requires[ibroker_requires]['stdout'] = open(tempbasename + '_o.log', 'w')
                     logging.info('- stdout: ' + self.requires[ibroker_requires]['stdout'].name)
@@ -142,6 +140,12 @@ class broker (object):
                             stdout=self.requires[ibroker_requires]['stdout'],
                             stderr=self.requires[ibroker_requires]['stderr'],
                             )
+
+
+                    (s):
+                    self.requires[ibroker_requires]['match_history'] = history_dict[parent_arguments]['return_from_subprocess_eval']
+
+                else:
         for ibroker_requires,broker_requires in enumerate(self.requires):
             if ('executing_subprocess' in broker_requires) or ('match_history' in broker_requires):
 
@@ -159,9 +163,7 @@ class broker (object):
                     history_dict[  self.requires[ibroker_requires]['process_arguments']   ] = { \
                         'return_from_subprocess_eval' : return_from_subprocess_eval,
                         'number_of_requests': 1
-
                     }
-
                     self.requires[ibroker_requires]['process_arguments'] in history_dict.keys()
                 else:
                     broker_requires['executing_subprocess'].wait()
@@ -176,11 +178,10 @@ class broker (object):
                     history_dict[self.requires[ibroker_requires]['process_arguments']] = { \
                         'return_from_subprocess': return_from_subprocess,
                         'number_of_requests': 0
-
                     }
                 history_dict[self.requires[ibroker_requires]['process_arguments']]  += 1
 
-                with open(history_filename,'w',as history_file:
+                with open(history_filename,'w') as history_file:
                     dump = pyyaml.dump(history_dict, default_flow_style = False)
                     history_dict.write( dump )
 
