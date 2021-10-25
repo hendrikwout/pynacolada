@@ -180,9 +180,6 @@ class broker (object):
                     }
                 history_dict[self.requires[ibroker_requires]['process_arguments']]  += 1
 
-                with open(history_filename, 'w'):
-                    yaml.dump(history_dict,
-
                 with open(history_filename,'w',as history_file:
                     dump = pyyaml.dump(history_dict, default_flow_style = False)
                     history_dict.write( dump )
