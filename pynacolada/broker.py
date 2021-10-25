@@ -155,7 +155,7 @@ class broker (object):
                 if ('archive' in broker_provides) and (type(broker_provides['archive']) is type(lambda x:x)):
                     values_input = []
                     for item in self.requires:
-                        if key in item['archive']:
+                        if 'archive' in item.keys():
                             values_input.append(item['archive'])
                         else:
                             values_input.append(None)
