@@ -136,12 +136,20 @@ class broker (object):
                 # list_return = literal_eval(return_from_subprocess)
                 # if (len(self.requires) == 1) and len(list_return) > 1:
 
-                return_from_subprocess_dict = literal_eval(return_from_subprocess)
-                for key,value in return_from_subprocess_dict.items():
-                    if (type(value) is list) and (len(value) <= 1):
-                        return_from_subprocess_dict[key] = return_from_subprocess_dict[key][0]
+                return_from_subprocess_eval = literal_eval(return_from_subprocess)
+                if type(return_from_subprocess_eval) == list:
+                    for ireturn_requires,return_requires in enumerate(return_from_subprocess_eval):
+                        self.requires.append(return_requires)
+                    self.requires[ibroker_requires]['disable'] = True
 
-                self.requires[ibroker_requires].update(return_from_subprocess_dict)
+                elif type(return_from_subprocess_eval) == dict:
+                    for key,value in return_from_subprocess_eval.items():
+                        if (type(value) is list) and (len(value) <= 1):
+                            return_from_subprocess_eval[key] = return_from_subprocess_eval[key][0]
+                        self.requires[ibroker_requires].update(return_from_subprocess_eval)
+                else:
+                    rais IOError('subprocess return type not implemented')
+
                 #broker['requires'][ibroker_requires]['archive'] = pcd.archive( args.root_requires + '/' + broker_requires['archive'])
         if type(self.provides) == list:
             for ibroker_provides, broker_provides in enumerate(self.provides):
@@ -200,14 +208,18 @@ class broker (object):
 
         requests_parents = [broker_requires.copy() for broker_requires in sources]
 
-        for irequest_parent,request_parent in enumerate(requests_parents):
-            for key,value in list(request_parent.items()):
-                if \
-                        (key in ['archive','process','executing_subprocess','stderr','stdout']) or \
-                            (key not in self.parent_collection.get_lib_dataarrays().columns and \
-                        key not in self.parent_collection.get_lib_dataarrays().index.names) or \
-                        type(value) is type(lambda x: x):
-                    del requests_parents[irequest_parent][key]
+        for irequest_parent,request_parent in list(enumerate(requests_parents)):
+            if ('disable' in request_parent.keys()) \
+                    and (request_parent['disable'] == True):
+                del requests_parents[irequest_parent]
+            else:
+                for key,value in list(request_parent.items()):
+                    if \
+                            (key in ['archive','process','executing_subprocess','stderr','stdout']) or \
+                                (key not in self.parent_collection.get_lib_dataarrays().columns and \
+                            key not in self.parent_collection.get_lib_dataarrays().index.names) or \
+                            type(value) is type(lambda x: x):
+                        del requests_parents[irequest_parent][key]
 
         if type(self.provides) is list:
             apply_groups_out = list()
