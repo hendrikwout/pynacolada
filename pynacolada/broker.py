@@ -141,14 +141,13 @@ class broker (object):
                     for ireturn_requires,return_requires in enumerate(return_from_subprocess_eval):
                         self.requires.append(return_requires)
                     self.requires[ibroker_requires]['disable'] = True
-
                 elif type(return_from_subprocess_eval) == dict:
                     for key,value in return_from_subprocess_eval.items():
                         if (type(value) is list) and (len(value) <= 1):
                             return_from_subprocess_eval[key] = return_from_subprocess_eval[key][0]
                         self.requires[ibroker_requires].update(return_from_subprocess_eval)
                 else:
-                    rais IOError('subprocess return type not implemented')
+                    raise IOError('subprocess return type not implemented')
 
                 #broker['requires'][ibroker_requires]['archive'] = pcd.archive( args.root_requires + '/' + broker_requires['archive'])
         if type(self.provides) == list:
