@@ -153,7 +153,12 @@ class broker (object):
         if type(self.provides) == list:
             for ibroker_provides, broker_provides in enumerate(self.provides):
                 if ('archive' in broker_provides) and (type(broker_provides['archive']) is type(lambda x:x)):
-                    values_input = [ item['archive'] for item in self.requires]
+                    values_input = []
+                    for item in self.requires:
+                        if key in item['archive']:
+                            values_input.append(item['archive'])
+                        else:
+                            values_input.append(None)
                     self.provides[ibroker_provides]['archive'] = broker_provides['archive'](values_input)
         else:
             broker_provides = self.provides
