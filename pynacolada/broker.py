@@ -119,10 +119,11 @@ class broker (object):
 
                 self.requires[ibroker_requires]['process_arguments'] = str(parent_arguments)
 
-                history_filename = self.requires[ibroker_requires]['root'] + '/requests/' + self.requires[0][ 'process'] + '_history.yaml'
+                history_filename = self.requires[ibroker_requires]['root'] + '/requests/' + self.requires[ibroker_requires][ 'process'] + '_history.yaml'
                 if not os.path.isfile(history_filename):
                     history_dict = {}
                 else:
+                    os.mkdir(os.path.dirname(history_filename))
                     with open(history_filename, 'r') as history_file:
                         history_dict = yaml.load(history_file)
 
