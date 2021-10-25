@@ -150,7 +150,7 @@ class broker (object):
                     with open(history_filename, 'r') as history_file:
                         history_dict = yaml.load(history_file)
 
-                if ('executing_process' in self.requires[ibroker_requires].keys():
+                if ('executing_process' in self.requires[ibroker_requires].keys()):
                     broker_requires['executing_subprocess'].wait()
                     self.requires[ibroker_requires]['stderr'].close()
                     self.requires[ibroker_requires]['stdout'].close()
