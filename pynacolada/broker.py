@@ -187,8 +187,8 @@ class broker (object):
                     elif type(self.provides['archive']) is archive:
                         self.provides['archive'].remove(records=True)
                         self.provides['archive'].close()
-
-        import pdb; pdb.set_trace()
+        if debug == True:
+            import pdb; pdb.set_trace()
         self.parent_collection = collection(
             [archive(broker_requires['root'] + '/' + broker_requires['archive']) for broker_requires in
              self.requires]
