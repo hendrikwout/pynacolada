@@ -141,6 +141,8 @@ class broker (object):
                     for ireturn_requires,return_requires in enumerate(return_from_subprocess_eval):
                         self.requires.append(return_requires)
                     self.requires[ibroker_requires]['disable'] = True
+                    for key in ['root','archive', 'process', 'executing_subprocess', 'stderr', 'stdout'])
+                        self.requires[ibroker_requires][key] = broker_requires[key]
                 elif type(return_from_subprocess_eval) == dict:
                     for key,value in return_from_subprocess_eval.items():
                         if (type(value) is list) and (len(value) <= 1):
