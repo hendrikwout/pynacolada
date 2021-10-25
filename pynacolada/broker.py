@@ -117,7 +117,7 @@ class broker (object):
 
                 print(parent_execute + parent_arguments)
 
-                self.requires[ibroker_requires]['process_arguments'] = str(parent_arguments)
+                self.requires[ibroker_requires]['process_arguments'] = str(request_parent)
 
                 history_filename = self.requires[ibroker_requires]['root'] + '/requests/' + self.requires[ibroker_requires][ 'process'] + '_history.yaml'
                 if not os.path.isfile(history_filename):
