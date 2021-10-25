@@ -142,13 +142,8 @@ class broker (object):
                             )
 
 
-                    (s):
-                    self.requires[ibroker_requires]['match_history'] = history_dict[parent_arguments]['return_from_subprocess_eval']
-
-                else:
         for ibroker_requires,broker_requires in enumerate(self.requires):
             if ('executing_subprocess' in broker_requires) or ('match_history' in broker_requires):
-
                 history_filename = self.requires[ibroker_requires]['root'] + '/requests/' + self.requires[0][ 'process'] + '_history.yaml'
                 if not os.path.isfile(history_filename):
                     history_dict = {}
@@ -156,23 +151,22 @@ class broker (object):
                     with open(history_filename, 'r') as history_file:
                         history_dict = yaml.load(history_file)
 
-
-
-                if 'match_history' in broker_requires:
-                    return_from_subprocess = self.requires[ibroker_requires]['match_history']
-                    history_dict[  self.requires[ibroker_requires]['process_arguments']   ] = { \
-                        'return_from_subprocess_eval' : return_from_subprocess_eval,
-                        'number_of_requests': 1
-                    }
-                    self.requires[ibroker_requires]['process_arguments'] in history_dict.keys()
-                else:
+                if ('executing_process' in self.requires[ibroker_requires].keys():
                     broker_requires['executing_subprocess'].wait()
                     self.requires[ibroker_requires]['stderr'].close()
                     self.requires[ibroker_requires]['stdout'].close()
                     return_from_subprocess = open(self.requires[ibroker_requires]['stdout'].name,'r').readlines()[-1][:-1]
                     print('retrieving from parent process '+self.requires[ibroker_requires]['stdout'].name+': '+return_from_subprocess)
 
-                # list_return = literal_eval(return_from_subprocess)
+                else:
+                    return_from_subprocess = self.requires[ibroker_requires]['process_arguments']
+                    history_dict[self.requires[ibroker_requires]['process_arguments']] = { \
+                        'return_from_subprocess_eval': return_from_subprocess_eval,
+                        'number_of_requests': 1
+                    }
+                    self.requires[ibroker_requires]['process_arguments'] in history_dict.keys()
+
+                    # list_return = literal_eval(return_from_subprocess)
                 # if (len(self.requires) == 1) and len(list_return) > 1:
 
                     history_dict[self.requires[ibroker_requires]['process_arguments']] = { \
