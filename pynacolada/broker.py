@@ -107,41 +107,93 @@ class broker (object):
                 for iarg, arg in enumerate(parent_execute):
                     if arg == "":
                         parent_execute[iarg] = '_empty_'
+
+
+
                 # logging.info('Executing parent process:'+ (' '.join(parent_execute))+'"'+ '" "'.join(parent_arguments))
                 # logging.info('parent_execute: ', parent_execute)
                 # logging.info('parent_arguments: ', parent_arguments)
                 tempbasename = tempfile.mktemp(prefix=broker_requires['process'].split('/')[-1] + '_')
-                self.requires[ibroker_requires]['stderr'] = open(tempbasename + '_e.log', 'w')
-                self.requires[ibroker_requires]['stdout'] = open(tempbasename + '_o.log', 'w')
 
-                logging.info('- stdout: ' + self.requires[ibroker_requires]['stdout'].name)
-                logging.info('- stderr: ' + self.requires[ibroker_requires]['stderr'].name)
                 print(parent_execute + parent_arguments)
-                self.requires[ibroker_requires]['executing_subprocess'] = \
-                    Popen(
-                        parent_execute + parent_arguments,
-                        # ' '.join(parent_execute), #' "' + ('" "'.join(parent_arguments))+'" ',
-                        # (' '.join(parent_execute) + '"' + '" "'.join(parent_arguments)),
-                        stdout=self.requires[ibroker_requires]['stdout'],
-                        stderr=self.requires[ibroker_requires]['stderr'],
-                        )
+
+                self.requires[ibroker_requires]['process_arguments'] = str(parent_arguments)
+
+                history_filename = self.requires[ibroker_requires]['root'] + '/requests/' + self.requires[0][ 'process'] + '_history.yaml'
+                if not os.path.isfile(history_filename):
+                    history_dict = {}
+                else:
+                    with open(history_filename, 'r') as history_file:
+                        history_dict = yaml.load(history_file)
+
+                if self.requires[ibroker_requires]['process_arguments'] in history_dict.keys():
+                    self.requires[ibroker_requires]['match_history'] = history_dict[parent_arguments]['return_from_subprocess_eval']
+
+                else:
+                    self.requires[ibroker_requires]['stderr'] = open(tempbasename + '_e.log', 'w')
+                    self.requires[ibroker_requires]['stdout'] = open(tempbasename + '_o.log', 'w')
+                    logging.info('- stdout: ' + self.requires[ibroker_requires]['stdout'].name)
+                    logging.info('- stderr: ' + self.requires[ibroker_requires]['stderr'].name)
+                    self.requires[ibroker_requires]['executing_subprocess'] = \
+                        Popen(
+                            parent_execute + parent_arguments,
+                            # ' '.join(parent_execute), #' "' + ('" "'.join(parent_arguments))+'" ',
+                            # (' '.join(parent_execute) + '"' + '" "'.join(parent_arguments)),
+                            stdout=self.requires[ibroker_requires]['stdout'],
+                            stderr=self.requires[ibroker_requires]['stderr'],
+                            )
         for ibroker_requires,broker_requires in enumerate(self.requires):
-            if 'executing_subprocess' in broker_requires:
-                broker_requires['executing_subprocess'].wait()
-                self.requires[ibroker_requires]['stderr'].close()
-                self.requires[ibroker_requires]['stdout'].close()
-                return_from_subprocess = open(self.requires[ibroker_requires]['stdout'].name,'r').readlines()[-1][:-1]
-                print('retrieving from parent process '+self.requires[ibroker_requires]['stdout'].name+': '+return_from_subprocess)
+            if ('executing_subprocess' in broker_requires) or ('match_history' in broker_requires):
+
+                history_filename = self.requires[ibroker_requires]['root'] + '/requests/' + self.requires[0][ 'process'] + '_history.yaml'
+                if not os.path.isfile(history_filename):
+                    history_dict = {}
+                else:
+                    with open(history_filename, 'r') as history_file:
+                        history_dict = yaml.load(history_file)
+
+
+
+                if 'match_history' in broker_requires:
+                    return_from_subprocess = self.requires[ibroker_requires]['match_history']
+                    history_dict[  self.requires[ibroker_requires]['process_arguments']   ] = { \
+                        'return_from_subprocess_eval' : return_from_subprocess_eval,
+                        'number_of_requests': 1
+
+                    }
+
+                    self.requires[ibroker_requires]['process_arguments'] in history_dict.keys()
+                else:
+                    broker_requires['executing_subprocess'].wait()
+                    self.requires[ibroker_requires]['stderr'].close()
+                    self.requires[ibroker_requires]['stdout'].close()
+                    return_from_subprocess = open(self.requires[ibroker_requires]['stdout'].name,'r').readlines()[-1][:-1]
+                    print('retrieving from parent process '+self.requires[ibroker_requires]['stdout'].name+': '+return_from_subprocess)
 
                 # list_return = literal_eval(return_from_subprocess)
                 # if (len(self.requires) == 1) and len(list_return) > 1:
 
+                    history_dict[self.requires[ibroker_requires]['process_arguments']] = { \
+                        'return_from_subprocess': return_from_subprocess,
+                        'number_of_requests': 0
+
+                    }
+                history_dict[self.requires[ibroker_requires]['process_arguments']]  += 1
+
+                with open(history_filename, 'w'):
+                    yaml.dump(history_dict,
+
+                with open(history_filename,'w',as history_file:
+                    dump = pyyaml.dump(history_dict, default_flow_style = False)
+                    history_dict.write( dump )
+
                 return_from_subprocess_eval = literal_eval(return_from_subprocess)
+
                 if type(return_from_subprocess_eval) == list:
                     for ireturn_requires,return_requires in enumerate(return_from_subprocess_eval):
                         self.requires.append(return_requires)
                     self.requires[ibroker_requires]['disable'] = True
-                    for key in ['root','archive', 'process', 'executing_subprocess', 'stderr', 'stdout']):
+                    for key in ['root','archive', 'process', 'executing_subprocess', 'stderr', 'stdout','process_arguments']):
                         self.requires[ibroker_requires][key] = broker_requires[key]
                 elif type(return_from_subprocess_eval) == dict:
                     for key,value in return_from_subprocess_eval.items():
@@ -222,7 +274,7 @@ class broker (object):
             else:
                 for key,value in list(request_parent.items()):
                     if \
-                            (key in ['archive','process','executing_subprocess','stderr','stdout']) or \
+                            (key in ['archive','process','executing_subprocess','stderr','stdout','process_arguments']) or \
                                 (key not in self.parent_collection.get_lib_dataarrays().columns and \
                             key not in self.parent_collection.get_lib_dataarrays().index.names) or \
                             type(value) is type(lambda x: x):
@@ -266,6 +318,7 @@ class broker (object):
         logging.info('Dumping return_request as last line in stdout being used for processes depending on it')
 
         if type(self.provides) is list:
+
             return_request = list()
             for igroups_out in range(len(self.provides)):
                 return_request.append(dict())
