@@ -127,7 +127,6 @@ class broker (object):
                     with open(history_filename, 'r') as history_file:
                         history_dict = yaml.load(history_file)
 
-
                 if (self.requires[ibroker_requires]['process_arguments'] in history_dict.keys()) and \
                         not (((self.force_recalculate -1)> 0) or ((self.reset_archive - 1) > 0)):
                     self.requires[ibroker_requires]['executing_subprocess'] = 'from_history'
@@ -144,7 +143,6 @@ class broker (object):
                             stdout=self.requires[ibroker_requires]['stdout'],
                             stderr=self.requires[ibroker_requires]['stderr'],
                             )
-                else:
 
         for ibroker_requires,broker_requires in enumerate(self.requires):
             if  ('executing_subprocess' in broker_requires.keys()):
