@@ -168,7 +168,7 @@ class broker (object):
                     os.mkdir(os.path.dirname(history_filename))
                 with open(history_filename,'w') as history_file:
                     dump = yaml.dump(history_dict, default_flow_style = False)
-                    history_dict.write( dump )
+                    history_file.write( dump )
 
                 return_from_subprocess_eval = literal_eval(return_from_subprocess)
 
