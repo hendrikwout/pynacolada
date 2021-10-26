@@ -144,6 +144,8 @@ class broker (object):
                 else:
                     with open(history_filename, 'r') as history_file:
                         history_dict = yaml.load(history_file)
+                        if history_dict is None:
+                            history_dict = {}
 
                 if (self.requires[ibroker_requires]['executing_subprocess'] == 'from_history'):
                     return_from_subprocess = \
