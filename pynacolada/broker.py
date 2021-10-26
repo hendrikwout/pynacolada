@@ -154,6 +154,7 @@ class broker (object):
                     self.requires[ibroker_requires]['stdout'].close()
                     return_from_subprocess = open(self.requires[ibroker_requires]['stdout'].name,'r').readlines()[-1][:-1]
                     print('retrieving from parent process '+self.requires[ibroker_requires]['stdout'].name+': '+return_from_subprocess)
+                    import pdb; pdb.set_trace()
                     history_dict[self.requires[ibroker_requires]['process_arguments']] = { \
                     'return_from_subprocess': return_from_subprocess, 'number_of_requests': 0 }
 
