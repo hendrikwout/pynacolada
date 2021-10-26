@@ -169,13 +169,14 @@ class broker (object):
 
                 history_dict[self.requires[ibroker_requires]['process_arguments']]['number_of_requests']  += 1
 
+                return_from_subprocess_eval = literal_eval(return_from_subprocess)
+
                 if not os.path.isdir(os.path.dirname(history_filename)):
                     os.mkdir(os.path.dirname(history_filename))
                 with open(history_filename,'w') as history_file:
                     dump = yaml.dump(history_dict, default_flow_style = False)
                     history_file.write( dump )
 
-                return_from_subprocess_eval = literal_eval(return_from_subprocess)
 
                 if type(return_from_subprocess_eval) == list:
                     for ireturn_requires,return_requires in enumerate(return_from_subprocess_eval):
