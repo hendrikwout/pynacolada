@@ -154,7 +154,7 @@ class broker (object):
                 if (self.requires[ibroker_requires]['executing_subprocess'] == 'from_history'):
                     return_from_subprocess = \
                             history_dict[self.requires[ibroker_requires]['process_arguments']]['return_from_subprocess']
-                    logging.info('return statement from history:', return_from_subprocess)
+                    logging.info('return statement from history: '+ return_from_subprocess)
                 else:
                     broker_requires['executing_subprocess'].wait()
                     self.requires[ibroker_requires]['stderr'].close()
@@ -167,7 +167,7 @@ class broker (object):
                         'return_from_subprocess': return_from_subprocess,
                         'number_of_requests': 0
                     }
-                    logging.info('return statement from subprocess:',return_from_subprocess)
+                    logging.info('return statement from subprocess: '+return_from_subprocess)
 
                 history_dict[self.requires[ibroker_requires]['process_arguments']]['number_of_requests']  += 1
 
