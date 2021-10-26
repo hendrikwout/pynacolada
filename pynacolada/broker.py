@@ -1,4 +1,4 @@
-import pyyaml
+import yaml
 import logging
 from . import archive,collection
 import os
@@ -163,7 +163,7 @@ class broker (object):
                 if not os.path.isdir(os.path.dirname(history_filename)):
                     os.mkdir(os.path.dirname(history_filename))
                 with open(history_filename,'w') as history_file:
-                    dump = pyyaml.dump(history_dict, default_flow_style = False)
+                    dump = yaml.dump(history_dict, default_flow_style = False)
                     history_dict.write( dump )
 
                 return_from_subprocess_eval = literal_eval(return_from_subprocess)
