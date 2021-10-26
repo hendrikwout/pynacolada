@@ -61,11 +61,6 @@ class broker (object):
                     del request_parent[key]
 
             if 'process' in broker_requires:
-                #print('broker_requires', broker_requires)
-                #print('request_parent', request_parent)
-                # parent_execute = ['conda','init','bash','&&','conda','activate','KLIMPALA','&&', 'python',broker_requires['process']]
-                # parent_execute = ['source','/projects/C3S_EUBiodiversity/bio_load.sh',';','python',broker_requires['process']]
-                # parent_execute = ['python',broker_requires['process']]
                 parent_execute = [
                     './bin/launch_python_conda.sh',
                     self.conda_environment_export,
@@ -108,22 +103,12 @@ class broker (object):
                     if arg == "":
                         parent_execute[iarg] = '_empty_'
 
-
-
-                # logging.info('Executing parent process:'+ (' '.join(parent_execute))+'"'+ '" "'.join(parent_arguments))
-                # logging.info('parent_execute: ', parent_execute)
-                # logging.info('parent_arguments: ', parent_arguments)
-                tempbasename = tempfile.mktemp(prefix=broker_requires['process'].split('/')[-1] + '_')
-
-                print(parent_execute + parent_arguments)
-
                 self.requires[ibroker_requires]['process_arguments'] = str(request_parent)
 
                 history_filename = self.requires[ibroker_requires]['root'] + '/requests/' + self.requires[ibroker_requires][ 'process'] + '_history.yaml'
                 if (not os.path.isfile(history_filename)) or ((self.reset_archive - 1) > 0):
                     history_dict = {}
                 else:
-                    os.mkdir(os.path.dirname(history_filename))
                     with open(history_filename, 'r') as history_file:
                         history_dict = yaml.load(history_file)
 
@@ -131,6 +116,11 @@ class broker (object):
                         not (((self.force_recalculate -1)> 0) or ((self.reset_archive - 1) > 0)):
                     self.requires[ibroker_requires]['executing_subprocess'] = 'from_history'
                 else:
+                    tempdir=self.requires[ibroker_requires]['root'] + '/log/'
+                    os.mkdir(tempdir)
+                    tempbasename = tempfile.mktemp(
+                        prefix=broker_requires['process'].split('/')[-1] + '_',
+                        dir=tempdir)
                     self.requires[ibroker_requires]['stderr'] = open(tempbasename + '_e.log', 'w')
                     self.requires[ibroker_requires]['stdout'] = open(tempbasename + '_o.log', 'w')
                     logging.info('- stdout: ' + self.requires[ibroker_requires]['stdout'].name)
@@ -168,6 +158,7 @@ class broker (object):
 
                 history_dict[self.requires[ibroker_requires]['process_arguments']]['number_of_requests']  += 1
 
+                os.mkdir(os.path.dirname(history_filename))
                 with open(history_filename,'w') as history_file:
                     dump = pyyaml.dump(history_dict, default_flow_style = False)
                     history_dict.write( dump )
