@@ -108,10 +108,12 @@ class broker (object):
 
                 history_filename = self.requires[ibroker_requires]['root'] + '/requests/' + self.requires[ibroker_requires][ 'process'] + '_history.yaml'
                 if (not os.path.isfile(history_filename)) or ((self.reset_archive - 1) > 0):
-                    history_dict = {}
+                    history_dict = {} #reset_history
                 else:
                     with open(history_filename, 'r') as history_file:
                         history_dict = yaml.load(history_file)
+                        if history_dict is None:
+                            history_dict = {}
 
                 if (self.requires[ibroker_requires]['process_arguments'] in history_dict.keys()) and \
                         not (((self.force_recalculate -1)> 0) or ((self.reset_archive - 1) > 0)):
@@ -159,8 +161,9 @@ class broker (object):
                     if debug == True:
                         import pdb; pdb.set_trace()
                     history_dict[self.requires[ibroker_requires]['process_arguments']] = { \
-                    'return_from_subprocess': return_from_subprocess, 'number_of_requests': 0 }
-
+                        'return_from_subprocess': return_from_subprocess,
+                        'number_of_requests': 0
+                    }
 
                 history_dict[self.requires[ibroker_requires]['process_arguments']]['number_of_requests']  += 1
 
