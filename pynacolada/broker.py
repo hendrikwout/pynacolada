@@ -236,7 +236,7 @@ class broker (object):
         archive_collection = []
         for broker_requires in self.requires:
             if 'archive' in broker_requires.keys():
-                archive_collection.append(broker_requires['archive'])
+                archive_collection.append(archive(broker_requires['archive']))
 
         self.parent_collection = collection(archive_collection)
 
