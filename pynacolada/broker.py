@@ -136,7 +136,7 @@ class broker (object):
 
         for ibroker_requires,broker_requires in enumerate(self.requires):
             if  ('executing_subprocess' in broker_requires.keys()):
-                history_filename = self.requires[ibroker_requires]['root'] + '/requests/' + self.requires[ibroker_requires][ 'process'] + '_history.yaml'
+                history_filename = self.requires[ibroker_requires]['root'] + '/requests/' + os.path.basename(self.requires[ibroker_requires][ 'process'] + '_history.yaml')
                 if not os.path.isfile(history_filename):
                     history_dict = {}
                 else:
