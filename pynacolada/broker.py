@@ -257,7 +257,6 @@ class broker (object):
             logging.info('archive locked with "' + lockfile + '" . Waiting for another process to release it.')
             sleep(10)
 
-
         requests_parents = [broker_requires.copy() for broker_requires in sources]
 
         for irequest_parent,request_parent in list(enumerate(requests_parents)):
