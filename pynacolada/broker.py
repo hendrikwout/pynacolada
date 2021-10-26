@@ -175,9 +175,11 @@ class broker (object):
                 if type(return_from_subprocess_eval) == list:
                     for ireturn_requires,return_requires in enumerate(return_from_subprocess_eval):
                         self.requires.append(return_requires)
+                        if debug ==True:
+                            import pdb; pdb.set_trace()
+                        for key in ['root','archive', 'process', 'executing_subprocess', 'stderr', 'stdout','process_arguments']:
+                            self.requires[ireturn_requires][key] = broker_requires[key]
                     self.requires[ibroker_requires]['disable'] = True
-                    for key in ['root','archive', 'process', 'executing_subprocess', 'stderr', 'stdout','process_arguments']:
-                        self.requires[ibroker_requires][key] = broker_requires[key]
                 elif type(return_from_subprocess_eval) == dict:
                     for key,value in return_from_subprocess_eval.items():
                         if (type(value) is list) and (len(value) <= 1):
