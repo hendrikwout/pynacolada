@@ -117,7 +117,8 @@ class broker (object):
                     self.requires[ibroker_requires]['executing_subprocess'] = 'from_history'
                 else:
                     tempdir=self.requires[ibroker_requires]['root'] + '/log/'
-                    os.mkdir(tempdir)
+                    if not os.path.isdir(tempdir):
+                        os.mkdir(tempdir)
                     tempbasename = tempfile.mktemp(
                         prefix=broker_requires['process'].split('/')[-1] + '_',
                         dir=tempdir)
@@ -158,7 +159,8 @@ class broker (object):
 
                 history_dict[self.requires[ibroker_requires]['process_arguments']]['number_of_requests']  += 1
 
-                os.mkdir(os.path.dirname(history_filename))
+                if not os.path.isdir(os.path.dirname(history_filename)):
+                    os.mkdir(os.path.dirname(history_filename))
                 with open(history_filename,'w') as history_file:
                     dump = pyyaml.dump(history_dict, default_flow_style = False)
                     history_dict.write( dump )
