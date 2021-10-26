@@ -232,10 +232,14 @@ class broker (object):
                         self.provides['archive'].close()
         if debug == True:
             import pdb; pdb.set_trace()
-        self.parent_collection = collection(
-            [archive(broker_requires['root'] + '/' + broker_requires['archive']) for broker_requires in
-             self.requires]
-        )
+
+        archive_collection = []
+        for broker_requires in self.requires:
+            if 'archive' in broker_requires.keys():
+                archive_collection.append(broker_requires['archive'])
+
+        self.parent_collection = collection(archive_collection)
+
         logging.info('--- END Collecting or generating coarse input data --- ')
 
     def apply_func(self,apply_groups_out_extra=None,sources=None,return_exclude_keys=[],debug=False,*args,**kwargs):
