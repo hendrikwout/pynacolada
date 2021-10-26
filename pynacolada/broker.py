@@ -180,8 +180,9 @@ class broker (object):
                         self.requires.append(return_requires)
                         if debug ==True:
                             import pdb; pdb.set_trace()
-                        for key in ['root','archive', 'process', 'executing_subprocess', 'stderr', 'stdout','process_arguments']:
-                            self.requires[ireturn_requires][key] = broker_requires[key]
+                        for key in ['root','process', 'executing_subprocess', 'stderr', 'stdout','process_arguments']:
+                            if key in broker_requires[key]:
+                                self.requires[-1][key] = broker_requires[key]
                     self.requires[ibroker_requires]['disable'] = True
                 elif type(return_from_subprocess_eval) == dict:
                     for key,value in return_from_subprocess_eval.items():
