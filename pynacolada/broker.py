@@ -274,7 +274,8 @@ class broker (object):
                             (key in ['archive','process','executing_subprocess','stderr','stdout','process_arguments']) or \
                                 (key not in self.parent_collection.get_lib_dataarrays().columns and \
                             key not in self.parent_collection.get_lib_dataarrays().index.names) or \
-                            type(value) is type(lambda x: x):
+                                    (type(value) is type(lambda x: x)) and \
+                                    (key in requests_parents[irequest_parent]):
                         del requests_parents[irequest_parent][key]
 
         if type(self.provides) is list:
