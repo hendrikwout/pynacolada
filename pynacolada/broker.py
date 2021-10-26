@@ -154,6 +154,7 @@ class broker (object):
                 if (self.requires[ibroker_requires]['executing_subprocess'] == 'from_history'):
                     return_from_subprocess = \
                             history_dict[self.requires[ibroker_requires]['process_arguments']]['return_from_subprocess']
+                    logging.info('return statement from history:', return_from_subprocess)
                 else:
                     broker_requires['executing_subprocess'].wait()
                     self.requires[ibroker_requires]['stderr'].close()
@@ -166,16 +167,11 @@ class broker (object):
                         'return_from_subprocess': return_from_subprocess,
                         'number_of_requests': 0
                     }
+                    logging.info('return statement from subprocess:',return_from_subprocess)
 
                 history_dict[self.requires[ibroker_requires]['process_arguments']]['number_of_requests']  += 1
 
                 return_from_subprocess_eval = literal_eval(return_from_subprocess)
-
-                if not os.path.isdir(os.path.dirname(history_filename)):
-                    os.mkdir(os.path.dirname(history_filename))
-                with open(history_filename,'w') as history_file:
-                    dump = yaml.dump(history_dict, default_flow_style = False)
-                    history_file.write( dump )
 
 
                 if type(return_from_subprocess_eval) == list:
@@ -194,6 +190,12 @@ class broker (object):
                         self.requires[ibroker_requires].update(return_from_subprocess_eval)
                 else:
                     raise IOError('subprocess return type not implemented')
+
+                if not os.path.isdir(os.path.dirname(history_filename)):
+                    os.mkdir(os.path.dirname(history_filename))
+                with open(history_filename,'w') as history_file:
+                    dump = yaml.dump(history_dict, default_flow_style = False)
+                    history_file.write( dump )
 
                 #broker['requires'][ibroker_requires]['archive'] = pcd.archive( args.root_requires + '/' + broker_requires['archive'])
         if type(self.provides) == list:
