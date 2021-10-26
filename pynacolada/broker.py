@@ -138,7 +138,7 @@ class broker (object):
                             stderr=self.requires[ibroker_requires]['stderr'],
                             )
 
-        for ibroker_requires,broker_requires in enumerate(self.requires):
+        for ibroker_requires,broker_requires in list(enumerate(self.requires)):
             if  ('executing_subprocess' in broker_requires.keys()):
                 history_filename = self.requires[ibroker_requires]['root'] + '/requests/' + os.path.basename(self.requires[ibroker_requires][ 'process'] + '_history.yaml')
                 if not os.path.isfile(history_filename):
