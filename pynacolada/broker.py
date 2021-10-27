@@ -249,6 +249,20 @@ class broker (object):
 
         logging.info('--- END Collecting or generating coarse input data --- ')
 
+
+    def subset_requires(self,subset_variables,key='variable'):
+        broker_requires_new = []
+        for variable in subset_variables:
+            first_variable_found = False
+            for ibroker_requires,broker_requires in enumerate(self.requires):
+                if (not first_variable_found) and (key in broker_requires[key]) and (broker_requires[key] == variable):
+                    broker_requires_new.append(broker_requires)
+                    first_variable_found = True
+            if not first_variable_found:
+                raise ValueError ('value '+variable+'not found in self.requires')
+
+
+
     def apply_func(self,apply_groups_out_extra=None,sources=None,return_exclude_keys=[],debug=False,*args,**kwargs):
         if sources == None:
             sources = self.requires
