@@ -106,7 +106,7 @@ class broker (object):
 
                 self.requires[ibroker_requires]['process_arguments'] = str(request_parent)
 
-                history_filename = self.requires[ibroker_requires]['root'] + '/requests/' + self.requires[ibroker_requires][ 'process'] + '_history.yaml'
+                history_filename = self.requires[ibroker_requires]['root'] + '/requests/' + os.path.basename(self.requires[ibroker_requires][ 'process'] + '_history.yaml')
                 if (not os.path.isfile(history_filename)) or ((self.reset_archive - 1) > 0):
                     history_dict = {} #reset_history
                 else:
