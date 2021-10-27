@@ -272,9 +272,9 @@ class broker (object):
                 del requests_parents[irequest_parent]
 
         for irequest_parent,request_parent in list(reversed(list(enumerate(requests_parents)))):
-             for key,value in list(requests_parents[irequest_parent].items()):
+            for key,value in list(requests_parents[irequest_parent].items()):
 
-             if \
+                if \
                      ((key in ['archive','process','executing_subprocess','stderr','stdout','process_arguments']) or \
                      (((key not in self.parent_collection.get_lib_dataarrays().columns)) and \
                        (key not in self.parent_collection.get_lib_dataarrays().index.names)) or \
