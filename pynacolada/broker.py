@@ -271,10 +271,10 @@ class broker (object):
             else:
                 for key,value in list(request_parent.items()):
                     if \
-                            (key in ['archive','process','executing_subprocess','stderr','stdout','process_arguments']) or \
+                            ((key in ['archive','process','executing_subprocess','stderr','stdout','process_arguments']) or \
                                 (key not in self.parent_collection.get_lib_dataarrays().columns and \
                             key not in self.parent_collection.get_lib_dataarrays().index.names) or \
-                                    (type(value) is type(lambda x: x)) and \
+                                    (type(value) is type(lambda x: x))) and \
                                     (key in requests_parents[irequest_parent]):
                         del requests_parents[irequest_parent][key]
 
