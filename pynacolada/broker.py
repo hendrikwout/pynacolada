@@ -272,8 +272,6 @@ class broker (object):
                 del requests_parents[irequest_parent]
             else:
                 for key,value in list(request_parent.items()):
-                    if debug == True:
-                        import pdb; pdb.set_trace()
 
                     if \
                             ((key in ['archive','process','executing_subprocess','stderr','stdout','process_arguments']) or \
