@@ -115,6 +115,8 @@ class broker (object):
                         if history_dict is None:
                             history_dict = {}
 
+                if debug==True:
+                    import pdb; pdb.set_trace()
                 if (self.requires[ibroker_requires]['process_arguments'] in history_dict.keys()) and \
                         not (((self.force_recalculate -1)> 0) or ((self.reset_archive - 1) > 0)):
                     self.requires[ibroker_requires]['executing_subprocess'] = 'from_history'
