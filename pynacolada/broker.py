@@ -266,14 +266,14 @@ class broker (object):
 
         requests_parents = [broker_requires.copy() for broker_requires in sources]
 
+        if debug == True:
+            import pdb; pdb.set_trace()
         for irequest_parent,request_parent in list(enumerate(requests_parents)):
             if ('disable' in request_parent.keys()) \
                     and (request_parent['disable'] == True):
                 del requests_parents[irequest_parent]
             else:
                 for key,value in list(request_parent.items()):
-                    if debug==True:
-                        import pdb; pdb.set_trace()
 
                     if \
                             ((key in ['archive','process','executing_subprocess','stderr','stdout','process_arguments']) or \
