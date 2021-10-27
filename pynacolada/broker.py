@@ -266,20 +266,20 @@ class broker (object):
 
         requests_parents = [broker_requires.copy() for broker_requires in sources]
 
-        for irequest_parent,request_parent in list(enumerate(requests_parents)):
+        for irequest_parent,request_parent in list(reversed(list(enumerate(requests_parents)))):
             if ('disable' in request_parent.keys()) \
-                    and (request_parent['disable'] == True):
+                    and (requests_parents[irequest_parent]['disable'] == True):
                 del requests_parents[irequest_parent]
-            else:
-                for key,value in list(request_parent.items()):
 
-                    if \
-                            ((key in ['archive','process','executing_subprocess','stderr','stdout','process_arguments']) or \
-                                    (((key not in self.parent_collection.get_lib_dataarrays().columns)) and \
-                              (key not in self.parent_collection.get_lib_dataarrays().index.names)) or \
-                                    (type(value) is type(lambda x: x))) and \
-                                    (key in requests_parents[irequest_parent].keys()):
-                        del requests_parents[irequest_parent][key]
+        for irequest_parent,request_parent in list(reversed(list(enumerate(requests_parents)))):
+             for key,value in list(requests_parents[irequest_parent].items()):
+
+             if \
+                     ((key in ['archive','process','executing_subprocess','stderr','stdout','process_arguments']) or \
+                     (((key not in self.parent_collection.get_lib_dataarrays().columns)) and \
+                       (key not in self.parent_collection.get_lib_dataarrays().index.names)) or \
+                             (type(value) is type(lambda x: x))):
+                 del requests_parents[irequest_parent][key]
 
         if debug == True:
             import pdb; pdb.set_trace()
