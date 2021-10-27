@@ -281,6 +281,9 @@ class broker (object):
                                     (key in requests_parents[irequest_parent].keys()):
                         del requests_parents[irequest_parent][key]
 
+        if debug == True:
+            import pdb; pdb.set_trace()
+
         if type(self.provides) is list:
             apply_groups_out = list()
             for igroups_out in range(len(self.provides)):
