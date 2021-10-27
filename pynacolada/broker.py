@@ -274,6 +274,7 @@ class broker (object):
                 for key,value in list(request_parent.items()):
                     if debug==True:
                         import pdb; pdb.set_trace()
+
                     if \
                             ((key in ['archive','process','executing_subprocess','stderr','stdout','process_arguments']) or \
                                 ((key not in self.parent_collection.get_lib_dataarrays().columns) and \
