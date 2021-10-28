@@ -347,7 +347,8 @@ class broker (object):
             for igroups_out in range(len(self.provides)):
                 return_request.append(dict())
                 for key in self.provides[igroups_out].keys():
-                    import pdb; pdb.set_trace()
+                    if debug==True:
+                        import pdb; pdb.set_trace()
                     if (key not in ['root','chain']) and (key not in return_exclude_keys):
                         if type(self.provides[igroups_out][key]) is not type(lambda x:x):
                             return_request[igroups_out][key] = self.provides[igroups_out][key]
