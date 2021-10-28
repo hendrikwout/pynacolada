@@ -50,6 +50,8 @@ class broker (object):
         for setting in self.global_settings_defaults.keys():
             if setting in kwargs.keys():
                 self.__dict__[setting] = kwargs[setting]
+            else:
+                self.__dict__[setting] = self.global_settings_defaults[setting]
 
     def retrieve_input(self,debug=False):
         logging.info('--- BEGIN Collecting or generating coarse input data -- ')
