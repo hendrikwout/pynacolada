@@ -341,7 +341,8 @@ class broker (object):
 
         logging.info('Dumping return_request as last line in stdout being used for processes depending on it')
 
-        import pdb; pdb.set_trace()
+        if debug==True:
+            import pdb; pdb.set_trace()
         if type(self.provides) is list:
 
             return_request = list()
