@@ -255,7 +255,7 @@ class broker (object):
         for variable in subset_variables:
             first_variable_found = False
             for ibroker_requires,broker_requires in enumerate(self.requires):
-                if (not first_variable_found) and (key in broker_requires[key]) and (broker_requires[key] == variable):
+                if (not first_variable_found) and (key in broker_requires) and (broker_requires[key] == variable):
                     broker_requires_new.append(broker_requires)
                     first_variable_found = True
             if not first_variable_found:
