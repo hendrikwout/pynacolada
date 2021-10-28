@@ -251,6 +251,7 @@ class broker (object):
 
 
     def subset_requires(self,subset_variables,key='variable'):
+        # this should be transformed into a query-like procedure
         broker_requires_new = []
         for variable in subset_variables:
             first_variable_found = False
