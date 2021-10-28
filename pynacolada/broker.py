@@ -237,14 +237,16 @@ class broker (object):
                     elif type(self.provides['archive']) is archive:
                         self.provides['archive'].remove(records=True)
                         self.provides['archive'].close()
+
         if debug == True:
             import pdb; pdb.set_trace()
 
         archive_collection_paths = []
         for broker_requires in self.requires:
-            full_path =os.path.realpath(broker_requires['root']+'/'+broker_requires['archive'])
-            if ('archive' in broker_requires.keys()) and (full_path not in archive_collection_paths):
-                archive_collection_paths.append(full_path)
+            if ('archive' in broker_requires.keys())
+                full_path = os.path.realpath(broker_requires['root'] + '/' + broker_requires['archive'])
+                if (full_path not in archive_collection_paths):
+                    archive_collection_paths.append(full_path)
 
         self.parent_collection = collection([archive(full_path) for full_path in archive_collection_paths])
 
