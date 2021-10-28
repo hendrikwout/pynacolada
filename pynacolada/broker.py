@@ -240,12 +240,13 @@ class broker (object):
         if debug == True:
             import pdb; pdb.set_trace()
 
-        archive_collection = []
+        archive_collection_paths = []
         for broker_requires in self.requires:
-            if 'archive' in broker_requires.keys():
-                archive_collection.append(archive(broker_requires['root']+'/'+broker_requires['archive']))
+            full_path =os.path.realpath(broker_requires['root']+'/'+broker_requires['archive'])
+            if ('archive' in broker_requires.keys()) and (full_path not in archive_collection_paths):
+                archive_collection_paths.append(full_path)
 
-        self.parent_collection = collection(archive_collection)
+        self.parent_collection = collection([archive(full_path) for full_path in archive_collection_paths])
 
         logging.info('--- END Collecting or generating coarse input data --- ')
 
