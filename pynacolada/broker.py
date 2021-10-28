@@ -243,7 +243,7 @@ class broker (object):
 
         archive_collection_paths = []
         for broker_requires in self.requires:
-            if ('archive' in broker_requires.keys())
+            if ('archive' in broker_requires.keys()):
                 full_path = os.path.realpath(broker_requires['root'] + '/' + broker_requires['archive'])
                 if (full_path not in archive_collection_paths):
                     archive_collection_paths.append(full_path)
