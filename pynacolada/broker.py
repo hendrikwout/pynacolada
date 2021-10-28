@@ -43,6 +43,7 @@ class broker (object):
             'dummy': 'False',
             'reset_archive': 0,
             'reset_lock':0,
+            'reset_history':0,
             'force_recalculate':0,
         }
 
@@ -90,6 +91,7 @@ class broker (object):
                 arguments_propagate_reduce_to_parent = [
                     'reset_archive',
                     'reset_lock',
+                    'reset_history',
                     'force_recalculate'
                 ]
                 for key in arguments_propagate_reduce_to_parent:
@@ -107,7 +109,7 @@ class broker (object):
                 self.requires[ibroker_requires]['process_arguments'] = str(request_parent)
 
                 history_filename = self.requires[ibroker_requires]['root'] + '/requests/' + os.path.basename(self.requires[ibroker_requires][ 'process'] + '_history.yaml')
-                if (not os.path.isfile(history_filename)) or ((self.reset_archive - 1) > 0):
+                if (not os.path.isfile(history_filename)) or ((self.reset_history - 1) > 0) or ((self.reset_archive - 1) > 0):
                     history_dict = {} #reset_history
                 else:
                     with open(history_filename, 'r') as history_file:
@@ -118,7 +120,7 @@ class broker (object):
                 if debug==True:
                     import pdb; pdb.set_trace()
                 if (self.requires[ibroker_requires]['process_arguments'] in history_dict.keys()) and \
-                        not (((self.force_recalculate -1)> 0) or ((self.reset_archive - 1) > 0)):
+                        not (((self.reset_history -1)> 0) or ((self.force_recalculate -1)> 0) or ((self.reset_archive - 1) > 0)):
                     self.requires[ibroker_requires]['executing_subprocess'] = 'from_history'
                 else:
                     tempdir=self.requires[ibroker_requires]['root'] + '/log/'
