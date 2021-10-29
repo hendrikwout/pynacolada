@@ -469,7 +469,8 @@ def apply_func(func,xarrays,dims_apply, method_dims_no_apply='outer',filenames_o
                             if attribute_key == 'variable':
                                 ##print('setting variable name',variables_out[ixarray_out])
                                 variables_out[ixarray_out] = attribute_value
-                    
+
+                    import pdb; pdb.set_trace()
                     ncouts[ixarray_out].createVariable(variables_out[ixarray_out],'f',dims_out[ixarray_out],)
 
                     # dims_out_def = dims_out_transposed[iarray]
