@@ -218,7 +218,10 @@ class broker (object):
                 for item in self.requires:
                     if 'disable' not in item.keys():
                         values_input.append(item['archive'])
-                self.provides['archive'] = broker_provides['archive'](values_input)
+                if len(values_input) > 0:
+                    self.provides['archive'] = broker_provides['archive'](values_input)
+                else:
+                    self.provides['archive'] = None #broker_provides['archive'](values_input)
 
         if self.reset_archive > 0 :
             logging.info('Resetting archive of current broker')
