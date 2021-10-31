@@ -119,8 +119,6 @@ class broker (object):
                         if history_dict is None:
                             history_dict = {}
 
-                if debug==True:
-                    import pdb; pdb.set_trace()
                 if (self.requires[ibroker_requires]['process_arguments'] in history_dict.keys()) and \
                         not (((self.reset_history -1)> 0) or ((self.force_recalculate -1)> 0) or ((self.reset_archive - 1) > 0)):
                     self.requires[ibroker_requires]['executing_subprocess'] = 'from_history'
@@ -143,8 +141,6 @@ class broker (object):
                             stdout=self.requires[ibroker_requires]['stdout'],
                             stderr=self.requires[ibroker_requires]['stderr'],
                             )
-        if debug == True:
-            import pdb; pdb.set_trace()
 
         for ibroker_requires,broker_requires in list(enumerate(self.requires)):
             if  ('executing_subprocess' in broker_requires.keys()):
@@ -167,8 +163,6 @@ class broker (object):
                     self.requires[ibroker_requires]['stdout'].close()
                     return_from_subprocess = open(self.requires[ibroker_requires]['stdout'].name,'r').readlines()[-1][:-1]
                     print('retrieving from parent process '+self.requires[ibroker_requires]['stdout'].name+': '+return_from_subprocess)
-                    if debug == True:
-                        import pdb; pdb.set_trace()
                     history_dict[self.requires[ibroker_requires]['process_arguments']] = { \
                         'return_from_subprocess': return_from_subprocess,
                         'number_of_requests': 0
@@ -178,6 +172,10 @@ class broker (object):
                 history_dict[self.requires[ibroker_requires]['process_arguments']]['number_of_requests']  += 1
 
                 return_from_subprocess_eval = literal_eval(return_from_subprocess)
+
+                if debug==True:
+                    import pdb; pdb.set_trace()
+
 
                 if (return_from_subprocess_eval) == None:
                     self.requires[ibroker_requires]['disable'] = True
