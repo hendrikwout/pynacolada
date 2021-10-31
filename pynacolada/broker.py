@@ -203,20 +203,24 @@ class broker (object):
                     history_file.write( dump )
 
                 #broker['requires'][ibroker_requires]['archive'] = pcd.archive( args.root_requires + '/' + broker_requires['archive'])
-        if type(self.provides) == list:
+        if type(self.provides) == list) and :
             for ibroker_provides, broker_provides in enumerate(self.provides):
                 if ('archive' in broker_provides) and (type(broker_provides['archive']) is type(lambda x:x)):
                     values_input = []
                     for item in self.requires:
-                        if 'archive' in item.keys():
-                            values_input.append(item['archive'])
-                        else:
-                            values_input.append(None)
+                        if ('disable' not in item.keys()):
+                            if ('archive' in item.keys()):
+                                values_input.append(item['archive'])
+                            else:
+                                values_input.append(None)
                     self.provides[ibroker_provides]['archive'] = broker_provides['archive'](values_input)
         else:
             broker_provides = self.provides
             if ('archive' in broker_provides) and (type(broker_provides['archive']) is type(lambda x: x)):
-                values_input = [item['archive'] for item in self.requires]
+                values_input = []
+                for item in self.requires:
+                    if 'disable' not in item.keys():
+                        values_input.append(item['archive'])
                 self.provides['archive'] = broker_provides['archive'](values_input)
 
         if self.reset_archive > 0 :
