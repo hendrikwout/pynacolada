@@ -179,8 +179,9 @@ class broker (object):
 
                 return_from_subprocess_eval = literal_eval(return_from_subprocess)
 
-
-                if type(return_from_subprocess_eval) == list:
+                if (return_from_subprocess_eval) == None:
+                    self.requires[ibroker_requires]['disable'] = True
+                elif type(return_from_subprocess_eval) == list:
                     for ireturn_requires,return_requires in enumerate(return_from_subprocess_eval):
                         self.requires.append(return_requires)
                         if debug ==True:
