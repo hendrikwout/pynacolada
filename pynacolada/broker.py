@@ -203,7 +203,7 @@ class broker (object):
                     history_file.write( dump )
 
                 #broker['requires'][ibroker_requires]['archive'] = pcd.archive( args.root_requires + '/' + broker_requires['archive'])
-        if type(self.provides) == list) and :
+        if type(self.provides) == list):
             for ibroker_provides, broker_provides in enumerate(self.provides):
                 if ('archive' in broker_provides) and (type(broker_provides['archive']) is type(lambda x:x)):
                     values_input = []
