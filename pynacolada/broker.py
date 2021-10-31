@@ -173,9 +173,6 @@ class broker (object):
 
                 return_from_subprocess_eval = literal_eval(return_from_subprocess)
 
-                if debug==True:
-                    import pdb; pdb.set_trace()
-
 
                 if (return_from_subprocess_eval) == None:
                     self.requires[ibroker_requires]['disable'] = True
