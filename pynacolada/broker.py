@@ -355,6 +355,10 @@ class broker (object):
                     if (key not in ['root','chain']) and (key not in return_exclude_keys):
                         if type(self.provides[igroups_out][key]) is not type(lambda x:x):
                             return_request[igroups_out][key] = self.provides[igroups_out][key]
+                        if type(return_request[igroups_out][key]) is str:
+                            return_request[igroups_out][key].replace('"','')
+
+
         else:
             return_request = dict()
             for key in self.provides.keys():
@@ -367,6 +371,9 @@ class broker (object):
                             if (type(self.provides[key][ireturn_request]) != type(lambda x:x)) and \
                                     (key not in return_exclude_keys):
                                 return_request[key].append(self.provides[key][ireturn_request])
+                                if type(return_request[key][-1]) == str:
+                                    return_request[key][-1] = return_request[key][-1].replace('"','')
+
                         if len(return_request[key]) == 0:
                             del return_request[key]
                     else:
