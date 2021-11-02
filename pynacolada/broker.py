@@ -185,7 +185,7 @@ class broker (object):
                             if key in broker_requires.keys():
                                 self.requires[-1][key] = broker_requires[key]
                     self.requires[ibroker_requires]['disable'] = True
-                elif type(return_from_subprocess_seval) == dict:
+                elif type(return_from_subprocess_eval) == dict:
                     for key,value in return_from_subprocess_eval.items():
                         if (type(value) is list) and (len(value) <= 1):
                             return_from_subprocess_eval[key] = return_from_subprocess_eval[key][0]
