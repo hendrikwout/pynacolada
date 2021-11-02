@@ -193,11 +193,12 @@ class broker (object):
                 else:
                     raise IOError('subprocess return type not implemented')
 
-                if not os.path.isdir(os.path.dirname(history_filename)):
-                    os.mkdir(os.path.dirname(history_filename))
-                with open(history_filename,'w') as history_file:
-                    dump = yaml.dump(history_dict, default_flow_style = False)
-                    history_file.write( dump )
+                if self.dummy != 'True':
+                    if not os.path.isdir(os.path.dirname(history_filename)):
+                        os.mkdir(os.path.dirname(history_filename))
+                    with open(history_filename,'w') as history_file:
+                        dump = yaml.dump(history_dict, default_flow_style = False)
+                        history_file.write( dump )
 
                 #broker['requires'][ibroker_requires]['archive'] = pcd.archive( args.root_requires + '/' + broker_requires['archive'])
         if (type(self.provides) == list):
@@ -284,6 +285,7 @@ class broker (object):
         else:
             archive_out_filename = self.provides['root'] + '/' + self.provides['archive']
         lockfile = archive_out_filename + '_lock'
+
         if self.reset_lock > 0:
             os.system('rm ' + lockfile)
         while os.path.isfile(lockfile):
@@ -332,15 +334,16 @@ class broker (object):
         if debug == True:
             import pdb; pdb.set_trace()
 
-        self.parent_collection.apply_func(
-            self.operator,
-            apply_groups_in = requests_parents,
-            apply_groups_out=apply_groups_out,
-            archive_out = archive_out_filename,
-            *args,
-            **self.operator_properties,
-            **kwargs)
-        os.system('rm '+lockfile)
+        if self.dummy != 'True':
+            self.parent_collection.apply_func(
+                self.operator,
+                apply_groups_in = requests_parents,
+                apply_groups_out=apply_groups_out,
+                archive_out = archive_out_filename,
+                *args,
+                **self.operator_properties,
+                **kwargs)
+            os.system('rm '+lockfile)
 
         logging.info('Dumping return_request as last line in stdout being used for processes depending on it')
 
