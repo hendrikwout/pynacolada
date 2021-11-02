@@ -104,9 +104,14 @@ class broker (object):
                 for iarg, arg in enumerate(parent_arguments):
                     if arg == "":
                         parent_arguments[iarg] = '_empty_'
+                    else:
+                        parent_arguments[iarg] = parent_arguments[iarg].replace('"','')
+
                 for iarg, arg in enumerate(parent_execute):
                     if arg == "":
                         parent_execute[iarg] = '_empty_'
+                    else:
+                        parent_arguments[iarg] = parent_arguments[iarg].replace('"','')
 
                 self.requires[ibroker_requires]['process_arguments'] = str(request_parent)
 
