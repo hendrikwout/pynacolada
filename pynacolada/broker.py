@@ -111,7 +111,7 @@ class broker (object):
                     if arg == "":
                         parent_execute[iarg] = '_empty_'
                     else:
-                        parent_arguments[iarg] = parent_arguments[iarg].replace('"','')
+                        parent_execute[iarg] = parent_execute[iarg].replace('"','')
 
                 self.requires[ibroker_requires]['process_arguments'] = str(request_parent)
 
