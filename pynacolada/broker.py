@@ -115,6 +115,7 @@ class broker (object):
 
                 self.requires[ibroker_requires]['process_arguments'] = str(request_parent)
 
+
                 history_filename = self.requires[ibroker_requires]['root'] + '/requests/' + os.path.basename(self.requires[ibroker_requires][ 'process'] + '_history.yaml')
                 if (not os.path.isfile(history_filename)) or ((self.reset_history - 1) > 0) or ((self.reset_archive - 1) > 0):
                     history_dict = {} #reset_history
@@ -124,6 +125,8 @@ class broker (object):
                         if history_dict is None:
                             history_dict = {}
 
+                if debug == True:
+                    import pdb; pdb.set_trace()
                 if (self.requires[ibroker_requires]['process_arguments'] in history_dict.keys()) and \
                         not (((self.reset_history -1)> 0) or ((self.force_recalculate -1)> 0) or ((self.reset_archive - 1) > 0)):
                     self.requires[ibroker_requires]['executing_subprocess'] = 'from_history'
@@ -202,7 +205,7 @@ class broker (object):
                     if not os.path.isdir(os.path.dirname(history_filename)):
                         os.mkdir(os.path.dirname(history_filename))
                     with open(history_filename,'w') as history_file:
-                        dump = yaml.dump(history_dict, default_flow_style = False)
+                        dump = yaml.dump(history_dict)
                         history_file.write( dump )
 
                 #broker['requires'][ibroker_requires]['archive'] = pcd.archive( args.root_requires + '/' + broker_requires['archive'])
