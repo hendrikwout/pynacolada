@@ -175,6 +175,9 @@ class broker (object):
                     self.requires[ibroker_requires]['stdout'].close()
                     return_from_subprocess = open(self.requires[ibroker_requires]['stdout'].name,'r').readlines()[-1][:-1]
 
+                    if self.requires[ibroker_requires]['process_arguments'] in history_dict.keys():
+                        del history_dict[self.requires[ibroker_requires]['process_arguments']]
+
                 if self.requires[ibroker_requires]['process_arguments'] not in history_dict.keys():
                     print('retrieving from parent process '+self.requires[ibroker_requires]['stdout'].name+': '+return_from_subprocess)
                     history_dict[self.requires[ibroker_requires]['process_arguments']] = { \
