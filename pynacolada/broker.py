@@ -211,7 +211,7 @@ class broker (object):
                 #broker['requires'][ibroker_requires]['archive'] = pcd.archive( args.root_requires + '/' + broker_requires['archive'])
         if (type(self.provides) == list):
             for ibroker_provides, broker_provides in enumerate(self.provides):
-                if ('archive' in broker_provides) and (type(broker_provides['archive']) is type(lambda x:x)):
+                if ('archive' in broker_provides.keys()) and (type(broker_provides['archive']) is type(lambda x:x)):
                     values_input = []
                     for item in self.requires:
                         if ('disable' not in item.keys()):
