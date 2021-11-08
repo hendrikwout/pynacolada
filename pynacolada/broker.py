@@ -117,7 +117,7 @@ class broker (object):
 
 
                 history_filename = self.requires[ibroker_requires]['root'] + '/requests/' + os.path.basename(self.requires[ibroker_requires][ 'process'] + '_history.yaml')
-                if (not os.path.isfile(history_filename)) or ((self.reset_history - 1) > 0) or ((self.reset_archive - 1) > 0):
+                if (not os.path.isfile(history_filename)):
                     history_dict = {} #reset_history
                 else:
                     with open(history_filename, 'r') as history_file:
@@ -127,9 +127,13 @@ class broker (object):
 
                 if debug == True:
                     import pdb; pdb.set_trace()
-                if (self.requires[ibroker_requires]['process_arguments'] in history_dict.keys()) and \
-                        not (((self.reset_history -1)> 0) or ((self.force_recalculate -1)> 0) or ((self.reset_archive - 1) > 0)):
-                    self.requires[ibroker_requires]['executing_subprocess'] = 'from_history'
+
+                if (((self.reset_history - 1) > 0) or ((self.reset_history - 1) > 0) or ( (self.reset_archive - 1) > 0)):
+                    if (self.requires[ibroker_requires]['process_arguments'] in history_dict.keys()):
+                        del history_dict[self.requires[ibroker_requires]['process_arguments']]
+
+                if (self.requires[ibroker_requires]['process_arguments'] in history_dict.keys()):
+                    self.requires[ibroker_requires]['return_from_history'] = history_dict[self.requires[ibroker_requires]['process_arguments']]['return_from_subprocess']
                 else:
                     tempdir=self.requires[ibroker_requires]['root'] + '/log/'
                     if not os.path.isdir(tempdir):
@@ -151,9 +155,10 @@ class broker (object):
                             )
 
         for ibroker_requires,broker_requires in list(enumerate(self.requires)):
-            if  ('executing_subprocess' in broker_requires.keys()):
+            if  ('executing_subprocess' in broker_requires.keys()) or ('return_from_history' in broker_requires.keys()):
                 history_filename = self.requires[ibroker_requires]['root'] + '/requests/' + os.path.basename(self.requires[ibroker_requires][ 'process'] + '_history.yaml')
-                if (not os.path.isfile(history_filename)) or ((self.reset_archive -1)>0) or ((self.reset_archive -1)>0):
+
+                if (not os.path.isfile(history_filename)):
                     history_dict = {}
                 else:
                     with open(history_filename, 'r') as history_file:
@@ -161,10 +166,9 @@ class broker (object):
                         if history_dict is None:
                             history_dict = {}
 
-                if (self.requires[ibroker_requires]['executing_subprocess'] == 'from_history'):
+                if 'return_from_history' in self.requires[ibroker_requires].keys():
                     return_from_subprocess = \
-                            history_dict[self.requires[ibroker_requires]['process_arguments']]['return_from_subprocess']
-                    logging.info('return statement from history: '+ return_from_subprocess)
+                       self.requires[ibroker_requires]['return_from_history']
                 else:
                     broker_requires['executing_subprocess'].wait()
                     self.requires[ibroker_requires]['stderr'].close()
