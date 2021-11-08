@@ -288,6 +288,8 @@ class broker (object):
         if sources == None:
             sources = self.requires
         #for ibroker_provides, broker_provides in enumerate(self.provides):
+        if debug==True:
+            import pdb; pdb.set_trace()
         if type(self.provides ) == list:
             archive_out_filename =self.provides[0]['root'] + '/' + self.provides[0]['archive']
         else:
