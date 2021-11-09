@@ -168,6 +168,7 @@ class broker (object):
 
                 if (not os.path.isfile(history_filename)):
                     history_dict = {}
+                    history_read = True
                 else:
                     try:
                         with open(history_filename, 'r') as history_file:
