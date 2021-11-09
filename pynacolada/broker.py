@@ -2,6 +2,7 @@ import yaml
 import logging
 from . import archive,collection
 import os
+from time import sleep
 import numpy as np
 import tempfile
 from ast import literal_eval
@@ -158,6 +159,8 @@ class broker (object):
                             stdout=self.requires[ibroker_requires]['stdout'],
                             stderr=self.requires[ibroker_requires]['stderr'],
                             )
+            logging.info('workaround to avoid simultaneous history and lock file access')
+            sleep(30)
 
         for ibroker_requires,broker_requires in list(enumerate(self.requires)):
             if  ('executing_subprocess' in broker_requires.keys()) or ('return_from_history' in broker_requires.keys()):
@@ -233,6 +236,8 @@ class broker (object):
                     with open(history_filename,'w') as history_file:
                         dump = yaml.dump(history_dict)
                         history_file.write( dump )
+            logging.info('workaround to avoid simultaneous history and lock file access')
+            sleep(30)
 
                 #broker['requires'][ibroker_requires]['archive'] = pcd.archive( args.root_requires + '/' + broker_requires['archive'])
         if (type(self.provides) == list):
