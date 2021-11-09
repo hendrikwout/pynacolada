@@ -120,10 +120,15 @@ class broker (object):
                 if (not os.path.isfile(history_filename)):
                     history_dict = {} #reset_history
                 else:
-                    with open(history_filename, 'r') as history_file:
-                        history_dict = yaml.load(history_file)
-                        if history_dict is None:
-                            history_dict = {}
+                    try:
+                        with open(history_filename, 'r') as history_file:
+                            history_dict = yaml.load(history_file)
+                            if history_dict is None:
+                                history_dict = {}
+                    except:
+                        logging.warning('reading history file failed.')
+                        history_dict = {}
+
 
                 if debug == True:
                     import pdb; pdb.set_trace()
@@ -161,10 +166,16 @@ class broker (object):
                 if (not os.path.isfile(history_filename)):
                     history_dict = {}
                 else:
-                    with open(history_filename, 'r') as history_file:
-                        history_dict = yaml.load(history_file)
-                        if history_dict is None:
-                            history_dict = {}
+                    try:
+                        with open(history_filename, 'r') as history_file:
+                            history_dict = yaml.load(history_file)
+                            if history_dict is None:
+                                history_dict = {}
+                        history_read = True
+                    except:
+                        logging.warning('reading history file failed.')
+                        history_dict = {}
+                        history_read = False
 
                 if 'return_from_history' in self.requires[ibroker_requires].keys():
                     return_from_subprocess = \
@@ -216,7 +227,7 @@ class broker (object):
                 else:
                     raise IOError('subprocess return type not implemented')
 
-                if self.dummy != 'True':
+                if (self.dummy != 'True') and (history_read == True):
                     if not os.path.isdir(os.path.dirname(history_filename)):
                         os.mkdir(os.path.dirname(history_filename))
                     with open(history_filename,'w') as history_file:
