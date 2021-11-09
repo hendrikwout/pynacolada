@@ -169,6 +169,15 @@ class broker (object):
                 if 'return_from_history' in self.requires[ibroker_requires].keys():
                     return_from_subprocess = \
                        self.requires[ibroker_requires]['return_from_history']
+
+
+                    if self.requires[ibroker_requires]['process_arguments'] in history_dict.keys():
+                        history_dict[self.requires[ibroker_requires]['process_arguments']]['number_of_requests'] += 1
+                    else:
+                        history_dict[self.requires[ibroker_requires]['process_arguments']] = { \
+                            'return_from_subprocess': return_from_subprocess,
+                            'number_of_requests': 1
+                        }
                 else:
                     broker_requires['executing_subprocess'].wait()
                     self.requires[ibroker_requires]['stderr'].close()
@@ -178,15 +187,13 @@ class broker (object):
                     if self.requires[ibroker_requires]['process_arguments'] in history_dict.keys():
                         del history_dict[self.requires[ibroker_requires]['process_arguments']]
 
-                if self.requires[ibroker_requires]['process_arguments'] not in history_dict.keys():
                     print('retrieving from parent process '+self.requires[ibroker_requires]['stdout'].name+': '+return_from_subprocess)
                     history_dict[self.requires[ibroker_requires]['process_arguments']] = { \
                         'return_from_subprocess': return_from_subprocess,
-                        'number_of_requests': 0
+                        'number_of_requests': 1
                     }
                     logging.info('return statement from subprocess: '+return_from_subprocess)
 
-                history_dict[self.requires[ibroker_requires]['process_arguments']]['number_of_requests']  += 1
 
                 return_from_subprocess_eval = literal_eval(return_from_subprocess)
 
