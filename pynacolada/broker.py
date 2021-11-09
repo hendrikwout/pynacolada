@@ -166,20 +166,19 @@ class broker (object):
             if  ('executing_subprocess' in broker_requires.keys()) or ('return_from_history' in broker_requires.keys()):
                 history_filename = self.requires[ibroker_requires]['root'] + '/requests/' + os.path.basename(self.requires[ibroker_requires][ 'process'] + '_history.yaml')
 
+                history_ok = True
                 if (not os.path.isfile(history_filename)):
                     history_dict = {}
-                    history_read = True
                 else:
                     try:
                         with open(history_filename, 'r') as history_file:
                             history_dict = yaml.load(history_file)
                             if history_dict is None:
                                 history_dict = {}
-                        history_read = True
                     except:
                         logging.warning('reading history file failed.')
                         history_dict = {}
-                        history_read = False
+                        history_ok = False
 
                 if 'return_from_history' in self.requires[ibroker_requires].keys():
                     return_from_subprocess = \
@@ -231,7 +230,7 @@ class broker (object):
                 else:
                     raise IOError('subprocess return type not implemented')
 
-                if (self.dummy != 'True') and (history_read == True):
+                if (self.dummy != 'True') and (history_ok == True):
                     if not os.path.isdir(os.path.dirname(history_filename)):
                         os.mkdir(os.path.dirname(history_filename))
                     with open(history_filename,'w') as history_file:
