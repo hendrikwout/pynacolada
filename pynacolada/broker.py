@@ -159,7 +159,7 @@ class broker (object):
                             stdout=self.requires[ibroker_requires]['stdout'],
                             stderr=self.requires[ibroker_requires]['stderr'],
                             )
-            logging.info('workaround to avoid simultaneous history and lock file access')
+            logging.info('workaround to avoid simultaneous history and lock file access. Waiting for 30 seconds')
             sleep(30)
 
         for ibroker_requires,broker_requires in list(enumerate(self.requires)):
@@ -236,8 +236,8 @@ class broker (object):
                     with open(history_filename,'w') as history_file:
                         dump = yaml.dump(history_dict)
                         history_file.write( dump )
-            logging.info('workaround to avoid simultaneous history and lock file access')
-            sleep(30)
+            logging.info('workaround to avoid simultaneous history and lock file access. Waiting for 5 seconds')
+            sleep(5)
 
                 #broker['requires'][ibroker_requires]['archive'] = pcd.archive( args.root_requires + '/' + broker_requires['archive'])
         if (type(self.provides) == list):
