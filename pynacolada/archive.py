@@ -212,9 +212,10 @@ def apply_func_wrapper(
                 else:
                     dataarrays_group_in.append(xr.open_dataarray(row_of_dataarray.absolute_path))
 
-                # for dataarray in dataarrays_group_in:
-                #     dataarray.close()
-                #     del dataarray
+            # ??????
+            # for dataarray in dataarrays_group_in:
+            #     dataarray.close()
+            #     del dataarray
 
 
 
@@ -369,8 +370,9 @@ def apply_func_wrapper(
                         archive_out.add_dataarray(filename_out)
                 else:
                     ValueError('mode ' + mode + ' not implemented')
-                for idataarray in range(len(dataarrays_group_in)):
+                for idataarray in reversed(range(len(dataarrays_group_in))):
                     dataarrays_group_in[idataarray].close()
+                    del dataarrays_group_in[idataarray]
 
                 if update_pickle:
                     archive_out.update(force_overwrite_pickle =True)
