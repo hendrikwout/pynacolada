@@ -208,13 +208,13 @@ def apply_func_wrapper(
                 row_of_dataarray = lib_dataarrays.loc[tuple(index_dataarray)]
 
                 if tuple(index_dataarray) in dataarrays.keys():
-                    dataarrays_group_in.append(dataarrays[tuple(index_dataarray)].copy())
+                    dataarrays_group_in.append(dataarrays[tuple(index_dataarray)])
                 else:
                     dataarrays_group_in.append(xr.open_dataarray(row_of_dataarray.absolute_path))
 
-                for dataarray in dataarrays_group_in:
-                    dataarray.close()
-                    del dataarray
+                # for dataarray in dataarrays_group_in:
+                #     dataarray.close()
+                #     del dataarray
 
 
 
