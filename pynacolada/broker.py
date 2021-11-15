@@ -257,7 +257,10 @@ class broker (object):
                 values_input = []
                 for item in self.requires:
                     if 'disable' not in item.keys():
-                        values_input.append(item['archive'])
+                        if 'archive' in item.keys():
+                            values_input.append(item['archive'])
+                        else:
+                            values_input.append(None)
                 if len(values_input) > 0:
                     self.provides['archive'] = broker_provides['archive'](values_input)
                 else:
