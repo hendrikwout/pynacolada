@@ -407,8 +407,8 @@ class broker (object):
             common_keys = list(return_request[0].keys())
 
             for item in return_request:
-                for key in item.keys():
-                    if key not in common_keys:
+                for key in common_keys:
+                    if key not in item.keys():
                        common_keys.remove(key)
 
             return_request_common_keys = []
