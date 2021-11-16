@@ -425,8 +425,6 @@ class broker (object):
 
 
 
-
-
         else:
             return_request = dict()
             for key in self.provides.keys():
