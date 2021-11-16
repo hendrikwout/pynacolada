@@ -422,6 +422,7 @@ class broker (object):
             for key in return_request[0].keys():
                 if key not in return_request_common_keys[0].keys():
                     return_request_common_keys[0][key] = return_request[0][key]
+            return_request = return_request_common_keys
 
 
 
