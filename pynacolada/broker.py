@@ -429,6 +429,8 @@ class broker (object):
                         if (type(self.provides[key]) != type(lambda x: x)) and \
                                (key not in return_exclude_keys):
                             return_request[key] = self.provides[key]
+        if debug==True:
+            import pdb; pdb.set_trace()
 
 
 
