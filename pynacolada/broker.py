@@ -404,6 +404,27 @@ class broker (object):
                             return_request[igroups_out][key] = self.provides[igroups_out][key]
                         # if type(return_request[igroups_out][key]) is str:
                         #     return_request[igroups_out][key].replace('"','')
+            common_keys = list(return_request[0].keys())
+
+            for item in return_request:
+                for key in item.keys():
+                    if key not in common_keys:
+                       common_keys.remove(key)
+
+            return_request_common_keys = []
+            for item in return_request:
+                return_request_common_keys_item = {}
+                for key in common_keys:
+                    return_request_common_keys_item[key] = item[key]
+                if return_request_common_keys_item not in return_request_common_keys:
+                    return_request_common_keys.append(return_request_common_keys_item)
+
+            for key in return_request[0].keys():
+                if key not in return_request_common_keys[0].keys():
+                    return_request_common_keys[0][key] = return_request[0][key]
+
+
+
 
 
         else:
