@@ -250,7 +250,11 @@ class broker (object):
                                 values_input.append(item['archive'])
                             else:
                                 values_input.append(None)
-                    self.provides[ibroker_provides]['archive'] = broker_provides['archive'](values_input)
+                    if len(values_input) > 0:
+                        self.provides[ibroker_provides]['archive'] = broker_provides['archive'](values_input)
+                    else:
+                        self.provides[ibroker_provides]['archive'] = None  # broker_provides['archive'](values_input)
+
         else:
             broker_provides = self.provides
             if ('archive' in broker_provides) and (type(broker_provides['archive']) is type(lambda x: x)):
