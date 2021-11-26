@@ -49,6 +49,7 @@ def apply_func_wrapper(
     initialize_array=None,
     copy_coordinates=False,
     update_pickle=True,
+    update_extras = True,
     force_recalculate=False,
     #lib_dataarrays = self.lib_dataarrays
     **kwargs,
@@ -375,7 +376,7 @@ def apply_func_wrapper(
                     del dataarrays_group_in[idataarray]
 
                 if update_pickle:
-                    archive_out.update(force_overwrite_pickle =True)
+                    archive_out.update(force_overwrite_pickle =True,extras=update_extras)
 
 
 class collection (object):
@@ -1308,7 +1309,9 @@ class archive (object):
                force_overwrite_dataarrays = False,
                force_overwrite_pickle=False,
                extra_attributes={},
-               dump_floating_dataarrays=False,**kwargs):
+               dump_floating_dataarrays=False,
+               extras=True,
+               **kwargs):
 
         """
             perform quick attribute parameter updates and/or dump unsynced information to disc on request.
@@ -1383,78 +1386,79 @@ class archive (object):
 
         read_lib_dataarrays = self.lib_dataarrays.copy()
 
-        for idx,columns in read_lib_dataarrays.iterrows():
-            if ( ('absolute_path' not in columns.keys()) or (type(columns['absolute_path']) != str)) or \
-               ( ('path' not in columns.keys()) or (type(columns['path']) != str)):
+        if extras:
+            for idx,columns in read_lib_dataarrays.iterrows():
+                if ( ('absolute_path' not in columns.keys()) or (type(columns['absolute_path']) != str)) or \
+                   ( ('path' not in columns.keys()) or (type(columns['path']) != str)):
 
-                if dump_floating_dataarrays:
-                    #parse filename according to file_pattern
-                    if 'path_pickle' not in self.__dict__.keys():
-                        raise ValueError ('self.path_pickle is not set')
-                    fnout = os.path.dirname(self.path_pickle)+'/'+''.join(np.array(list(zip(self.file_pattern.split('"')[::2],[{**dict(zip(self.lib_dataarrays.index.names,idx)),**columns}[key] for key in self.file_pattern.split('"')[1::2]]+['']))).ravel())
-                    print("File pointer for ",idx," is not known, so I'm dumping a new file under ",fnout)
-                    #fnout = self.lib_dataarrays.loc[idx]['absolute_path']
-                    if (not force_overwrite_dataarrays) and (os.path.isfile(fnout)):
-                        raise IOError(fnout+' exists. Use force_overwrite_dataarrays to overwrite file')
-                    os.system('mkdir -p '+os.path.dirname(fnout))
-                    # self.dataarrays[idx].attrs['absolute_path'] = fnout
-                    for key,value in dict(columns).items():
-                        self.dataarrays[idx]
+                    if dump_floating_dataarrays:
+                        #parse filename according to file_pattern
+                        if 'path_pickle' not in self.__dict__.keys():
+                            raise ValueError ('self.path_pickle is not set')
+                        fnout = os.path.dirname(self.path_pickle)+'/'+''.join(np.array(list(zip(self.file_pattern.split('"')[::2],[{**dict(zip(self.lib_dataarrays.index.names,idx)),**columns}[key] for key in self.file_pattern.split('"')[1::2]]+['']))).ravel())
+                        print("File pointer for ",idx," is not known, so I'm dumping a new file under ",fnout)
+                        #fnout = self.lib_dataarrays.loc[idx]['absolute_path']
+                        if (not force_overwrite_dataarrays) and (os.path.isfile(fnout)):
+                            raise IOError(fnout+' exists. Use force_overwrite_dataarrays to overwrite file')
+                        os.system('mkdir -p '+os.path.dirname(fnout))
+                        # self.dataarrays[idx].attrs['absolute_path'] = fnout
+                        for key,value in dict(columns).items():
+                            self.dataarrays[idx]
 
-                    for key,value in dict(columns).items():
-                        if key not in [
-                            'variable',
-                            'absolute_path',
-                            'absolute_path_for_reading',
-                            'absolute_path_as_cache',
-                            'path',
-                            'available'
-                            #'dataarray_pointer',
-                        ]:
-                            if type(value) == bool:
-                                self.dataarrays[idx].attrs[key] = int(value)
-                            else:
-                                self.dataarrays[idx].attrs[key] = value
-                        if key == 'variable':
-                            self.dataarrays[idx].name = value
+                        for key,value in dict(columns).items():
+                            if key not in [
+                                'variable',
+                                'absolute_path',
+                                'absolute_path_for_reading',
+                                'absolute_path_as_cache',
+                                'path',
+                                'available'
+                                #'dataarray_pointer',
+                            ]:
+                                if type(value) == bool:
+                                    self.dataarrays[idx].attrs[key] = int(value)
+                                else:
+                                    self.dataarrays[idx].attrs[key] = value
+                            if key == 'variable':
+                                self.dataarrays[idx].name = value
  
-                    os.system('rm '+fnout)
-                    self.dataarrays[idx].to_netcdf(fnout);print('file written to: '+fnout)
-                    self.remove_by_index(idx,update_pickle=False)
-                    self.add_dataarray(fnout)
-                    #self.dataarrays[idx]
+                        os.system('rm '+fnout)
+                        self.dataarrays[idx].to_netcdf(fnout);print('file written to: '+fnout)
+                        self.remove_by_index(idx,update_pickle=False)
+                        self.add_dataarray(fnout)
+                        #self.dataarrays[idx]
 
-                    # key = 'path'
-                    # if key not in self.lib_dataarrays.columns:
-                    #     self.lib_dataarrays[key] = ''
-                    # self.lib_dataarrays.loc[idx]['path'] = './'
+                        # key = 'path'
+                        # if key not in self.lib_dataarrays.columns:
+                        #     self.lib_dataarrays[key] = ''
+                        # self.lib_dataarrays.loc[idx]['path'] = './'
 
-                    # note that path and absolute_path are not written to the netcdf file above, but it is available virtually for convenience
-                    #self.lib_dataarrays['absolute_path'].loc[idx] = fnout
-                #self.dataarrays[idx].attrs['path'] = self.lib_dataarrays.loc[idx]['path']
-            else:
+                        # note that path and absolute_path are not written to the netcdf file above, but it is available virtually for convenience
+                        #self.lib_dataarrays['absolute_path'].loc[idx] = fnout
+                    #self.dataarrays[idx].attrs['path'] = self.lib_dataarrays.loc[idx]['path']
+                else:
 
-                print("Assuming variable for ",idx," exists in file "+columns['absolute_path'])
-                if 'path' not in self.lib_dataarrays.columns:
-                    self.lib_dataarrays['path'] = None
-
-            if 'path_pickle' in self.__dict__.keys():
-                if ((columns['absolute_path'] is not None) and (type(columns['absolute_path']) is str)):
+                    print("Assuming variable for ",idx," exists in file "+columns['absolute_path'])
                     if 'path' not in self.lib_dataarrays.columns:
                         self.lib_dataarrays['path'] = None
-                    self.lib_dataarrays['path'].loc[idx] =  os.path.relpath(columns['absolute_path'],os.path.dirname(self.path_pickle))
-                    print("relative file path to "+os.path.dirname(self.path_pickle)+" is "+self.lib_dataarrays['path'].loc[idx])
-                #os.path.commonprefix([columns['absolute_path'],lib_dirname])
-                elif ((columns['path'] is not None) and (type(columns['path']) is str)):
-                    if 'absolute_path' not in self.lib_dataarrays.columns:
-                        self.lib_dataarrays['absolute_path'] = None
-                    self.lib_dataarrays['absolute_path'].loc[idx] =  os.path.dirname(self.path_pickle)+'/'+columns['path']
 
-                    if ((columns['absolute_path_for_reading'] is None) or (type(columns['absolute_path_for_reading']) is not str)):
-                        if 'absolute_path_for_reading' not in self.lib_dataarrays.columns:
-                            self.lib_dataarrays['absolute_path_for_reading'] = None 
-                        self.lib_dataarrays['absolute_path_for_reading'].loc[idx] =  os.path.dirname(self.path_pickle)+'/'+columns['path']
-                    #print("absolute file path to "+os.path.dirname(self.path_pickle)+" is "+self.lib_dataarrays['path'].loc[idx])
+                if 'path_pickle' in self.__dict__.keys():
+                    if ((columns['absolute_path'] is not None) and (type(columns['absolute_path']) is str)):
+                        if 'path' not in self.lib_dataarrays.columns:
+                            self.lib_dataarrays['path'] = None
+                        self.lib_dataarrays['path'].loc[idx] =  os.path.relpath(columns['absolute_path'],os.path.dirname(self.path_pickle))
+                        print("relative file path to "+os.path.dirname(self.path_pickle)+" is "+self.lib_dataarrays['path'].loc[idx])
+                    #os.path.commonprefix([columns['absolute_path'],lib_dirname])
+                    elif ((columns['path'] is not None) and (type(columns['path']) is str)):
+                        if 'absolute_path' not in self.lib_dataarrays.columns:
+                            self.lib_dataarrays['absolute_path'] = None
+                        self.lib_dataarrays['absolute_path'].loc[idx] =  os.path.dirname(self.path_pickle)+'/'+columns['path']
+
+                        if ((columns['absolute_path_for_reading'] is None) or (type(columns['absolute_path_for_reading']) is not str)):
+                            if 'absolute_path_for_reading' not in self.lib_dataarrays.columns:
+                                self.lib_dataarrays['absolute_path_for_reading'] = None
+                            self.lib_dataarrays['absolute_path_for_reading'].loc[idx] =  os.path.dirname(self.path_pickle)+'/'+columns['path']
+                        #print("absolute file path to "+os.path.dirname(self.path_pickle)+" is "+self.lib_dataarrays['path'].loc[idx])
         
         if ('path_pickle' in self.__dict__.keys()):
             self.lib_dataarrays.to_pickle(self.path_pickle)
