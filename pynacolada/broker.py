@@ -322,7 +322,7 @@ class broker (object):
 
 
 
-    def apply_func(self,apply_groups_out_extra=None,query=None,sources=None,return_exclude_keys=[],debug=False,*args,**kwargs):
+    def apply_func(self,apply_groups_out_extra=None,sources=None,return_exclude_keys=[],debug=False,*args,**kwargs):
         if sources == None:
             sources = self.requires
         #for ibroker_provides, broker_provides in enumerate(self.provides):
@@ -385,7 +385,6 @@ class broker (object):
         if self.dummy != 'True':
             self.parent_collection.apply_func(
                 self.operator,
-                query=query,
                 apply_groups_in = requests_parents,
                 apply_groups_out=apply_groups_out,
                 archive_out = archive_out_filename,
