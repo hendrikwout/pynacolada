@@ -400,6 +400,7 @@ class collection (object):
             archive_out = None,
             add_archive_out_to_collection=True,
             update_pickle=True,
+            query=None,
             **kwargs
     ):
 
@@ -410,8 +411,10 @@ class collection (object):
             write_mode = 'add_to_external_archive'
         else:
             write_mode = 'add_to_current_archive'
-
-        lib_dataarrays = self.get_lib_dataarrays()
+        if query is not None:
+            lib_dataarrays = query
+        else:
+            lib_dataarrays = self.get_lib_dataarrays()
         dataarrays = self.get_dataarrays()
         apply_func_wrapper(
             func,
