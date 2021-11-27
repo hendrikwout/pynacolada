@@ -13,13 +13,15 @@ from tqdm import tqdm
 import tempfile
 from . import apply_func
 
+
 def parse_to_dataframe(list_or_dict_or_dataframe):
     if type(list_or_dict_or_dataframe) == pd.core.frame.DataFrame:
         return list_or_dict_or_dataframe
     elif type(list_or_dict_or_dataframe) == list:
         return pd.DataFrame(list_or_dict_or_dataframe)
     elif type(list_or_dict_or_dataframe) == dict:
-        return pd.DataFrame.from_dict([dict(zip(list_or_dict_or_dataframe.keys(),v)) for v in itertools.product(*list_or_dict_or_dataframe.values())])
+        return pd.DataFrame.from_dict([dict(zip(list_or_dict_or_dataframe.keys(), v)) for v in
+                                       itertools.product(*list_or_dict_or_dataframe.values())])
 
 
 # test ;lkjdfg
@@ -30,30 +32,30 @@ def empty_multiindex(names):
     """
     return pd.MultiIndex.from_tuples(tuples=[(None,) * len(names)], names=names)
 
-def apply_func_wrapper(
-    func,
-    lib_dataarrays,
-    dataarrays,
-    archive_out,
-    xarray_function_wrapper=apply_func,
-    dataarrays_wrapper = lambda *x: (*x,),
-    groupby=None,
-    apply_groups_in=[],
-    apply_groups_out=[],
-    divide_into_groups_extra = [],
-    mode = 'numpy_output_to_disk_in_chunks',
-    inherit_attributes = False,
-    query=None,
-    extra_attributes={},
-    post_apply=None,
-    initialize_array=None,
-    copy_coordinates=False,
-    update_pickle=True,
-    force_recalculate=False,
-    #lib_dataarrays = self.lib_dataarrays
-    **kwargs,
-):
 
+def apply_func_wrapper(
+        func,
+        lib_dataarrays,
+        dataarrays,
+        archive_out,
+        xarray_function_wrapper=apply_func,
+        dataarrays_wrapper=lambda *x: (*x,),
+        groupby=None,
+        apply_groups_in=[],
+        apply_groups_out=[],
+        divide_into_groups_extra=[],
+        mode='numpy_output_to_disk_in_chunks',
+        inherit_attributes=False,
+        query=None,
+        extra_attributes={},
+        post_apply=None,
+        initialize_array=None,
+        copy_coordinates=False,
+        update_pickle=True,
+        force_recalculate=False,
+        # lib_dataarrays = self.lib_dataarrays
+        **kwargs,
+):
     """
     purpose: this wrapper routine allows to apply a function in automatic groups of
     dataarrays in an archive or collection of archive, and dumps the output to
@@ -85,7 +87,6 @@ def apply_func_wrapper(
     else:
         read_lib_dataarrays = lib_dataarrays.copy()
 
-
     if len(divide_into_groups) == 0:
         print('creating dummy group that encompasses the whole library')
         divide_into_groups = ['dummy_group']
@@ -100,14 +101,12 @@ def apply_func_wrapper(
             else:
                 return idx
 
-
         def always_multi_index(index):
 
             if type(index) == pd.core.indexes.base.Index:
                 return pd.MultiIndex.from_tuples([x.split()[::-1] for x in index], names=(index.name,))
             else:
                 return index
-
 
         apply_this_group_in_df = apply_groups_in_df.copy()
         for idx_group_in, row in apply_this_group_in_df.iterrows():
@@ -127,7 +126,8 @@ def apply_func_wrapper(
                 check_group_columns.append(column)
 
         group_reduced = group[check_group_columns].drop_duplicates().reset_index().drop(columns='index')
-        apply_this_group_in_df_reduced = apply_this_group_in_df[check_group_columns].drop_duplicates().reset_index().drop(
+        apply_this_group_in_df_reduced = apply_this_group_in_df[
+            check_group_columns].drop_duplicates().reset_index().drop(
             columns='index')
 
         if len(apply_groups_in_df) == 0:
@@ -190,7 +190,8 @@ def apply_func_wrapper(
                     # elif apply_groups_out_df_this_group.loc[idx_group_out,key] is None:
                     #     raise ValueError('Not supported yet')
                     else:
-                        apply_groups_out_df_this_group.loc[idx_group_out, key] = apply_groups_out_df.loc[idx_group_out, key]
+                        apply_groups_out_df_this_group.loc[idx_group_out, key] = apply_groups_out_df.loc[
+                            idx_group_out, key]
             table_this_group_out = apply_groups_out_df_this_group
 
             dataarrays_group_in = []
@@ -212,12 +213,9 @@ def apply_func_wrapper(
                 else:
                     dataarrays_group_in.append(xr.open_dataarray(row_of_dataarray.absolute_path))
 
-            # ??????
-            # for dataarray in dataarrays_group_in:
-            #     dataarray.close()
-            #     del dataarray
-
-
+                # for dataarray in dataarrays_group_in:
+                #     dataarray.close()
+                #     del dataarray
 
             # building attributes of output dataarrays
             ifile = 0
@@ -246,7 +244,7 @@ def apply_func_wrapper(
                         if (key not in attributes_dataarrays_out[ifile]) and \
                                 ((inherit_attributes == True) or (key in inherit_attributes)) and \
                                 (key not in ['absolute_path_as_cache', 'absolute_path_for_reading', 'absolute_path',
-                                             'path','available']):
+                                             'path', 'available']):
                             attributes_dataarrays_out[ifile][key] = value
 
                 # !!
@@ -273,7 +271,7 @@ def apply_func_wrapper(
                 for key, value in extra_attributes.items():
                     attributes_dataarrays_out[ifile][key] = value
 
-                index_keys = ['variable','source','time','space']
+                index_keys = ['variable', 'source', 'time', 'space']
                 index_out = []
                 for key in index_keys:
                     index_out.append(attributes_dataarrays_out[ifile][key])
@@ -286,11 +284,13 @@ def apply_func_wrapper(
 
                     filename_out = os.path.dirname(archive_out.path_pickle) + '/' + ''.join(np.array(list(
                         zip(archive_out.file_pattern.split('"')[::2],
-                            [attributes_dataarrays_out[ifile][key] for key in archive_out.file_pattern.split('"')[1::2]] + [
+                            [attributes_dataarrays_out[ifile][key] for key in
+                             archive_out.file_pattern.split('"')[1::2]] + [
                                 '']))).ravel())
                     # index_out =
                     # if archive_out.lib_dataarrays.index[df['absolute_path'] == filename].tolist() == index_out
-                    if (filename_out in archive_out.lib_dataarrays.absolute_path.unique()) and (not dataarrays_out_already_available[ifile]):
+                    if (filename_out in archive_out.lib_dataarrays.absolute_path.unique()) and (
+                            not dataarrays_out_already_available[ifile]):
                         raise ValueError(
                             'filename ' + filename_out + ' already exists and not already managed/within the output archive. Consider revising the output file_pattern.')
                     filenames_out.append(filename_out)
@@ -298,10 +298,13 @@ def apply_func_wrapper(
                 ifile += 1
             all_dataarrays_out_already_available = np.prod(dataarrays_out_already_available)
             if all_dataarrays_out_already_available and not force_recalculate:
-                logging.info('All output data is already available in the output archive and force_recalculate is switched False. Skipping group "'+str(idx)+'"')
+                logging.info(
+                    'All output data is already available in the output archive and force_recalculate is switched False. Skipping group "' + str(
+                        idx) + '"')
             else:
                 if force_recalculate and all_dataarrays_out_already_available:
-                    logging.info('all output dataarrays were available but force_recalulate is set True, so I force recaculation')
+                    logging.info(
+                        'all output dataarrays were available but force_recalulate is set True, so I force recaculation')
 
                 if mode == 'xarray':
                     print('making a temporary dataarray copy to prevent data hanging around into memory afterwards')
@@ -325,8 +328,10 @@ def apply_func_wrapper(
 
                     if mode == 'numpy_output_to_disk_in_chunks':
                         xarray_function_wrapper(func, dataarrays_wrapper(*tuple(dataarrays_group_in)),
-                                                filenames_out=filenames_out, attributes=attributes_dataarrays_out, release=True,
-                                                initialize_array=initialize_array, copy_coordinates=copy_coordinates, **kwargs)
+                                                filenames_out=filenames_out, attributes=attributes_dataarrays_out,
+                                                release=True,
+                                                initialize_array=initialize_array, copy_coordinates=copy_coordinates,
+                                                **kwargs)
                     elif mode == 'numpy_output_to_disk_no_chunks':
                         temp_dataarrays = xarray_function_wrapper(func, dataarrays_wrapper(*tuple(dataarrays_group_in)),
                                                                   **kwargs)
@@ -370,17 +375,16 @@ def apply_func_wrapper(
                         archive_out.add_dataarray(filename_out)
                 else:
                     ValueError('mode ' + mode + ' not implemented')
-                for idataarray in reversed(range(len(dataarrays_group_in))):
+                for idataarray in range(len(dataarrays_group_in)):
                     dataarrays_group_in[idataarray].close()
-                    del dataarrays_group_in[idataarray]
 
                 if update_pickle:
-                    archive_out.update(force_overwrite_pickle =True)
+                    archive_out.update(force_overwrite_pickle=True)
 
 
-class collection (object):
-    def __init__(self,archives,*args,**kwargs):
-        self.archives =  archives
+class collection(object):
+    def __init__(self, archives, *args, **kwargs):
+        self.archives = archives
 
     def get_lib_dataarrays(self):
         lib_dataarrays = pd.DataFrame()
@@ -397,7 +401,7 @@ class collection (object):
     def apply_func(
             self,
             func,
-            archive_out = None,
+            archive_out=None,
             add_archive_out_to_collection=True,
             update_pickle=True,
             **kwargs
@@ -406,7 +410,7 @@ class collection (object):
         if type(archive_out) is str:
             archive_out = archive(archive_out)
             write_mode = 'create_new_archive'
-        elif archive_out is not None: # type is considered an archive object
+        elif archive_out is not None:  # type is considered an archive object
             write_mode = 'add_to_external_archive'
         else:
             write_mode = 'add_to_current_archive'
@@ -415,8 +419,8 @@ class collection (object):
         dataarrays = self.get_dataarrays()
         apply_func_wrapper(
             func,
-            lib_dataarrays = lib_dataarrays,
-            dataarrays = dataarrays,
+            lib_dataarrays=lib_dataarrays,
+            dataarrays=dataarrays,
             archive_out=archive_out,
             update_pickle=update_pickle,
             **kwargs
@@ -429,15 +433,16 @@ class collection (object):
             return archive_out
 
 
-class archive (object):
-    def __init__(self,path=None,file_pattern='"variable"_"source"_"time"_"space".nc', *args,**kwargs):
-        self.lib_dataarrays = pd.DataFrame(index=empty_multiindex(['variable','source','time','space']),columns = ['path','absolute_path','available']).iloc[1:]
+class archive(object):
+    def __init__(self, path=None, file_pattern='"variable"_"source"_"time"_"space".nc', *args, **kwargs):
+        self.lib_dataarrays = pd.DataFrame(index=empty_multiindex(['variable', 'source', 'time', 'space']),
+                                           columns=['path', 'absolute_path', 'available']).iloc[1:]
 
-        self.settings_keys = ['file_pattern','mode']
+        self.settings_keys = ['file_pattern', 'mode']
         print('Creating generic functions to set attributes')
         for key in self.settings_keys:
-            print('creating function self.set_'+key)
-            self.__dict__['set_'+key] = lambda value: self.__setattr__(key,value)
+            print('creating function self.set_' + key)
+            self.__dict__['set_' + key] = lambda value: self.__setattr__(key, value)
         print('Loading default settings')
         self.file_pattern = file_pattern
         self.not_dataarray_attributes = ['variable', 'absolute_path', 'absolute_path_as_cache',
@@ -450,33 +455,33 @@ class archive (object):
         self.path_pickle = None
         print('Loading datasets')
         if path is not None:
-            self.load(path,*args,**kwargs)
+            self.load(path, *args, **kwargs)
 
     def copy(self):
         return self.archive.apply(lambda x: x.copy())
 
-    def sel(self,sel):
+    def sel(self, sel):
         return self.archive.apply(lambda x: x.sel(sel))
 
-    def sel_lib(self,sel):
+    def sel_lib(self, sel):
         lib_dataarrays_out = self.lib_dataarrays_out[sel]
         archive_out = archive()
-        for index,lib_dataarray in lib_dataarays_out.iterrows():
+        for index, lib_dataarray in lib_dataarays_out.iterrows():
             archive_out.add_dataarray(self.dataarrays[index])
 
-    def remove(self,query=None,update_pickle = True,dataarrays=True,records=False):
+    def remove(self, query=None, update_pickle=True, dataarrays=True, records=False):
 
         if (not dataarrays) and records:
             raise ValueError('the dataarrays on the disk is maintained by this archive.'
-            'Not removing them while removing them from the database will lead to orphaned files. Aborting... ')
+                             'Not removing them while removing them from the database will lead to orphaned files. Aborting... ')
 
         if query is not None:
             read_lib_dataarrays = self.lib_dataarrays.query(query).copy()
         else:
             read_lib_dataarrays = self.lib_dataarrays.copy()
-        for idx,row in read_lib_dataarrays.iterrows():
+        for idx, row in read_lib_dataarrays.iterrows():
             if dataarrays:
-                CMD ='rm '+row.absolute_path
+                CMD = 'rm ' + row.absolute_path
                 os.system(CMD)
                 # if 'available' not in self.lib_dataarrays.columns:
                 #     self.lib_dataarrays['available'] = ""
@@ -486,38 +491,37 @@ class archive (object):
             else:
                 self.lib_dataarrays.loc[idx]['available'] = False
         if update_pickle:
-            self.update(force_overwrite_pickle =True)
+            self.update(force_overwrite_pickle=True)
 
-    def remove_by_index(self,index,delete_on_disk=False,update_pickle=True):
+    def remove_by_index(self, index, delete_on_disk=False, update_pickle=True):
         self.dataarrays[index].close()
         del self.dataarrays[index]
         if delete_on_disk:
-            os.system('rm '+self.lib_dataarrays.loc[index].absolute_path)
+            os.system('rm ' + self.lib_dataarrays.loc[index].absolute_path)
         print(self.lib_dataarrays.loc[index].absolute_path_as_cache)
         if (self.lib_dataarrays.loc[index].absolute_path_as_cache is not None):
             print(np.isnan(self.lib_dataarrays.loc[index].absolute_path_as_cache))
             print(np.isnan(self.lib_dataarrays.loc[index].absolute_path_as_cache) == True)
-        if (self.lib_dataarrays.loc[index].absolute_path_as_cache is not None) and (np.isnan(self.lib_dataarrays.loc[index].absolute_path_as_cache == False)) :
-            CMD = 'rm '+self.lib_dataarrays.loc[index].absolute_path_as_cache
-            print('removing cached file:',CMD)
+        if (self.lib_dataarrays.loc[index].absolute_path_as_cache is not None) and (
+                np.isnan(self.lib_dataarrays.loc[index].absolute_path_as_cache == False)):
+            CMD = 'rm ' + self.lib_dataarrays.loc[index].absolute_path_as_cache
+            print('removing cached file:', CMD)
 
-        self.lib_dataarrays.drop(index=index,inplace=True)
-
+        self.lib_dataarrays.drop(index=index, inplace=True)
 
         if update_pickle:
             self.update(force_overwrite_pickle=True)
 
-
-    def close(self,delete_archive=False):
+    def close(self, delete_archive=False):
         lib_dataarrays_temp = self.lib_dataarrays.copy()
-        for index,columns in lib_dataarrays_temp.iterrows():
-            self.remove_by_index(index=index,delete_on_disk=(delete_archive==True))
+        for index, columns in lib_dataarrays_temp.iterrows():
+            self.remove_by_index(index=index, delete_on_disk=(delete_archive == True))
 
         del lib_dataarrays_temp
         if delete_archive:
-            os.system('rm '+self.path_pickle)
+            os.system('rm ' + self.path_pickle)
 
-    def add_from_dataset(self,Dataset_or_filepath,variables=None,**kwargs):
+    def add_from_dataset(self, Dataset_or_filepath, variables=None, **kwargs):
         if type(Dataset_or_filepath).__name__ == 'str':
             Dataset = xr.open_dataset(Dataset_or_filepath)
             kwargs['absolute_path'] = os.path.abspath(Dataset_or_filepath)
@@ -526,56 +530,58 @@ class archive (object):
             Dataset = Dataset_or_filepath
 
         if variables is None:
-            variables= []#Dataset.variables
+            variables = []  # Dataset.variables
             for variable in Dataset.variables:
                 print(Dataset.dims)
                 if variable not in Dataset.dims:
                     variables.append(variable)
         for variable in variables:
-            self.add_dataarray(Dataset[variable],**kwargs)
+            self.add_dataarray(Dataset[variable], **kwargs)
 
         Dataset.close()
 
     def add_dataarray(
             self,
             DataArray_or_filepath,
-            skip_unavailable= False,
+            skip_unavailable=False,
             release_dataarray_pointer=False,
             cache_to_tempdir=False,
             cache_to_ram=False,
             reset_space=False,
             **kwargs,
     ):
-        #DataArray = None
+        # DataArray = None
         if type(DataArray_or_filepath).__name__ == 'str':
             filepath = DataArray_or_filepath
             if (cache_to_tempdir is None) or cache_to_tempdir:
                 if type(cache_to_tempdir) is not str:
                     cache_to_tempdir = tempfile.gettempdir()
-                #filepath_as_cache = cache_to_tempdir+'/'+os.path.basename(filepath)
+                # filepath_as_cache = cache_to_tempdir+'/'+os.path.basename(filepath)
 
-                filepath_as_cache = tempfile.mktemp(prefix=os.path.basename(filepath)[:-3]+'_',suffix='.nc',dir=cache_to_tempdir)
-                CMD='cp '+filepath+' '+filepath_as_cache
+                filepath_as_cache = tempfile.mktemp(prefix=os.path.basename(filepath)[:-3] + '_', suffix='.nc',
+                                                    dir=cache_to_tempdir)
+                CMD = 'cp ' + filepath + ' ' + filepath_as_cache
 
-                print('caching to temporary file: ',CMD)
+                print('caching to temporary file: ', CMD)
                 os.system(CMD)
                 filepath_for_reading = filepath_as_cache
             else:
                 filepath_as_cache = None
                 filepath_for_reading = filepath
                 if cache_to_ram:
-                    CMD='cat '+filepath_for_reading+' > /dev/null'
-                    print('caching to ram:',CMD)
+                    CMD = 'cat ' + filepath_for_reading + ' > /dev/null'
+                    print('caching to ram:', CMD)
                     os.system(CMD)
 
             # ncvariable: variable as seen on disk
             # variable (= DataArray.name): variable as considered in the library
-            ncvariable = None # netcdf variable as seen on disk, not necessarily in the library
-            if ('ncvariable' not in kwargs.keys()) or ((type(kwargs['ncvariable']).__name__ == 'float') and np.isnan(kwargs['ncvariable'])):
+            ncvariable = None  # netcdf variable as seen on disk, not necessarily in the library
+            if ('ncvariable' not in kwargs.keys()) or (
+                    (type(kwargs['ncvariable']).__name__ == 'float') and np.isnan(kwargs['ncvariable'])):
                 if 'variable' in kwargs.keys():
                     ncvariable = kwargs['variable']
 
-                print('Opening file:',filepath_for_reading, '(original file: '+filepath+')')
+                print('Opening file:', filepath_for_reading, '(original file: ' + filepath + ')')
                 if ncvariable is not None:
                     # print('reading',filepath,ncvariable)
                     # try:
@@ -588,18 +594,18 @@ class archive (object):
                     #         raise ValueError('first variable is not the correct ncvariable')
                     # except:
                     try:
-                        
+
                         ds = xr.open_dataset(filepath_for_reading)
                         DataArray = ds[ncvariable]
                         ds.close()
                         del ds
-                        #kwargs['ncvariable'] = ncvariable
+                        # kwargs['ncvariable'] = ncvariable
                     except:
                         DataArray = xr.open_dataarray(filepath_for_reading)
                 else:
                     DataArray = xr.open_dataarray(filepath_for_reading)
-                kwargs['ncvariable'] = DataArray.name 
-            else: 
+                kwargs['ncvariable'] = DataArray.name
+            else:
                 ds = xr.open_dataset(filepath_for_reading)
                 DataArray = ds[kwargs['ncvariable']]
                 ds.close()
@@ -613,12 +619,13 @@ class archive (object):
 
             kwargs['absolute_path'] = os.path.abspath(filepath)
             kwargs['absolute_path_for_reading'] = os.path.abspath(filepath_for_reading)
-            kwargs['absolute_path_as_cache'] = (None if filepath_as_cache is None else os.path.abspath(filepath_as_cache))
+            kwargs['absolute_path_as_cache'] = (
+                None if filepath_as_cache is None else os.path.abspath(filepath_as_cache))
             kwargs['available'] = True
         else:
             DataArray = DataArray_or_filepath
 
-            #kwargs['absolute_path'] = None 
+            # kwargs['absolute_path'] = None
 
         # for key in self.lib_dataarrays.index.names:
         #     if key not in (list(DataArray.attrs.keys())+['variable']):
@@ -631,58 +638,65 @@ class archive (object):
 
             dict_index = {}
             dict_columns = {}
-            
+
             if DataArray.name is None:
-                raise ValueError ('input dataarray should have a name')
-            
+                raise ValueError('input dataarray should have a name')
+
             if 'variable' not in kwargs.keys():
                 kwargs['variable'] = DataArray.name
 
             DataArray.name = kwargs['variable']
 
             dict_index['variable'] = DataArray.name
-            
-            for key,value in DataArray.attrs.items():
-               if key in self.lib_dataarrays.index.names:
-                   dict_index[key] = value
-               else:
-                   dict_columns[key] = value
+
+            for key, value in DataArray.attrs.items():
+                if key in self.lib_dataarrays.index.names:
+                    dict_index[key] = value
+                else:
+                    dict_columns[key] = value
 
             # for key in self.lib_dataarrays.index.names:
             #     if key in kwargs.keys():
             #         dict_index[key] = kwargs[key]
-            for key,value in kwargs.items():
+            for key, value in kwargs.items():
                 if key in self.lib_dataarrays.index.names:
                     dict_index[key] = kwargs[key]
                 else:
                     dict_columns[key] = kwargs[key]
-            if ('time' not in dict_index.keys()) or (dict_index['time'] is None) or (type(dict_index['time']).__name__ == 'float') and (  np.isnan(dict_index['time']).any()):
+            if ('time' not in dict_index.keys()) or (dict_index['time'] is None) or (
+                    type(dict_index['time']).__name__ == 'float') and (np.isnan(dict_index['time']).any()):
                 print('Guessing time coordinate from DataArray')
                 # is month type
-                
-                #monthly spacing
-                if np.apply_along_axis(lambda y: np.sum((y[1:] - y[:-1] != 1),0),0,np.vectorize(lambda x: int(x[:4])*12+int(x[5:7]))(DataArray.time.values.astype('str'))).item() == 0:
+
+                # monthly spacing
+                if np.apply_along_axis(lambda y: np.sum((y[1:] - y[:-1] != 1), 0), 0,
+                                       np.vectorize(lambda x: int(x[:4]) * 12 + int(x[5:7]))(
+                                           DataArray.time.values.astype('str'))).item() == 0:
                     dict_index['time'] = \
-                            'monthly_'+str(DataArray.time[0].values)[:7]+'_'+str(DataArray.time[-1].values)[:7]
-                # also monthly 
-                elif (not np.any( ~(np.vectorize(lambda x: x[8:])(DataArray.time.values.astype('str')) == '01T00:00:00.000000000'))):
+                        'monthly_' + str(DataArray.time[0].values)[:7] + '_' + str(DataArray.time[-1].values)[:7]
+                # also monthly
+                elif (not np.any(~(np.vectorize(lambda x: x[8:])(
+                        DataArray.time.values.astype('str')) == '01T00:00:00.000000000'))):
                     dict_index['time'] = \
-                            'monthly_'+str(DataArray.time[0].values)[:7]+'_'+str(DataArray.time[-1].values)[:7]
-                elif not np.any((DataArray.time[2:-1].values - DataArray.time[1:-2].values) != np.array(86400000000000, dtype='timedelta64[ns]')):
-                    #daily
-                    dict_index['time'] = 'daily_'+np.datetime_as_string(DataArray.time[0].values,unit='D')+'_'+np.datetime_as_string(DataArray.time[-1].values,unit='D')
+                        'monthly_' + str(DataArray.time[0].values)[:7] + '_' + str(DataArray.time[-1].values)[:7]
+                elif not np.any((DataArray.time[2:-1].values - DataArray.time[1:-2].values) != np.array(86400000000000,
+                                                                                                        dtype='timedelta64[ns]')):
+                    # daily
+                    dict_index['time'] = 'daily_' + np.datetime_as_string(DataArray.time[0].values,
+                                                                          unit='D') + '_' + np.datetime_as_string(
+                        DataArray.time[-1].values, unit='D')
                 elif not np.any((DataArray.time[2:-1].values - DataArray.time[1:-2].values) != dt.timedelta(days=1)):
                     dict_index['time'] = \
-                            'daily_'+str(DataArray.time[0].values)[:10]+'_'+str(DataArray.time[-1].values)[:10]
+                        'daily_' + str(DataArray.time[0].values)[:10] + '_' + str(DataArray.time[-1].values)[:10]
                 else:
                     raise ValueError('time dimension not implemented')
 
-                #DataArray.attrs['time'] = dict_index['time']
+                # DataArray.attrs['time'] = dict_index['time']
 
-            renamings = {'lat':'latitude','lon':'longitude'}
-            for key,value in renamings.items():
+            renamings = {'lat': 'latitude', 'lon': 'longitude'}
+            for key, value in renamings.items():
                 if key in DataArray.dims:
-                    DataArray = DataArray.rename({key:value})
+                    DataArray = DataArray.rename({key: value})
 
             # filter coordinates that are listed in the library index (these are not treated under space but separately, eg., 'time').
             space_coordinates = list(DataArray.dims)
@@ -694,20 +708,21 @@ class archive (object):
                 spacing = {}
                 for coordinate in space_coordinates:
                     spacing_temp = (DataArray[coordinate].values[1] - DataArray[coordinate].values[0])
-                    if not np.any(DataArray[coordinate][1:].values != (DataArray[coordinate].values[:-1] + spacing_temp)):
-                        spacing[coordinate] = str(DataArray[coordinate][0].values)+','+str(DataArray[coordinate][-1].values)+','+str(spacing_temp)
+                    if not np.any(
+                            DataArray[coordinate][1:].values != (DataArray[coordinate].values[:-1] + spacing_temp)):
+                        spacing[coordinate] = str(DataArray[coordinate][0].values) + ',' + str(
+                            DataArray[coordinate][-1].values) + ',' + str(spacing_temp)
                     else:
                         spacing[coordinate] = 'irregular'
-                dict_index_space = [key+':'+str(value) for key,value in spacing.items()]
-                dict_index_space ='_'.join(dict_index_space) 
+                dict_index_space = [key + ':' + str(value) for key, value in spacing.items()]
+                dict_index_space = '_'.join(dict_index_space)
                 dict_index['space'] = dict_index_space
-                #DataArray.attrs['space'] = dict_index_space
+                # DataArray.attrs['space'] = dict_index_space
 
-
-            for key,index in dict_index.items():
+            for key, index in dict_index.items():
                 if key not in self.coordinates:
-                    if key not in ['variable','source','space',]:
-                            self.coordinates[key] = DataArray[key]
+                    if key not in ['variable', 'source', 'space', ]:
+                        self.coordinates[key] = DataArray[key]
                     if key == 'space':
                         self.coordinates[key] = []
                         for coordinate in space_coordinates:
@@ -715,18 +730,17 @@ class archive (object):
 
             for key in self.lib_dataarrays.index.names:
                 if (key not in dict_index.keys()) or (dict_index[key] is None):
-                    raise ValueError ('Could not track key "'+key+'" that is required for the archive index.')
-            index = tuple([dict_index[key] for key in self.lib_dataarrays.index.names]) 
-
+                    raise ValueError('Could not track key "' + key + '" that is required for the archive index.')
+            index = tuple([dict_index[key] for key in self.lib_dataarrays.index.names])
 
             self.dataarrays[index] = DataArray
             DataArray.close()
             del DataArray
 
-            if (self.mode == 'passive') and (not self.lib_dataarrays.loc[index]['absolute_path'].isnull().any() ):
-               self.dataarrays[index].close()
+            if (self.mode == 'passive') and (not self.lib_dataarrays.loc[index]['absolute_path'].isnull().any()):
+                self.dataarrays[index].close()
 
-            for key,value in dict_index.items():
+            for key, value in dict_index.items():
                 if key == 'variable':
                     self.dataarrays[index].name = value
                 else:
@@ -746,14 +760,14 @@ class archive (object):
                 self.lib_dataarrays['available'] = None
 
             self.lib_dataarrays.loc[index] = None
-            for key,value in dict_columns.items():
+            for key, value in dict_columns.items():
                 if key not in self.lib_dataarrays.columns:
                     self.lib_dataarrays[key] = ''
                 if index not in self.lib_dataarrays.index:
                     self.lib_dataarrays.loc[index] = ''
                 self.lib_dataarrays[key].loc[index] = value
                 if key not in [
-                    #'dataarray_pointer',
+                    # 'dataarray_pointer',
                     'absolute_path_as_cache',
                     'absolute_path_for_reading',
                     'absolute_path',
@@ -764,68 +778,68 @@ class archive (object):
             self.lib_dataarrays.sort_index(inplace=True)
 
             if release_dataarray_pointer:
-                print('closing',index)
+                print('closing', index)
                 self.dataarrays[index].close()
                 if cache_to_tempdir:
-                    CMD='rm '+filepath_as_cache
-                    print('Released pointer, so removing cached file: ',CMD)
+                    CMD = 'rm ' + filepath_as_cache
+                    print('Released pointer, so removing cached file: ', CMD)
                     os.system(CMD)
                 # del self.dataarrays[index]
-                #self.lib_dataarrays.loc[index,'dataarray_pointer'] = None
+                # self.lib_dataarrays.loc[index,'dataarray_pointer'] = None
             # else:
             #     self.lib_dataarrays.loc[index,'dataarray_pointer'] = self.dataarrays[index]
 
     #         if self.path_pickle:# and (type(self.lib_dataarrays.loc[index].absolute_path) != str):
     #             self.dump()
 
+    # if attrs is not None:
+    #     for key,value in attrs.items():
+    #         DataArray
 
-            # if attrs is not None:
-            #     for key,value in attrs.items():
-            #         DataArray
-
-            # for key,value in kwargs.items():
-            #     if key not in self.lib_dataarrays.columns:
-            #         self.lib_dataarrays[key] = ''
-            #     self.lib_dataarrays.loc[index][key] = value
+    # for key,value in kwargs.items():
+    #     if key not in self.lib_dataarrays.columns:
+    #         self.lib_dataarrays[key] = ''
+    #     self.lib_dataarrays.loc[index][key] = value
 
     #    def intersect_times(self,DataArray_input):
-    def dataarrays_apply(self,function,query=None,inplace=False, attrs=None):
+    def dataarrays_apply(self, function, query=None, inplace=False, attrs=None):
         # if query is not None:
         #     lib_dataarrays_out = self.lib_dataarrays.query(query,engine='python').copy()
         # elsepath
         #     lib_dataarrays_out = self.lib_dataarrays.copy()
 
         archive_out = archive()
-        for index,columns in self.lib_dataarrays.iterrows():
+        for index, columns in self.lib_dataarrays.iterrows():
             dataarray_out_temp = function(self.dataarrays[index])
-            for key,value in self.dataarrays[index].attrs.items():
+            for key, value in self.dataarrays[index].attrs.items():
                 dataarray_out_temp.attrs[key] = value
             if attrs is not None:
-                for key,value in attrs.items():
+                for key, value in attrs.items():
                     dataarray_out_temp.attrs[key] = value
             archive_out.add_dataarray(dataarray_out_temp)
-            
+
         return archive_out
 
-    def apply_virtual(self,func,groupby=None,apply_merge=[],apply_merge_out=[],archive_out = None, inherit_attributes = True,extra_attributes={}, **kwargs):
+    def apply_virtual(self, func, groupby=None, apply_merge=[], apply_merge_out=[], archive_out=None,
+                      inherit_attributes=True, extra_attributes={}, **kwargs):
 
         if (archive_out is None) and (self.path_pickle is None):
             raise ValueError('Please specify how the data should be written '
-                    'out. In case you want to create a new archive returned by '
-                    'this procedure. Specify path_archive_out="/path/to/dir". In case '
-                    'you want to merge it to the current archive, you need to '
-                    'dump the current archive so that the self.path_pickle is '
-                    'set.')
+                             'out. In case you want to create a new archive returned by '
+                             'this procedure. Specify path_archive_out="/path/to/dir". In case '
+                             'you want to merge it to the current archive, you need to '
+                             'dump the current archive so that the self.path_pickle is '
+                             'set.')
 
-        temp_df = self.lib_dataarrays.reset_index() 
-
+        temp_df = self.lib_dataarrays.reset_index()
 
         if type(apply_merge) == pd.core.frame.DataFrame:
             apply_merge_df = apply_merge
         elif type(apply_merge) == list:
             apply_merge_df = pd.DataFrame(apply_merge)
         elif type(apply_merge) == dict:
-            apply_merge_df = pd.DataFrame.from_dict([dict(zip(apply_merge.keys(),v)) for v in itertools.product(*apply_merge.values())])
+            apply_merge_df = pd.DataFrame.from_dict(
+                [dict(zip(apply_merge.keys(), v)) for v in itertools.product(*apply_merge.values())])
         apply_merge_index = pd.MultiIndex.from_frame(apply_merge_df)
 
         if type(apply_merge_out) == pd.core.frame.DataFrame:
@@ -833,23 +847,22 @@ class archive (object):
         elif type(apply_merge_out) == list:
             apply_merge_out_df = pd.DataFrame(apply_merge_out)
         elif type(apply_merge_out) == dict:
-            apply_merge_out_df = pd.DataFrame.from_dict([dict(zip(apply_merge_out.keys(),v)) for v in itertools.product(*apply_merge_out.values())])
-        
+            apply_merge_out_df = pd.DataFrame.from_dict(
+                [dict(zip(apply_merge_out.keys(), v)) for v in itertools.product(*apply_merge_out.values())])
+
         if len(apply_merge_out_df) == 0:
             print('creating automatic single output table')
             apply_merge_out_dict = {}
             for column in apply_merge_df.columns:
-                apply_merge_out_dict[column] = ['from__'+'__'.join(apply_merge_df[column].unique())]
-            apply_merge_out_df = pd.DataFrame.from_dict([dict(zip(apply_merge_out_dict.keys(),v)) for v in itertools.product(*apply_merge_out_dict.values())])
-                
+                apply_merge_out_dict[column] = ['from__' + '__'.join(apply_merge_df[column].unique())]
+            apply_merge_out_df = pd.DataFrame.from_dict(
+                [dict(zip(apply_merge_out_dict.keys(), v)) for v in itertools.product(*apply_merge_out_dict.values())])
 
         apply_merge_out_index = pd.MultiIndex.from_frame(apply_merge_out_df)
 
-        
+        # apply_merge_pandas = pd.DataFrame([{'variable':'msshf_0001'},{'variable':'mslhf_0001','source':'cds_era5'}])
 
-        #apply_merge_pandas = pd.DataFrame([{'variable':'msshf_0001'},{'variable':'mslhf_0001','source':'cds_era5'}])
-        
-        #self.lib_dataarrays.index.names
+        # self.lib_dataarrays.index.names
         if groupby is None:
             groupby = list(self.lib_dataarrays.index.names)
             for key in apply_merge_df.columns:
@@ -860,7 +873,6 @@ class archive (object):
         else:
             write_mode = 'add_to_current_archive'
 
-
         if write_mode == 'create_new_archive':
             archive_out = archive()
             archive_out.dump(path_archive_out)
@@ -868,7 +880,7 @@ class archive (object):
             archive_out = self
 
         xr_outputs = {}
-        for index,group in temp_df.groupby(groupby):
+        for index, group in temp_df.groupby(groupby):
             if type(index) is not tuple:
                 index_multi = (index,)
             else:
@@ -881,118 +893,118 @@ class archive (object):
 
             all_variables_available_in_this_group = True
             if len(apply_merge_index.intersection(group_columns.index)) != len(apply_merge_index):
-             all_variables_available_in_this_group = False
+                all_variables_available_in_this_group = False
             # if not group_columns.loc[apply_merge_index][groupby].isnull().any().any():
             #  all_variables_available_in_this_group = False
 
             if all_variables_available_in_this_group:
-                  dataarrays_for_func = []
+                dataarrays_for_func = []
 
-                  for index_group,columns in group_columns.loc[apply_merge_index].iterrows():
-                      index_array_dict =   {**dict(columns),**dict(zip(apply_merge_index.names,index_group))}#**dict(zip(apply_merge_index.names,index_group))} **dict(zip(groupby,index)),
-                      index_array_tuple_ordered =  tuple([index_array_dict[key] for key in self.lib_dataarrays.index.names])
+                for index_group, columns in group_columns.loc[apply_merge_index].iterrows():
+                    index_array_dict = {**dict(columns), **dict(zip(apply_merge_index.names,
+                                                                    index_group))}  # **dict(zip(apply_merge_index.names,index_group))} **dict(zip(groupby,index)),
+                    index_array_tuple_ordered = tuple(
+                        [index_array_dict[key] for key in self.lib_dataarrays.index.names])
 
-                      if (self.mode == 'passive') and (not self.lib_dataarrays.loc[index]['absolute_path'].isnull().any() ):
-                          print('to be implemented')
-                          import pdb; pdb.set_trace()
-                      else:
-                          dataarrays_for_func.append(self.dataarrays[index_array_tuple_ordered])
+                    if (self.mode == 'passive') and (
+                            not self.lib_dataarrays.loc[index]['absolute_path'].isnull().any()):
+                        print('to be implemented')
+                        import pdb;
+                        pdb.set_trace()
+                    else:
+                        dataarrays_for_func.append(self.dataarrays[index_array_tuple_ordered])
 
-                  filenames_out = []
-                  
-                  attributes = []
-                  ifile = 0
-                  for index_group,group_columns in apply_merge_out_df.iterrows():
-                      index_array_out_dict = {**dict(zip(groupby,index_multi)),**dict(zip(apply_merge_out_df.columns,group_columns))}
-                      attributes.append(index_array_out_dict)
-                      index_array_out_tuple_ordered =  tuple([index_array_out_dict[key] for key in self.lib_dataarrays.index.names])
+                filenames_out = []
 
-                      if inherit_attributes:
-                          for key,value in dataarrays_for_func[min(len(dataarrays_for_func),ifile)].attrs.items():
-                              if (key not in self.lib_dataarrays.index.names)  and \
-                                 ( inherit_attributes or ((type(inherit_attributes) is list) and (key in inherit_attributes))) and \
-                                 (key not in attributes[-1].keys()):
-                                  attributes[-1][key] = value
+                attributes = []
+                ifile = 0
+                for index_group, group_columns in apply_merge_out_df.iterrows():
+                    index_array_out_dict = {**dict(zip(groupby, index_multi)),
+                                            **dict(zip(apply_merge_out_df.columns, group_columns))}
+                    attributes.append(index_array_out_dict)
+                    index_array_out_tuple_ordered = tuple(
+                        [index_array_out_dict[key] for key in self.lib_dataarrays.index.names])
 
-                      for key,value in extra_attributes.items():
-                          attributes[-1][key] = value
+                    if inherit_attributes:
+                        for key, value in dataarrays_for_func[min(len(dataarrays_for_func), ifile)].attrs.items():
+                            if (key not in self.lib_dataarrays.index.names) and \
+                                    (inherit_attributes or (
+                                            (type(inherit_attributes) is list) and (key in inherit_attributes))) and \
+                                    (key not in attributes[-1].keys()):
+                                attributes[-1][key] = value
 
-                      # if (archive_out.file_pattern is None):
-                      #     raise ValueError("I don't know how to write the data file to disk. Please set to file_pattern") 
-                      #filenames_out.append(os.path.dirname(archive_out.path_pickle)+'/'+''.join(np.array(list(zip(archive_out.file_pattern.split('"')[::2],[attributes[-1][key] for key in archive_out.file_pattern.split('"')[1::2]]+['']))).ravel()))
-                      ifile +=1
-                  #  ifile = 0
-                  #  for index_group,group_columns in apply_merge_out_df.iterrows():
-                  #      index_array_out_tuple_ordered =  tuple([attributes[ifile][key] for key in archive_out.lib_dataarrays.index.names])
-                  #      if index_array_out_tuple_ordered in archive_out.dataarrays.keys():
-                  #          print('forcing to overwrite data for ',index_array_out_tuple_ordered,)
-                  #          self.remove_by_index(index_array_out_tuple_ordered,delete_on_disk=True)
-                  #      ifile +=1
-                  
+                    for key, value in extra_attributes.items():
+                        attributes[-1][key] = value
 
-                  # for filename_out in filenames_out:
-                  #     os.system('mkdir -p '+os.path.dirname(filename_out))
+                    # if (archive_out.file_pattern is None):
+                    #     raise ValueError("I don't know how to write the data file to disk. Please set to file_pattern")
+                    # filenames_out.append(os.path.dirname(archive_out.path_pickle)+'/'+''.join(np.array(list(zip(archive_out.file_pattern.split('"')[::2],[attributes[-1][key] for key in archive_out.file_pattern.split('"')[1::2]]+['']))).ravel()))
+                    ifile += 1
+                #  ifile = 0
+                #  for index_group,group_columns in apply_merge_out_df.iterrows():
+                #      index_array_out_tuple_ordered =  tuple([attributes[ifile][key] for key in archive_out.lib_dataarrays.index.names])
+                #      if index_array_out_tuple_ordered in archive_out.dataarrays.keys():
+                #          print('forcing to overwrite data for ',index_array_out_tuple_ordered,)
+                #          self.remove_by_index(index_array_out_tuple_ordered,delete_on_disk=True)
+                #      ifile +=1
 
-                  temp_dataarrays = func(tuple(dataarrays_for_func))
+                # for filename_out in filenames_out:
+                #     os.system('mkdir -p '+os.path.dirname(filename_out))
 
-                    # if type(temp_dataarrays) != tuple:
-                    #     print('this is a workaround in case we get a single dataarray instead of tuple of dataarrays from the wrapper function. This needs revision')
-                    #     idataarray = 0
-                    #     for key,value in attributes[idataarray].items():
-                    #         if key not in ['variable','absolute_path','path']:
-                    #             temp_dataarrays.attrs[key] = value
-                    #         if key == 'variable':
-                    #             temp_dataarrays.name = value
-                    #     #import pdb;pdb.set_trace()
-                    #     temp_dataarrays.to_netcdf(filenames_out[idataarray])
-                    #     temp_dataarrays.close()
-                    # else:
-                    #     for idataarray in range(len(temp_dataarrays)):
-                    #         for key,value in attributes[idataarray].items():
-                    #             if key not in ['variable','absolute_path','path']:
-                    #                 temp_dataarrays[idataarray].attrs[key] = value
-                    #             if key == 'variable':
-                    #                 temp_dataarrays[idataarray].name = value
+                temp_dataarrays = func(tuple(dataarrays_for_func))
 
-                    #     for idataarray in range(len(temp_dataarrays)):
-                    #         temp_dataarrays[idataarray].to_netcdf(filenames_out[idataarray])
-                    #         temp_dataarrays[idataarray].close()
+                # if type(temp_dataarrays) != tuple:
+                #     print('this is a workaround in case we get a single dataarray instead of tuple of dataarrays from the wrapper function. This needs revision')
+                #     idataarray = 0
+                #     for key,value in attributes[idataarray].items():
+                #         if key not in ['variable','absolute_path','path']:
+                #             temp_dataarrays.attrs[key] = value
+                #         if key == 'variable':
+                #             temp_dataarrays.name = value
+                #     #import pdb;pdb.set_trace()
+                #     temp_dataarrays.to_netcdf(filenames_out[idataarray])
+                #     temp_dataarrays.close()
+                # else:
+                #     for idataarray in range(len(temp_dataarrays)):
+                #         for key,value in attributes[idataarray].items():
+                #             if key not in ['variable','absolute_path','path']:
+                #                 temp_dataarrays[idataarray].attrs[key] = value
+                #             if key == 'variable':
+                #                 temp_dataarrays[idataarray].name = value
 
-                  for idataarray,dataarray in enumerate(temp_dataarrays):
-                      for key,value in attributes[idataarray].items():
-                          dataarray.attrs[key] = value
-                      archive_out.add_dataarray(dataarray)
+                #     for idataarray in range(len(temp_dataarrays)):
+                #         temp_dataarrays[idataarray].to_netcdf(filenames_out[idataarray])
+                #         temp_dataarrays[idataarray].close()
+
+                for idataarray, dataarray in enumerate(temp_dataarrays):
+                    for key, value in attributes[idataarray].items():
+                        dataarray.attrs[key] = value
+                    archive_out.add_dataarray(dataarray)
         if write_mode == 'create_new_archive':
             return archive_out
 
+    #             if type(group_columns_out.index) == pd.core.indexes.base.Index:
+    #                 MultiIndex_from_Single_Index = lambda index: pd.MultiIndex.from_tuples([x.split()[::-1] for x in index])
+    #                 group_columns_out.index = MultiIndex_from_Single_Index(group_columns_out.index)
+    #
+    #             # not_all_arrays_available_in_this_group = group_columns.loc[apply_merge_out_index][groupby].isnull().any().any()
+    #             #       dataarrays_for_func = []
+    #
+    #             import pdb;pdb.set_trace()
+    #             for index_group,columns in group_columns_out.loc[apply_merge_out_index].iterrows():
+    #                 index_array_dict =   {**dict(columns),**dict(zip(apply_merge_out_index.names,index_group))}#**dict(zip(apply_merge_index.names,index_group))} **dict(zip(groupby,index)),
+    #                 index_array_tuple_ordered =  tuple([index_array_dict[key] for key in self.lib_dataarrays.index.names])
+    #                 # dataarrays_for_func.append(self.dataarrays[index_array_tuple_ordered])
+    #
 
+    # group_columns.loc[apply_merge_index]
 
-#             if type(group_columns_out.index) == pd.core.indexes.base.Index:
-#                 MultiIndex_from_Single_Index = lambda index: pd.MultiIndex.from_tuples([x.split()[::-1] for x in index])
-#                 group_columns_out.index = MultiIndex_from_Single_Index(group_columns_out.index)
-#            
-#             # not_all_arrays_available_in_this_group = group_columns.loc[apply_merge_out_index][groupby].isnull().any().any()
-#             #       dataarrays_for_func = []
-# 
-#             import pdb;pdb.set_trace()
-#             for index_group,columns in group_columns_out.loc[apply_merge_out_index].iterrows():
-#                 index_array_dict =   {**dict(columns),**dict(zip(apply_merge_out_index.names,index_group))}#**dict(zip(apply_merge_index.names,index_group))} **dict(zip(groupby,index)),
-#                 index_array_tuple_ordered =  tuple([index_array_dict[key] for key in self.lib_dataarrays.index.names])
-#                 # dataarrays_for_func.append(self.dataarrays[index_array_tuple_ordered])
-# 
+    # temp_df.groupby(self.lib_dataarrays.index.names
+    # if kwargs.keys() != 1:
+    #     raise ValueError('length different from 1 is not allowed')
 
-
-
-
-                #group_columns.loc[apply_merge_index]
-            
-
-        # temp_df.groupby(self.lib_dataarrays.index.names
-        # if kwargs.keys() != 1:
-        #     raise ValueError('length different from 1 is not allowed')
-
-    def apply_virtual2(self,func,divide_into_groups_extra=None, apply_groups_in=[],apply_groups_out=[], archive_out=None,inherit_attributes=True,extra_attributes={},**kwargs ):
-
+    def apply_virtual2(self, func, divide_into_groups_extra=None, apply_groups_in=[], apply_groups_out=[],
+                       archive_out=None, inherit_attributes=True, extra_attributes={}, **kwargs):
 
         divide_into_groups = []
         for name in self.lib_dataarrays.index.names:
@@ -1001,10 +1013,10 @@ class archive (object):
         for name in divide_into_groups_extra:
             if name not in divide_into_groups:
                 divide_into_groups.append(name)
-        
-        for index,group in self.lib_dataarrays.reset_index().groupby(divide_into_groups):
 
-            def allways_multi_index (idx):
+        for index, group in self.lib_dataarrays.reset_index().groupby(divide_into_groups):
+
+            def allways_multi_index(idx):
                 if type(idx) is not tuple:
                     return (idx,)
                 else:
@@ -1021,25 +1033,19 @@ class archive (object):
 
             apply_this_group_in = pd.dataframe(columns=apply_groups_columns)
 
-                 
-
-
-
-
-
         def parse_to_dataframe(list_or_dict_or_dataframe):
             if type(list_or_dict_or_dataframe) == pd.core.frame.DataFrame:
                 return list_or_dict_or_dataframe
             elif type(list_or_dict_or_dataframe) == list:
                 return pd.DataFrame(list_or_dict_or_dataframe)
             elif type(list_or_dict_or_dataframe) == dict:
-                return pd.DataFrame.from_dict([dict(zip(list_or_dict_or_dataframe.keys(),v)) for v in itertools.product(*list_or_dict_or_dataframe.values())])
+                return pd.DataFrame.from_dict([dict(zip(list_or_dict_or_dataframe.keys(), v)) for v in
+                                               itertools.product(*list_or_dict_or_dataframe.values())])
 
         apply_groups_in_df = parse_to_dataframe(apply_groups_in)
         apply_groups_out_df = parse_to_dataframe(apply_groups_out)
 
         # import pdb;pdb.set_trace()
-
 
         # apply_merge_index = pd.MultiIndex.from_frame(apply_merge_df)
 
@@ -1048,65 +1054,55 @@ class archive (object):
         # elif type(apply_groups_out) == list:
         #     apply_groups_out_df = pd.DataFrame(apply_groups_out)
         # elif type(apply_groups_out) == dict:
-     
 
-
-
-
-        # apply_groups_in_out_pre = 
+        # apply_groups_in_out_pre =
 
         # if archive_out is not None:
         #     write_mode = 'add_to_external_archive'
         # else:
         #     write_mode = 'add_to_current_archive'
 
-
-
         #     apply_groups_index
 
-
-
-
-    #def cdo(self,cdostring,):
+    # def cdo(self,cdostring,):
     def apply_func(self,
-            func,
-            #lib_dataarrays = self.lib_dataarrays
-            archive_out = None,
-            update_pickle = True,
-            force_recalculate=False,
-            *args,
-            **kwargs):
-        #apply_groups_in = {'variable':['aridity'],'source':[None]}
-        #apply_groups_out={'variable':['aridity'],'source':[lambda labels: labels[0].replace('historical','rcp45'),lambda labels: labels[0].replace('historical','rcp85')]}
-        #archive_out = pcd.archive()
-        #mode='xarray'
+                   func,
+                   # lib_dataarrays = self.lib_dataarrays
+                   archive_out=None,
+                   update_pickle=True,
+                   force_recalculate=False,
+                   *args,
+                   **kwargs):
+        # apply_groups_in = {'variable':['aridity'],'source':[None]}
+        # apply_groups_out={'variable':['aridity'],'source':[lambda labels: labels[0].replace('historical','rcp45'),lambda labels: labels[0].replace('historical','rcp85')]}
+        # archive_out = pcd.archive()
+        # mode='xarray'
 
         if (archive_out is None) and (self.path_pickle is None) and (mode != 'xarray'):
             raise ValueError('Please specify how the data should be written '
-                    'out. In case you want to create a new archive returned by '
-                    'this procedure. Specify path_archive_out="/path/to/dir". In case '
-                    'you want to merge it to the current archive, you need to '
-                    'dump the current archive so that the self.path_pickle is '
-                    'set.')
+                             'out. In case you want to create a new archive returned by '
+                             'this procedure. Specify path_archive_out="/path/to/dir". In case '
+                             'you want to merge it to the current archive, you need to '
+                             'dump the current archive so that the self.path_pickle is '
+                             'set.')
 
         if archive_out is not None:
             write_mode = 'add_to_external_archive'
         else:
             write_mode = 'add_to_current_archive'
 
-
         # if write_mode == 'create_new_archive':
         #     archive_out = archive()
         #     archive_out.dump(path_archive_out)
-        #el
+        # el
         if write_mode == 'add_to_current_archive':
             archive_out = self
-        
+
         apply_func_wrapper(
             func,
-            lib_dataarrays = self.lib_dataarrays,
-            dataarrays = self.dataarrays,
-            archive_out = archive_out,
+            lib_dataarrays=self.lib_dataarrays,
+            dataarrays=self.dataarrays,
+            archive_out=archive_out,
             update_pickle=update_pickle,
             force_recalculate=force_recalculate,
             **kwargs,
@@ -1115,25 +1111,27 @@ class archive (object):
         if write_mode == 'create_new_archive':
             return archive_out
 
-    def apply_func_old(self,func, xarray_function_wrapper=apply_func,dataarrays_wrapper = lambda *x: (*x,),groupby=None,apply_merge=[],apply_merge_out=[],archive_out = None,keep_in_memory_during_processing = False, inherit_attributes = False,extra_attributes={}, **kwargs):
+    def apply_func_old(self, func, xarray_function_wrapper=apply_func, dataarrays_wrapper=lambda *x: (*x,),
+                       groupby=None, apply_merge=[], apply_merge_out=[], archive_out=None,
+                       keep_in_memory_during_processing=False, inherit_attributes=False, extra_attributes={}, **kwargs):
 
         if (archive_out is None) and (self.path_pickle is None):
             raise ValueError('Please specify how the data should be written '
-                    'out. In case you want to create a new archive returned by '
-                    'this procedure. Specify path_archive_out="/path/to/dir". In case '
-                    'you want to merge it to the current archive, you need to '
-                    'dump the current archive so that the self.path_pickle is '
-                    'set.')
+                             'out. In case you want to create a new archive returned by '
+                             'this procedure. Specify path_archive_out="/path/to/dir". In case '
+                             'you want to merge it to the current archive, you need to '
+                             'dump the current archive so that the self.path_pickle is '
+                             'set.')
 
-        temp_df = self.lib_dataarrays.reset_index() 
-
+        temp_df = self.lib_dataarrays.reset_index()
 
         if type(apply_merge) == pd.core.frame.DataFrame:
             apply_merge_df = apply_merge
         elif type(apply_merge) == list:
             apply_merge_df = pd.DataFrame(apply_merge)
         elif type(apply_merge) == dict:
-            apply_merge_df = pd.DataFrame.from_dict([dict(zip(apply_merge.keys(),v)) for v in itertools.product(*apply_merge.values())])
+            apply_merge_df = pd.DataFrame.from_dict(
+                [dict(zip(apply_merge.keys(), v)) for v in itertools.product(*apply_merge.values())])
         apply_merge_index = pd.MultiIndex.from_frame(apply_merge_df)
 
         if type(apply_merge_out) == pd.core.frame.DataFrame:
@@ -1141,22 +1139,22 @@ class archive (object):
         elif type(apply_merge_out) == list:
             apply_merge_out_df = pd.DataFrame(apply_merge_out)
         elif type(apply_merge_out) == dict:
-            apply_merge_out_df = pd.DataFrame.from_dict([dict(zip(apply_merge_out.keys(),v)) for v in itertools.product(*apply_merge_out.values())])
-        
+            apply_merge_out_df = pd.DataFrame.from_dict(
+                [dict(zip(apply_merge_out.keys(), v)) for v in itertools.product(*apply_merge_out.values())])
+
         if len(apply_merge_out_df) == 0:
             print('creating automatic single output table')
             apply_merge_out_dict = {}
             for column in apply_merge_df.columns:
-                apply_merge_out_dict[column] = ['from__'+'__'.join(apply_merge_df[column].unique())]
-            apply_merge_out_df = pd.DataFrame.from_dict([dict(zip(apply_merge_out_dict.keys(),v)) for v in itertools.product(*apply_merge_out_dict.values())])
-                
+                apply_merge_out_dict[column] = ['from__' + '__'.join(apply_merge_df[column].unique())]
+            apply_merge_out_df = pd.DataFrame.from_dict(
+                [dict(zip(apply_merge_out_dict.keys(), v)) for v in itertools.product(*apply_merge_out_dict.values())])
 
         apply_merge_out_index = pd.MultiIndex.from_frame(apply_merge_out_df)
 
+        # apply_merge_pandas = pd.DataFrame([{'variable':'msshf_0001'},{'variable':'mslhf_0001','source':'cds_era5'}])
 
-        #apply_merge_pandas = pd.DataFrame([{'variable':'msshf_0001'},{'variable':'mslhf_0001','source':'cds_era5'}])
-        
-        #self.lib_dataarrays.index.names
+        # self.lib_dataarrays.index.names
         if groupby is None:
             groupby = list(self.lib_dataarrays.index.names)
             for key in apply_merge_df.columns:
@@ -1167,7 +1165,6 @@ class archive (object):
         else:
             write_mode = 'add_to_current_archive'
 
-
         if write_mode == 'create_new_archive':
             archive_out = archive()
             archive_out.dump(path_archive_out)
@@ -1175,7 +1172,7 @@ class archive (object):
             archive_out = self
 
         xr_outputs = {}
-        for index,group in temp_df.groupby(groupby):
+        for index, group in temp_df.groupby(groupby):
 
             group_columns = group.set_index(list(apply_merge_df.columns))
             if type(group_columns.index) == pd.core.indexes.base.Index:
@@ -1184,128 +1181,133 @@ class archive (object):
 
             all_variables_available_in_this_group = True
             if len(apply_merge_index.intersection(group_columns.index)) != len(apply_merge_index):
-             all_variables_available_in_this_group = False
+                all_variables_available_in_this_group = False
             # if not group_columns.loc[apply_merge_index][groupby].isnull().any().any():
             #  all_variables_available_in_this_group = False
             #  import pdb; pdb.set_trace()
 
             if all_variables_available_in_this_group:
-                  dataarrays_for_func = []
+                dataarrays_for_func = []
 
-                  for index_group,columns in group_columns.loc[apply_merge_index].iterrows():
-                      index_array_dict =   {**dict(columns),**dict(zip(apply_merge_index.names,index_group))}#**dict(zip(apply_merge_index.names,index_group))} **dict(zip(groupby,index)),
-                      index_array_tuple_ordered =  tuple([index_array_dict[key] for key in self.lib_dataarrays.index.names])
+                for index_group, columns in group_columns.loc[apply_merge_index].iterrows():
+                    index_array_dict = {**dict(columns), **dict(zip(apply_merge_index.names,
+                                                                    index_group))}  # **dict(zip(apply_merge_index.names,index_group))} **dict(zip(groupby,index)),
+                    index_array_tuple_ordered = tuple(
+                        [index_array_dict[key] for key in self.lib_dataarrays.index.names])
 
-                      if (self.mode == 'passive') and (not self.lib_dataarrays.loc[index]['absolute_path'].isnull().any() ):
-                          print('to be implemented')
-                          import pdb; pdb.set_trace()
-                      else:
-                          dataarrays_for_func.append(self.dataarrays[index_array_tuple_ordered])
+                    if (self.mode == 'passive') and (
+                            not self.lib_dataarrays.loc[index]['absolute_path'].isnull().any()):
+                        print('to be implemented')
+                        import pdb;
+                        pdb.set_trace()
+                    else:
+                        dataarrays_for_func.append(self.dataarrays[index_array_tuple_ordered])
 
-                  filenames_out = []
-                  
-                  attributes = []
-                  ifile = 0
-                  for index_group,group_columns in apply_merge_out_df.iterrows():
-                      index_array_out_dict = {**dict(zip(groupby,index)),**dict(zip(apply_merge_out_df.columns,group_columns))}
-                      attributes.append(index_array_out_dict)
-                      index_array_out_tuple_ordered =  tuple([index_array_out_dict[key] for key in self.lib_dataarrays.index.names])
+                filenames_out = []
 
+                attributes = []
+                ifile = 0
+                for index_group, group_columns in apply_merge_out_df.iterrows():
+                    index_array_out_dict = {**dict(zip(groupby, index)),
+                                            **dict(zip(apply_merge_out_df.columns, group_columns))}
+                    attributes.append(index_array_out_dict)
+                    index_array_out_tuple_ordered = tuple(
+                        [index_array_out_dict[key] for key in self.lib_dataarrays.index.names])
 
-                      if inherit_attributes:
-                          for key,value in dataarrays_for_func[min(len(dataarrays_for_func),ifile)].attrs.items():
-                              if (key not in self.lib_dataarrays.index.names)  and \
-                                 ( inherit_attributes or ((type(inherit_attributes) is list) and (key in inherit_attributes))) and \
-                                 (key not in attributes[-1].keys()):
-                                  attributes[-1][key] = value
+                    if inherit_attributes:
+                        for key, value in dataarrays_for_func[min(len(dataarrays_for_func), ifile)].attrs.items():
+                            if (key not in self.lib_dataarrays.index.names) and \
+                                    (inherit_attributes or (
+                                            (type(inherit_attributes) is list) and (key in inherit_attributes))) and \
+                                    (key not in attributes[-1].keys()):
+                                attributes[-1][key] = value
 
-                      for key,value in extra_attributes.items():
-                          attributes[-1][key] = value
+                    for key, value in extra_attributes.items():
+                        attributes[-1][key] = value
 
-                      if (archive_out.file_pattern is None):
-                          raise ValueError("I don't know how to write the data file to disk. Please set to file_pattern") 
-                      filenames_out.append(os.path.dirname(archive_out.path_pickle)+'/'+''.join(np.array(list(zip(archive_out.file_pattern.split('"')[::2],[attributes[-1][key] for key in archive_out.file_pattern.split('"')[1::2]]+['']))).ravel()))
-                      ifile +=1
+                    if (archive_out.file_pattern is None):
+                        raise ValueError("I don't know how to write the data file to disk. Please set to file_pattern")
+                    filenames_out.append(os.path.dirname(archive_out.path_pickle) + '/' + ''.join(np.array(list(
+                        zip(archive_out.file_pattern.split('"')[::2],
+                            [attributes[-1][key] for key in archive_out.file_pattern.split('"')[1::2]] + [
+                                '']))).ravel()))
+                    ifile += 1
 
-                  for ixr_out,filename_out in enumerate(filenames_out):
-                      index_array_out_tuple_ordered =  tuple([attributes[ixr_out][key] for key in archive_out.lib_dataarrays.index.names])
-                      if index_array_out_tuple_ordered in archive_out.dataarrays.keys():
-                          self.remove_by_index(index_array_out_tuple_ordered,delete_on_disk=True)
-                  
+                for ixr_out, filename_out in enumerate(filenames_out):
+                    index_array_out_tuple_ordered = tuple(
+                        [attributes[ixr_out][key] for key in archive_out.lib_dataarrays.index.names])
+                    if index_array_out_tuple_ordered in archive_out.dataarrays.keys():
+                        self.remove_by_index(index_array_out_tuple_ordered, delete_on_disk=True)
 
-                  for filename_out in filenames_out:
-                      os.system('mkdir -p '+os.path.dirname(filename_out))
+                for filename_out in filenames_out:
+                    os.system('mkdir -p ' + os.path.dirname(filename_out))
 
-                  if not keep_in_memory_during_processing:
-                    xarray_function_wrapper(func,dataarrays_wrapper(*tuple(dataarrays_for_func)),filenames_out=filenames_out,attributes = attributes, release=True, **kwargs)
-                  else:
-                    temp_dataarrays = xarray_function_wrapper(func,dataarrays_wrapper(*tuple(dataarrays_for_func)),**kwargs)
+                if not keep_in_memory_during_processing:
+                    xarray_function_wrapper(func, dataarrays_wrapper(*tuple(dataarrays_for_func)),
+                                            filenames_out=filenames_out, attributes=attributes, release=True, **kwargs)
+                else:
+                    temp_dataarrays = xarray_function_wrapper(func, dataarrays_wrapper(*tuple(dataarrays_for_func)),
+                                                              **kwargs)
 
                     if type(temp_dataarrays) != tuple:
-                        print('this is a workaround in case we get a single dataarray instead of tuple of dataarrays from the wrapper function. This needs revision')
+                        print(
+                            'this is a workaround in case we get a single dataarray instead of tuple of dataarrays from the wrapper function. This needs revision')
                         idataarray = 0
-                        for key,value in attributes[idataarray].items():
+                        for key, value in attributes[idataarray].items():
                             if key not in self.not_dataarray_attributes:
                                 temp_dataarrays.attrs[key] = value
                             if key == 'variable':
                                 temp_dataarrays.name = value
-                        #import pdb;pdb.set_trace()
-                        os.system('rm '+filenames_out[idataarray])
+                        # import pdb;pdb.set_trace()
+                        os.system('rm ' + filenames_out[idataarray])
                         temp_dataarrays.to_netcdf(filenames_out[idataarray])
                         temp_dataarrays.close()
                     else:
                         for idataarray in range(len(temp_dataarrays)):
-                            for key,value in attributes[idataarray].items():
+                            for key, value in attributes[idataarray].items():
                                 if key not in self.not_dataarray_attributes:
                                     temp_dataarrays[idataarray].attrs[key] = value
                                 if key == 'variable':
                                     temp_dataarrays[idataarray].name = value
 
                         for idataarray in range(len(temp_dataarrays)):
-                            os.system('rm '+filenames_out[idataarray])
+                            os.system('rm ' + filenames_out[idataarray])
                             temp_dataarrays[idataarray].to_netcdf(filenames_out[idataarray])
                             temp_dataarrays[idataarray].close()
 
-                  for ixr_out,filename_out in enumerate(filenames_out):
-                      archive_out.add_dataarray(filename_out)
+                for ixr_out, filename_out in enumerate(filenames_out):
+                    archive_out.add_dataarray(filename_out)
 
         if write_mode == 'create_new_archive':
             return archive_out
 
+    #             if type(group_columns_out.index) == pd.core.indexes.base.Index:
+    #                 MultiIndex_from_Single_Index = lambda index: pd.MultiIndex.from_tuples([x.split()[::-1] for x in index])
+    #                 group_columns_out.index = MultiIndex_from_Single_Index(group_columns_out.index)
+    #
+    #             # not_all_arrays_available_in_this_group = group_columns.loc[apply_merge_out_index][groupby].isnull().any().any()
+    #             #       dataarrays_for_func = []
+    #
+    #             import pdb;pdb.set_trace()
+    #             for index_group,columns in group_columns_out.loc[apply_merge_out_index].iterrows():
+    #                 index_array_dict =   {**dict(columns),**dict(zip(apply_merge_out_index.names,index_group))}#**dict(zip(apply_merge_index.names,index_group))} **dict(zip(groupby,index)),
+    #                 index_array_tuple_ordered =  tuple([index_array_dict[key] for key in self.lib_dataarrays.index.names])
+    #                 # dataarrays_for_func.append(self.dataarrays[index_array_tuple_ordered])
+    #
 
+    # group_columns.loc[apply_merge_index]
 
-#             if type(group_columns_out.index) == pd.core.indexes.base.Index:
-#                 MultiIndex_from_Single_Index = lambda index: pd.MultiIndex.from_tuples([x.split()[::-1] for x in index])
-#                 group_columns_out.index = MultiIndex_from_Single_Index(group_columns_out.index)
-#            
-#             # not_all_arrays_available_in_this_group = group_columns.loc[apply_merge_out_index][groupby].isnull().any().any()
-#             #       dataarrays_for_func = []
-# 
-#             import pdb;pdb.set_trace()
-#             for index_group,columns in group_columns_out.loc[apply_merge_out_index].iterrows():
-#                 index_array_dict =   {**dict(columns),**dict(zip(apply_merge_out_index.names,index_group))}#**dict(zip(apply_merge_index.names,index_group))} **dict(zip(groupby,index)),
-#                 index_array_tuple_ordered =  tuple([index_array_dict[key] for key in self.lib_dataarrays.index.names])
-#                 # dataarrays_for_func.append(self.dataarrays[index_array_tuple_ordered])
-# 
-
-
-
-
-                #group_columns.loc[apply_merge_index]
-            
-
-        # temp_df.groupby(self.lib_dataarrays.index.names
-        # if kwargs.keys() != 1:
-        #     raise ValueError('length different from 1 is not allowed')
-
+    # temp_df.groupby(self.lib_dataarrays.index.names
+    # if kwargs.keys() != 1:
+    #     raise ValueError('length different from 1 is not allowed')
 
     def update(self,
                library_path=None,
                query=None,
-               force_overwrite_dataarrays = False,
+               force_overwrite_dataarrays=False,
                force_overwrite_pickle=False,
                extra_attributes={},
-               dump_floating_dataarrays=False,**kwargs):
+               dump_floating_dataarrays=False, **kwargs):
 
         """
             perform quick attribute parameter updates and/or dump unsynced information to disc on request.
@@ -1318,24 +1320,24 @@ class archive (object):
                 lib_basename = 'master.pkl'
                 lib_dirname = os.path.abspath(library_path)
             else:
-                raise ValueError('Please provide a path that either ends on ".pkl" (indicating specific picklefile) or "/" (full archive dump at master.pkl)')
+                raise ValueError(
+                    'Please provide a path that either ends on ".pkl" (indicating specific picklefile) or "/" (full archive dump at master.pkl)')
 
-
-            if os.path.isfile(lib_dirname+'/'+lib_basename) and (not force_overwrite_pickle):
-                raise IOError('pickle file exists. Please use force_overwrite_pickle = True, or specify the full pickle name as the library_path.')
+            if os.path.isfile(lib_dirname + '/' + lib_basename) and (not force_overwrite_pickle):
+                raise IOError(
+                    'pickle file exists. Please use force_overwrite_pickle = True, or specify the full pickle name as the library_path.')
 
             # when the self.path_pickle exists, it is assumed that this file needs to be updated
-            self.path_pickle = lib_dirname+'/'+lib_basename
+            self.path_pickle = lib_dirname + '/' + lib_basename
         # else:
         #     lib_dirname = os.path.dirname(self.path_pickle)
-
 
         # if self.path_pickle is None:
         #     raise ValueError("I can't track the pickle name. Please specify a pkl file or directory with library_path")
 
-        for key,value in kwargs.items():
+        for key, value in kwargs.items():
             if key not in self.settings_keys:
-                raise ValueError('"'+key+'" is not a known setting.')
+                raise ValueError('"' + key + '" is not a known setting.')
             else:
                 self.__dict__[key] = value
 
@@ -1345,7 +1347,7 @@ class archive (object):
             read_lib_dataarrays = self.lib_dataarrays.copy()
 
         if len(extra_attributes) > 0:
-            for idx,row in read_lib_dataarrays.iterrows():
+            for idx, row in read_lib_dataarrays.iterrows():
 
                 # # this should become part of a save procedure updating the attributes of the netcdf on disc
                 # if ('absolute_path' in row.keys()) and ('ncvariable' in row.keys()):
@@ -1359,8 +1361,8 @@ class archive (object):
                 # else:
                 dataarray_temp = self.dataarrays[idx]
 
-                attributes_temp = {**dict(zip(read_lib_dataarrays.index.names,idx)),**row}
-                for attribute_key,attribute_value in extra_attributes.items():
+                attributes_temp = {**dict(zip(read_lib_dataarrays.index.names, idx)), **row}
+                for attribute_key, attribute_value in extra_attributes.items():
                     attributes_temp[attribute_key] = attribute_value
 
                 # extra_attributes_plus_path = extra_attributes.copy()
@@ -1369,36 +1371,39 @@ class archive (object):
                 # if ( ('absolute_path' in row.keys()) and (type(row['absolute_path']) == str)):
                 #     extra_attributes_plus_path['absolute_path'] =row['absolute_path']
 
-                self.remove_by_index(idx,update_pickle=False)
-                self.add_dataarray(dataarray_temp,**attributes_temp)
+                self.remove_by_index(idx, update_pickle=False)
+                self.add_dataarray(dataarray_temp, **attributes_temp)
 
         # for key,value in extra_attributes.items():
         #     self.lib_dataarrays.loc[read_lib_dataarrays.index][key] = value
-        
+
         if 'path_pickle' in self.__dict__.keys():
-            os.system('mkdir -p '+os.path.dirname(self.path_pickle))
+            os.system('mkdir -p ' + os.path.dirname(self.path_pickle))
 
         read_lib_dataarrays = self.lib_dataarrays.copy()
 
-        for idx,columns in read_lib_dataarrays.iterrows():
-            if ( ('absolute_path' not in columns.keys()) or (type(columns['absolute_path']) != str)) or \
-               ( ('path' not in columns.keys()) or (type(columns['path']) != str)):
+        for idx, columns in read_lib_dataarrays.iterrows():
+            if (('absolute_path' not in columns.keys()) or (type(columns['absolute_path']) != str)) or \
+                    (('path' not in columns.keys()) or (type(columns['path']) != str)):
 
                 if dump_floating_dataarrays:
-                    #parse filename according to file_pattern
+                    # parse filename according to file_pattern
                     if 'path_pickle' not in self.__dict__.keys():
-                        raise ValueError ('self.path_pickle is not set')
-                    fnout = os.path.dirname(self.path_pickle)+'/'+''.join(np.array(list(zip(self.file_pattern.split('"')[::2],[{**dict(zip(self.lib_dataarrays.index.names,idx)),**columns}[key] for key in self.file_pattern.split('"')[1::2]]+['']))).ravel())
-                    print("File pointer for ",idx," is not known, so I'm dumping a new file under ",fnout)
-                    #fnout = self.lib_dataarrays.loc[idx]['absolute_path']
+                        raise ValueError('self.path_pickle is not set')
+                    fnout = os.path.dirname(self.path_pickle) + '/' + ''.join(np.array(list(
+                        zip(self.file_pattern.split('"')[::2],
+                            [{**dict(zip(self.lib_dataarrays.index.names, idx)), **columns}[key] for key in
+                             self.file_pattern.split('"')[1::2]] + ['']))).ravel())
+                    print("File pointer for ", idx, " is not known, so I'm dumping a new file under ", fnout)
+                    # fnout = self.lib_dataarrays.loc[idx]['absolute_path']
                     if (not force_overwrite_dataarrays) and (os.path.isfile(fnout)):
-                        raise IOError(fnout+' exists. Use force_overwrite_dataarrays to overwrite file')
-                    os.system('mkdir -p '+os.path.dirname(fnout))
+                        raise IOError(fnout + ' exists. Use force_overwrite_dataarrays to overwrite file')
+                    os.system('mkdir -p ' + os.path.dirname(fnout))
                     # self.dataarrays[idx].attrs['absolute_path'] = fnout
-                    for key,value in dict(columns).items():
+                    for key, value in dict(columns).items():
                         self.dataarrays[idx]
 
-                    for key,value in dict(columns).items():
+                    for key, value in dict(columns).items():
                         if key not in [
                             'variable',
                             'absolute_path',
@@ -1406,7 +1411,7 @@ class archive (object):
                             'absolute_path_as_cache',
                             'path',
                             'available'
-                            #'dataarray_pointer',
+                            # 'dataarray_pointer',
                         ]:
                             if type(value) == bool:
                                 self.dataarrays[idx].attrs[key] = int(value)
@@ -1414,12 +1419,13 @@ class archive (object):
                                 self.dataarrays[idx].attrs[key] = value
                         if key == 'variable':
                             self.dataarrays[idx].name = value
- 
-                    os.system('rm '+fnout)
-                    self.dataarrays[idx].to_netcdf(fnout);print('file written to: '+fnout)
-                    self.remove_by_index(idx,update_pickle=False)
+
+                    os.system('rm ' + fnout)
+                    self.dataarrays[idx].to_netcdf(fnout);
+                    print('file written to: ' + fnout)
+                    self.remove_by_index(idx, update_pickle=False)
                     self.add_dataarray(fnout)
-                    #self.dataarrays[idx]
+                    # self.dataarrays[idx]
 
                     # key = 'path'
                     # if key not in self.lib_dataarrays.columns:
@@ -1427,11 +1433,11 @@ class archive (object):
                     # self.lib_dataarrays.loc[idx]['path'] = './'
 
                     # note that path and absolute_path are not written to the netcdf file above, but it is available virtually for convenience
-                    #self.lib_dataarrays['absolute_path'].loc[idx] = fnout
-                #self.dataarrays[idx].attrs['path'] = self.lib_dataarrays.loc[idx]['path']
+                    # self.lib_dataarrays['absolute_path'].loc[idx] = fnout
+                # self.dataarrays[idx].attrs['path'] = self.lib_dataarrays.loc[idx]['path']
             else:
 
-                print("Assuming variable for ",idx," exists in file "+columns['absolute_path'])
+                print("Assuming variable for ", idx, " exists in file " + columns['absolute_path'])
                 if 'path' not in self.lib_dataarrays.columns:
                     self.lib_dataarrays['path'] = None
 
@@ -1439,51 +1445,56 @@ class archive (object):
                 if ((columns['absolute_path'] is not None) and (type(columns['absolute_path']) is str)):
                     if 'path' not in self.lib_dataarrays.columns:
                         self.lib_dataarrays['path'] = None
-                    self.lib_dataarrays['path'].loc[idx] =  os.path.relpath(columns['absolute_path'],os.path.dirname(self.path_pickle))
-                    print("relative file path to "+os.path.dirname(self.path_pickle)+" is "+self.lib_dataarrays['path'].loc[idx])
-                #os.path.commonprefix([columns['absolute_path'],lib_dirname])
+                    self.lib_dataarrays['path'].loc[idx] = os.path.relpath(columns['absolute_path'],
+                                                                           os.path.dirname(self.path_pickle))
+                    print("relative file path to " + os.path.dirname(self.path_pickle) + " is " +
+                          self.lib_dataarrays['path'].loc[idx])
+                # os.path.commonprefix([columns['absolute_path'],lib_dirname])
                 elif ((columns['path'] is not None) and (type(columns['path']) is str)):
                     if 'absolute_path' not in self.lib_dataarrays.columns:
                         self.lib_dataarrays['absolute_path'] = None
-                    self.lib_dataarrays['absolute_path'].loc[idx] =  os.path.dirname(self.path_pickle)+'/'+columns['path']
+                    self.lib_dataarrays['absolute_path'].loc[idx] = os.path.dirname(self.path_pickle) + '/' + columns[
+                        'path']
 
-                    if ((columns['absolute_path_for_reading'] is None) or (type(columns['absolute_path_for_reading']) is not str)):
+                    if ((columns['absolute_path_for_reading'] is None) or (
+                            type(columns['absolute_path_for_reading']) is not str)):
                         if 'absolute_path_for_reading' not in self.lib_dataarrays.columns:
                             self.lib_dataarrays['absolute_path_for_reading'] = None
-                        self.lib_dataarrays['absolute_path_for_reading'].loc[idx] =  os.path.dirname(self.path_pickle)+'/'+columns['path']
-                    #print("absolute file path to "+os.path.dirname(self.path_pickle)+" is "+self.lib_dataarrays['path'].loc[idx])
-        
+                        self.lib_dataarrays['absolute_path_for_reading'].loc[idx] = os.path.dirname(
+                            self.path_pickle) + '/' + columns['path']
+                    # print("absolute file path to "+os.path.dirname(self.path_pickle)+" is "+self.lib_dataarrays['path'].loc[idx])
+
         if ('path_pickle' in self.__dict__.keys()):
             self.lib_dataarrays.to_pickle(self.path_pickle)
-            with open(self.path_pickle+'.yaml','w') as file:
-                yaml.dump([[key,self.__dict__[key]] for key in self.settings_keys],file)
+            with open(self.path_pickle + '.yaml', 'w') as file:
+                yaml.dump([[key, self.__dict__[key]] for key in self.settings_keys], file)
 
     def load(
             self,
             path,
-            path_settings = None,
-            #file_pattern = lambda columns: columns['variable']+'_'+columns['source']+'_'+columns['time']+'_'+columns['space']+'.nc',
-            file_pattern = None,
-            query= None,
+            path_settings=None,
+            # file_pattern = lambda columns: columns['variable']+'_'+columns['source']+'_'+columns['time']+'_'+columns['space']+'.nc',
+            file_pattern=None,
+            query=None,
             extra_attributes={},
             skip_unavailable=False,
             add_file_pattern_matches=False,
-            release_dataarray_pointer =False,
+            release_dataarray_pointer=False,
             cache_to_tempdir=False,
             cache_to_ram=False,
             reset_space=False,
             initialize_if_missing=True,
             **kwargs):
 
-
         if type(path).__name__ == 'list':
             # eg., -> files_wildcard = '*_*_*_*.nc'
             print('Guessing files from file list...(this procedure may need revision)')
-            #allkwargs = {**dict(zip(lib_dataarrays_temp.index.names, index)),**dict(dataarray),**kwargs}
+            # allkwargs = {**dict(zip(lib_dataarrays_temp.index.names, index)),**dict(dataarray),**kwargs}
             filenames = path
             for filename in filenames:
-                
-                self.add_dataarray(xr.open_dataarray(filename),absolute_path=filename,skip_unavailable=False,release_dataarray_pointer =True,cache_to_tempdir=False,reset_space=reset_space,**extra_attributes)
+                self.add_dataarray(xr.open_dataarray(filename), absolute_path=filename, skip_unavailable=False,
+                                   release_dataarray_pointer=True, cache_to_tempdir=False, reset_space=reset_space,
+                                   **extra_attributes)
 
         # elif os.path.isfile(path):
         #     print('pkl file '+path+' detected. Listing files from there.' )
@@ -1500,7 +1511,7 @@ class archive (object):
         #         allkwargs['absolute_path'] = absolute_file_path
         #         if os.path.isfile(absolute_file_path):
         #             print('adding '+absolute_file_path+' with additional attributes: ',allkwargs)
-        #             try: 
+        #             try:
         #                 xrin = xr.open_dataarray(absolute_file_path)
         #             except ValueError:
         #                 # try to open the variable out of dataset
@@ -1524,123 +1535,132 @@ class archive (object):
                 lib_basename = 'master.pkl'
                 lib_dirname = os.path.abspath(path)
             else:
-                raise ValueError('Please provide a path that either ends on ".pkl" (indicating specific picklefile) or "/" (full archive dump at master.pkl)')
+                raise ValueError(
+                    'Please provide a path that either ends on ".pkl" (indicating specific picklefile) or "/" (full archive dump at master.pkl)')
         else:
-            raise IOError ('path '+path+ ' does not exist.')
-#         os.system('mkdir -p '+path)
+            raise IOError('path ' + path + ' does not exist.')
+        #         os.system('mkdir -p '+path)
 
         # file_pattern = '"variable"_"columns"_"time"_"space".nc'
 
+        temp_path_pickle = lib_dirname + '/' + lib_basename
 
-        temp_path_pickle = lib_dirname+'/'+lib_basename
-
-        
         print('apply settings according to yaml file and kwargs')
         if path_settings is None:
-            path_settings = temp_path_pickle+'.yaml'
+            path_settings = temp_path_pickle + '.yaml'
         elif not os.path.isfile(path_settings):
-            raise IOError('Settings file '+path_settings+ ' not found.')
+            raise IOError('Settings file ' + path_settings + ' not found.')
         print(temp_path_pickle)
         if os.path.isfile(temp_path_pickle):
             self.path_pickle = temp_path_pickle
 
         if (not os.path.isfile(temp_path_pickle)) and initialize_if_missing:
             if 'file_pattern' in kwargs.keys():
-                self.update(temp_path_pickle,file_pattern=kwargs['file_pattern'])
+                self.update(temp_path_pickle, file_pattern=kwargs['file_pattern'])
             else:
                 self.update(temp_path_pickle)
-
 
         if os.path.isfile(path_settings):
             print('settings file found')
             with open(path_settings) as file:
-                for key,value in yaml.load(file):
+                for key, value in yaml.load(file):
                     if key in self.settings_keys:
-                        self.__dict__[key] = value 
+                        self.__dict__[key] = value
 
-        for key,value in kwargs.items():
+        for key, value in kwargs.items():
             if key not in self.settings_keys:
-                raise ValueError('"'+key+'" is not a known setting.')
+                raise ValueError('"' + key + '" is not a known setting.')
             else:
                 self.__dict__[key] = value
-
 
         # if file_pattern is not None:
         #     print('Overriding settings "file_pattern" with ', file_pattern,' from arguments')
         #     self.file_pattern = file_pattern
 
-        
         print('reading the dataarrays from the pickle file')
 
         if type(query) == str:
-            read_lib_dataarrays = pd.read_pickle(temp_path_pickle).query(query,engine='python')
+            read_lib_dataarrays = pd.read_pickle(temp_path_pickle).query(query, engine='python')
         elif query is not None:
             read_lib_dataarrays = query(pd.read_pickle(temp_path_pickle))
         else:
-            #query is None
+            # query is None
             read_lib_dataarrays = pd.read_pickle(temp_path_pickle)
 
         for column in read_lib_dataarrays.columns:
             if column not in self.lib_dataarrays.columns:
-                print('adding column '+column+' from the original set to avoid errors when the query result is empty and gets queried again')
+                print(
+                    'adding column ' + column + ' from the original set to avoid errors when the query result is empty and gets queried again')
                 self.lib_dataarrays[column] = ""
 
-        for index,columns in read_lib_dataarrays.iterrows():
+        for index, columns in read_lib_dataarrays.iterrows():
             absolute_path = None
 
             if 'path' in read_lib_dataarrays.columns:
-                absolute_path = lib_dirname+'/'+columns['path']
+                absolute_path = lib_dirname + '/' + columns['path']
             elif 'absolute_path' in read_lib_dataarrays.columns:
                 absolute_path = columns['absolute_path']
-                columns['path'] =  os.path.relpath(columns['absolute_path'],os.path.dirname(self.path_pickle))
+                columns['path'] = os.path.relpath(columns['absolute_path'], os.path.dirname(self.path_pickle))
 
             if (absolute_path is not None) and (absolute_path not in self.lib_dataarrays.absolute_path):
-                #if index[0] == 'mslhf_0001':
-                print('Opening file : '+absolute_path)
-                self.add_dataarray(absolute_path,skip_unavailable=skip_unavailable,release_dataarray_pointer =True,cache_to_tempdir=False,cache_to_ram=cache_to_ram,**({**dict(zip(read_lib_dataarrays.index.names,index)),**columns}),**extra_attributes)
+                # if index[0] == 'mslhf_0001':
+                print('Opening file : ' + absolute_path)
+                self.add_dataarray(absolute_path, skip_unavailable=skip_unavailable, release_dataarray_pointer=True,
+                                   cache_to_tempdir=False, cache_to_ram=cache_to_ram,
+                                   **({**dict(zip(read_lib_dataarrays.index.names, index)), **columns}),
+                                   **extra_attributes)
 
         if add_file_pattern_matches and (self.file_pattern is not None):
-            files_wildcard = lib_dirname+'/'+''.join(np.array(list(zip(self.file_pattern.split('"')[::2],['*']*len(self.file_pattern.split('"')[1::2])+['']))).ravel())
-            print('file_pattern is '+self.file_pattern+' and add_file_pattern_matches == True, so scanning and adding files that match the wildcard: ',files_wildcard+' that are not in the library yet')
+            files_wildcard = lib_dirname + '/' + ''.join(np.array(list(zip(self.file_pattern.split('"')[::2],
+                                                                           ['*'] * len(
+                                                                               self.file_pattern.split('"')[1::2]) + [
+                                                                               '']))).ravel())
+            print(
+                'file_pattern is ' + self.file_pattern + ' and add_file_pattern_matches == True, so scanning and adding files that match the wildcard: ',
+                files_wildcard + ' that are not in the library yet')
             # eg., -> files_wildcard = '*_*_*_*.nc'
             filenames = glob.glob(files_wildcard)
             for filename in filenames:
                 if filename not in self.lib_dataarrays.absolute_path:
-                    path = os.path.relpath(filename,os.path.dirname(temp_path_pickle))
-                    print('Opening file : '+filename)
-                    self.add_dataarray(filename,skip_unavailable=skip_unavailable, release_dataarray_pointer = True, cache_to_tempdir=False,path=path,cache_to_ram=cache_to_ram,reset_space=reset_space,**extra_attributes)
+                    path = os.path.relpath(filename, os.path.dirname(temp_path_pickle))
+                    print('Opening file : ' + filename)
+                    self.add_dataarray(filename, skip_unavailable=skip_unavailable, release_dataarray_pointer=True,
+                                       cache_to_tempdir=False, path=path, cache_to_ram=cache_to_ram,
+                                       reset_space=reset_space, **extra_attributes)
 
         # import pdb; pdb.set_trace()
         if type(query) == str:
-            read_lib_dataarrays = self.lib_dataarrays.query(query,engine='python').copy()
+            read_lib_dataarrays = self.lib_dataarrays.query(query, engine='python').copy()
         elif (query is not None):
             read_lib_dataarrays = query(self.lib_dataarrays)
         else:
             read_lib_dataarrays = self.lib_dataarrays.copy()
 
-        for idx,columns in self.lib_dataarrays.iterrows():
-            self.remove_by_index(idx,update_pickle=False)
-        for idx,columns in read_lib_dataarrays.iterrows():
+        for idx, columns in self.lib_dataarrays.iterrows():
+            self.remove_by_index(idx, update_pickle=False)
+        for idx, columns in read_lib_dataarrays.iterrows():
             absolute_path = None
             # import pdb; pdb.set_trace()
             if 'path' in read_lib_dataarrays.columns:
-                absolute_path = lib_dirname+'/'+columns['path']
+                absolute_path = lib_dirname + '/' + columns['path']
             elif 'absolute_path' in read_lib_dataarrays.columns:
                 absolute_path = columns['absolute_path']
 
             if (absolute_path is not None) and (absolute_path not in self.lib_dataarrays.absolute_path):
-                #if index[0] == 'mslhf_0001':
-                print('Opening file : '+absolute_path)
-                self.add_dataarray(absolute_path,skip_unavailable=skip_unavailable,release_dataarray_pointer =release_dataarray_pointer,cache_to_tempdir=cache_to_tempdir,cache_to_ram=cache_to_ram,reset_space=reset_space,**({**dict(zip(read_lib_dataarrays.index.names,idx)),**columns}),**extra_attributes)
-
-            
-
+                # if index[0] == 'mslhf_0001':
+                print('Opening file : ' + absolute_path)
+                self.add_dataarray(absolute_path, skip_unavailable=skip_unavailable,
+                                   release_dataarray_pointer=release_dataarray_pointer,
+                                   cache_to_tempdir=cache_to_tempdir, cache_to_ram=cache_to_ram,
+                                   reset_space=reset_space,
+                                   **({**dict(zip(read_lib_dataarrays.index.names, idx)), **columns}),
+                                   **extra_attributes)
 
     # def dataarrays_merge_apply(self,attrs,function):
     #     if len(attrs.keys()) > 1:
     #         print('not tested, please check')
     #         import pdb; pdb.set_trace()
-    #     
+    #
     #     index_keys_groupby = []
     #     index_keys_nongroupby = []
     #     for key in self.lib_dataarrays.index.names:
@@ -1664,11 +1684,12 @@ class archive (object):
     #         archive_out.add_dataarray(dataarray_out)
     #     return archive_out
 
-    def dataarrays_merge(self,attrs):
+    def dataarrays_merge(self, attrs):
         if len(attrs.keys()) > 1:
             print('not tested, please check')
-            import pdb; pdb.set_trace()
-        
+            import pdb;
+            pdb.set_trace()
+
         index_keys_groupby = []
         index_keys_nongroupby = []
         for key in self.lib_dataarrays.index.names:
@@ -1679,30 +1700,27 @@ class archive (object):
         lfirst = True
 
         archive_out = archive()
-        for index_groupby,group_lib_dataarrays in  self.lib_dataarrays.groupby(index_keys_groupby):
+        for index_groupby, group_lib_dataarrays in self.lib_dataarrays.groupby(index_keys_groupby):
             group_dataarrays = [self.dataarrays[key] for key in group_lib_dataarrays.index]
-            dataarray_out = xr.concat(group_dataarrays,dim=group_lib_dataarrays.loc[index_groupby].index) 
+            dataarray_out = xr.concat(group_dataarrays, dim=group_lib_dataarrays.loc[index_groupby].index)
             for column in group_lib_dataarrays.columns:
                 # if lib_dataarrays[column].unique() > 0:
                 # aparently uniform attributes are taken over, so we can detect from the destination attributies
                 if (column not in dataarray_out.attrs.keys()) and (column != 'path'):
                     dataarray_out.coords[column] = (attrs.keys(), group_lib_dataarrays[column].values)
-            for key,value in attrs.items():
+            for key, value in attrs.items():
                 dataarray_out.attrs[key] = value
             archive_out.add_dataarray(dataarray_out)
         return archive_out
-            # group_dataarrays = self.lib_dataarrays.loc[index_groupby]
-            # xr.concat(group_dataarrays.values(),dim=group_dataarrays.index)
+        # group_dataarrays = self.lib_dataarrays.loc[index_groupby]
+        # xr.concat(group_dataarrays.values(),dim=group_dataarrays.index)
 
-            # if lfirst:
-            #     dataarray_out = self.dataarrays
-
-
+        # if lfirst:
+        #     dataarray_out = self.dataarrays
 
     #    for key,value in merges.items():
 
     #        self.lib_dataarrays.groupby:
-
 
     # def merge_time_in_space(self,time,datetimes,space):
     #     archive_temp = self.dataarrays_apply(lambda x: x.reindex({'time':datetimes}),attrs={'time':time})
@@ -1710,30 +1728,25 @@ class archive (object):
     #         archive_out = archive()
     #         import pdb; pdb.set_trace()
 
+    # for key in
+    # self.lib_dataarrays
 
-        
-
-
-        # for key in 
-        # self.lib_dataarrays
-
-        # self.timeframes = pd.DataFrame(index=empty_multiindex(['timeframe','grid','source','variable']),columns=['model','experiment','ensemble_member','start','end','start_clip','end_clip']).iloc[1:]
-        # self.timeframes_pages = pd.DataFrame(index = empty_multiindex(['timeframe','grid','source','variable','start','end']),columns = list(self.pages.columns)+['start_clip','end_clip']).iloc[1:]
-
+    # self.timeframes = pd.DataFrame(index=empty_multiindex(['timeframe','grid','source','variable']),columns=['model','experiment','ensemble_member','start','end','start_clip','end_clip']).iloc[1:]
+    # self.timeframes_pages = pd.DataFrame(index = empty_multiindex(['timeframe','grid','source','variable','start','end']),columns = list(self.pages.columns)+['start_clip','end_clip']).iloc[1:]
 
     # def add_source(self,source = 'gsod_historical',pathfile = ''):
-    #     if source == 'ghcn_historical':    
+    #     if source == 'ghcn_historical':
     #         lib_temp = pd.read_fwf(pathfile,names=['locid','lat','lon','variable','yearstart','yearend'])
     #         self.lookupvar[source] = {'pr_dailysum':'PRCP'}
     #         for var,sourcevar in self.lookupvar[source].items():
-    #             
+    #
     #             lib_temp['variable'].loc[lib_temp['variable'] == sourcevar] = var    # = lib_temp.var.str.rename(columns={0:self.lookupvar[source][seriesvar]})
     #     else:
     #         raise ValueError ('Source '+source+' not supported.')
-    #         
+    #
     #     lib_temp['source'] = source
     #     lib_temp = lib_temp.set_index(['locid','source','variable'])
-    #     
-    #     self.lib = pd.concat([self.lib,lib_temp])    
+    #
+    #     self.lib = pd.concat([self.lib,lib_temp])
 
 
