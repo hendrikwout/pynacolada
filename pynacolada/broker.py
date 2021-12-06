@@ -338,7 +338,7 @@ class broker (object):
             os.system('rm ' + lockfile)
         while os.path.isfile(lockfile):
             logging.info('archive locked with "' + lockfile + '" . Waiting for another process to release it.')
-            sleep(10)
+            sleep(1)
 
         requests_parents = [broker_requires.copy() for broker_requires in sources]
 
