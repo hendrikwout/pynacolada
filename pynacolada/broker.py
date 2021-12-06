@@ -316,8 +316,8 @@ class broker (object):
                 if (not first_variable_found) and (key in broker_requires) and (broker_requires[key] == variable):
                     broker_requires_new.append(broker_requires)
                     first_variable_found = True
-            if not first_variable_found:
-                raise ValueError ('value '+variable+'not found in self.requires')
+            # if not first_variable_found:
+            #     raise ValueError ('value '+variable+'not found in self.requires')
         self.requires = broker_requires_new
 
 
