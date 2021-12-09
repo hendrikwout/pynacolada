@@ -6,9 +6,224 @@ purpose: vectorized functions that can be used with apply_func
 
 import math
 import numpy as np
-from scipy.spatial import Delaunay
+import logging
+import xarray as xr
 
-def moving_average(a, n=3) : 
+
+
+def extend_grid_longitude(longitude,x=None,return_index=False):
+    """
+    purpose: extend longitude to have a full -180 to 360 domain. This makes selection of locations and domains more easy.
+
+    """
+
+    select_longitude_left = longitude >= 170
+    longitude_list = []
+    if x is not None:
+        x_list = []
+        x_list = []
+
+    longitude_index_list = []
+    select_longitude_left_index = np.where(select_longitude_left)[0]
+    longitude_index_list.append(select_longitude_left_index)
+
+    longitude_left =longitude[select_longitude_left] - 360
+    if longitude_left.shape != (0,):
+        longitude_list.append(longitude_left)
+        if x is not None:
+            x_list.append(x[..., select_longitude_left])
+
+    longitude_list.append(longitude)
+    if x is not None:
+        x_list.append(x)
+
+    longitude_index_list.append(np.array(range(len(longitude))))
+
+    select_longitude_right = longitude < 10.
+    longitude_right =longitude[select_longitude_right] + 360
+    if longitude_right.shape != (0,):
+        longitude_list.append(longitude_right)
+        if x is not None:
+            x_list.append(x[..., select_longitude_right])
+
+    select_longitude_right_index = np.where(select_longitude_right)[0]
+    longitude_index_list.append(select_longitude_right_index)
+
+    longitude_extended = np.concatenate( longitude_list, axis=-1)
+    longitude_index_extended = np.concatenate( longitude_list, axis=-1)
+    output = [longitude_extended,]
+
+    if x is not None:
+        x_extended = np.concatenate(x_list, axis=-1)
+        output.append(x_extended)
+
+    if return_index == True:
+        longitude_extended_index = np.concatenate(longitude_index_list, axis=-1)
+        output.append(longitude_extended_index)
+
+    if len(output) >1:
+        return tuple(output)
+    else:
+        return output[0]
+
+
+def extend_crop_interpolate(
+        x,
+        grid_input,
+        grid_output,
+        interpolation=True,
+        return_grid_output=False,
+        debug=False,
+        border_pixels=5
+    ):
+    """
+    purpose:
+        perform area cropping. But also auto-extending so that
+        one can always choose longitude ranges between -180 and 360 degrees.
+
+    input arguments:
+        border_pixels: include extra number of pixels at the borders of the domain to ensure consistent interpolation
+    """
+
+    grid_input_latitude_spacing = np.abs(np.median(np.ravel(grid_input[0][1:] - grid_input[0][:-1])))
+    grid_input_longitude_spacing = np.abs(np.median(np.ravel(grid_input[1][...,1:] - grid_input[1][...,:-1])))
+
+    grid_output_latitude_spacing = np.abs(np.median(np.ravel(grid_output[0][1:] - grid_output[0][:-1])))
+    grid_output_longitude_spacing = np.abs(np.median(np.ravel(grid_output[1][...,1:] - grid_output[1][...,:-1])))
+
+    latitude_bottom_input = np.min(grid_output[0]) - grid_input_latitude_spacing*border_pixels #+ grid_output_latitude_spacing/2.
+    latitude_top_input = np.max(grid_output[0]) + grid_input_latitude_spacing*border_pixels #- grid_output_latitude_spacing/2.
+
+    grid_input_longitude_extended,grid_input_longitude_extended_index = \
+        extend_grid_longitude(grid_input[1],return_index=True)
+
+    longitude_left_input  = np.min(grid_output[1]) - grid_input_longitude_spacing*border_pixels #+ grid_output_longitude_spacing/2.
+    longitude_right_input = np.max(grid_output[1]) + grid_input_longitude_spacing*border_pixels #- grid_output_longitude_spacing/2.
+
+    select_longitude_crop_input_index = \
+        (grid_input_longitude_extended >= longitude_left_input) & \
+        (grid_input_longitude_extended <= longitude_right_input)
+
+    longitude_crop_input_index = \
+        grid_input_longitude_extended_index[ select_longitude_crop_input_index ]
+
+    longitude_crop_input = grid_input_longitude_extended[select_longitude_crop_input_index]
+
+    latitude_crop_input_index = np.where(
+        (grid_input[0] >= latitude_bottom_input) &
+        (grid_input[0] <= latitude_top_input)
+    )[0]
+    latitude_crop_input = grid_input[0][latitude_crop_input_index]
+
+    if x is not None:
+        if type(x) is xr.DataArray:
+        # x_crop = x[...,latitude_crop_input_index,:][...,longitude_crop_input_index]
+            x_crop = x.isel(latitude=latitude_crop_input_index, longitude=longitude_crop_input_index).values
+        else:
+            x_crop = x.take(latitude_crop_input_index,axis=-2).take(longitude_crop_input_index,axis=-1)
+
+
+    longitude_left_output = np.max([
+        np.min(longitude_crop_input),
+        np.min(grid_output[1]) - grid_output_longitude_spacing/2.
+    ])
+    longitude_right_output = np.min([
+        np.max(longitude_crop_input),
+        np.max(grid_output[1]) + grid_output_longitude_spacing/2.
+    ])
+
+    latitude_bottom_output = np.max([
+        np.min(latitude_crop_input),
+        np.min(grid_output[0]) - grid_output_latitude_spacing/2. #grid_input_latitude_spacing #+ grid_output_latitude_spacing/2.
+    ])
+    latitude_top_output = np.min([
+        np.max(latitude_crop_input),
+        np.max(grid_output[0]) + grid_output_latitude_spacing/2. #grid_input_latitude_spacing #- grid_output_latitude_spacing/2
+    ])
+
+    grid_output_revised = []
+    grid_output_revised.append(
+        grid_output[0][(grid_output[0] > latitude_bottom_output) & (grid_output[0] < latitude_top_output)]
+    )
+    grid_output_revised.append(
+        grid_output[1][(grid_output[1] > longitude_left_output) & (grid_output[1] < longitude_right_output)]
+    )
+
+    if (not interpolation) or (\
+           (len(grid_output_revised[0]) == len(latitude_crop_input)) and \
+           (not np.any(np.abs(grid_output_revised[0] - latitude_crop_input) >
+                        (grid_input_latitude_spacing/10.))) and \
+           (len(grid_output_revised[1]) == len(longitude_crop_input)) and \
+           ( not np.any(np.abs(grid_output_revised[1] - longitude_crop_input) >
+                         (grid_input_longitude_spacing / 10.)))
+        ):
+        if not interpolation:
+            logging.info("I'm keeping original grid and spacing, so skipping "
+                         "interpolation and returning cropped field directly.")
+            grid_output_revised = (latitude_crop_input,longitude_crop_input)
+        else:
+            logging.info('output grid is identical to cropped input grid. '
+       'Skipping interpolation and returning cropped field directly.')
+        if x is not None:
+            x_interpolated = x_crop
+    else:
+        logging.warning(
+        'Warning. Making a small gridshift to avoid problems in case of coinciding input and output grid locations in the Delaunay triangulation')
+        latitude_crop_input_workaround = np.clip(np.float64(latitude_crop_input + 0.000001814),
+        -90., 90)
+        longitude_crop_input_workaround = np.float64(longitude_crop_input + 0.00001612)
+        meshgrid_input_crop = np.meshgrid(
+           latitude_crop_input_workaround,
+           longitude_crop_input_workaround,
+           indexing='ij'
+        )
+
+        if x is not None:
+            if len(x_crop.shape) == 2:
+                x_crop = x_crop[np.newaxis]
+            x_interpolated = interpolate_delaunay_linear(
+                x_crop,
+                meshgrid_input_crop,
+                np.meshgrid(*grid_output_revised,indexing='ij'),
+                remove_duplicate_points=True,
+                dropnans=True,
+                add_newaxes=False
+            )[0]
+        if debug:
+            import pdb; pdb.set_trace()
+    # x_interpolated = pcd.vectorized_functions.interpolate_delaunay_linear(
+    #     x_extended,
+    #     meshgrid_coarse,
+    #     meshgrid_fine,
+    #     remove_duplicate_points=True,
+    #     dropnans=True,
+    #     add_newaxes=False )
+    return_value = []
+    if x is not None:
+        return_value.append(x_interpolated)
+
+
+    if return_grid_output:
+        return_value.append(grid_output_revised)#(latitude_output,longitude_output)
+    else:
+        if (len(grid_output_revised[0]) != len(grid_output[0])) or \
+                np.any(grid_output_revised[0] != grid_output[0]) or \
+           (len(grid_output_revised[1]) != len(grid_output[1])) or \
+                np.any(grid_output_revised[1] != grid_output[1]):
+            raise ValueError('Predifined output grid is different from actual output grid, '
+                             'so you may need that output. Please set return_output_grid to true.')
+
+    if len(return_value) == 0:
+        return_value = None
+    elif len(return_value) == 1:
+        return_value =  return_value[0]
+    else:
+        return_value = tuple(return_value)
+#    import pdb; pdb.set_trace()
+    return return_value
+
+
+def moving_average(a, n=3) :
     cumsum = np.cumsum(a, dtype=float,axis=-1) 
     ret = np.zeros_like(cumsum)*np.nan 
     ret[...,math.ceil(n/2):math.ceil(-n/2)] = cumsum[...,n:] - cumsum[...,:-n] 
@@ -111,7 +326,8 @@ def interpolate_delaunay_linear(values,xylist,uvlist,remove_duplicate_points=Fal
     uvstack.shape = (axis0shape,uvstack.shape[-1]) 
     # print(uvstack.shape)
     # print(xystack.shape) 
-    tri = Delaunay(xystack) 
+    from scipy.spatial import Delaunay
+    tri = Delaunay(xystack)
     # print(uvstack.shape)  
     simplex = tri.find_simplex(uvstack) 
     vertices = np.take(tri.simplices, simplex, axis=0) 
@@ -125,11 +341,9 @@ def interpolate_delaunay_linear(values,xylist,uvlist,remove_duplicate_points=Fal
         outeraxisshaperavel *= facdim
     valuesstack.shape = [outeraxisshaperavel] + [valuesstack.shape[-1]] 
     
-    # import pdb; pdb.set_trace()
     valout = np.einsum('pnj,nj->pn', np.take(valuesstack, vtx,axis=-1), wts)
     valout[:,np.any(wts < 0, axis=1)] = fill_value
     valout.shape = [element for element in values.shape[:-len(xylist[0].shape)]]+[element for element in uvshape ]
-    # import pdb;pdb.set_trace()
 
     #new axis are added to conform the output to 4 dimenions
     if add_newaxes:
@@ -169,7 +383,6 @@ def lookup_nearest(x_fix, y_fix, x_var):
     #     x_fix.reshape(list(x_fix.shape[:])+[1])-\
     #     x_var.reshape(list(x_var.shape[:-1])+[1,x_var.shape[-1]]) # 1,1,1001,151
     distances = np.abs(x_fix - np.expand_dims(x_var,axis=-1))
-
 
     x_indices_closest = np.expand_dims(np.argmin(np.abs(distances),axis=-1) ,axis=-1)
     y_var_closest = np.take_along_axis(y_fix,x_indices_closest,axis=-1) 

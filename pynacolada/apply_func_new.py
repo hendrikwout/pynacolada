@@ -8,7 +8,6 @@ from tqdm import tqdm
 import tempfile
 import logging
 
-
 logging.basicConfig(level=logging.DEBUG)
 def apply_func(func,xarrays,dims_apply, method_dims_no_apply='outer',filenames_out = None, attributes = None,maximum_input_memory_chars = 10240*1024*100 ,squeeze_apply_dims = False,release=False,output_dims={},transpose_hack=True,tempfile_dir=False,initialize_array=None,copy_coordinates=True):
     logger = logging.getLogger()
@@ -469,7 +468,7 @@ def apply_func(func,xarrays,dims_apply, method_dims_no_apply='outer',filenames_o
                             if attribute_key == 'variable':
                                 ##print('setting variable name',variables_out[ixarray_out])
                                 variables_out[ixarray_out] = attribute_value
-                    
+
                     ncouts[ixarray_out].createVariable(variables_out[ixarray_out],'f',dims_out[ixarray_out],)
 
                     # dims_out_def = dims_out_transposed[iarray]
@@ -533,8 +532,8 @@ def apply_func(func,xarrays,dims_apply, method_dims_no_apply='outer',filenames_o
                     return [(a.index(b[i]) if b[i] in a else -1) for i in range(len(b))]
 
                 if filenames_out is not None:
-                    logger.debug(list(xarray_chunk_part_select.keys()),dims_out[iarray])
-                    logger.debug(mapdims(dims_out[iarray],list(xarray_chunk_part_select.keys())))
+                    # logger.debug(list(xarray_chunk_part_select.keys()),dims_out[iarray])
+                    # logger.debug(mapdims(dims_out[iarray],list(xarray_chunk_part_select.keys())))
 
                     ncouts[iarray].variables[variables_out[iarray]][tuple([xarray_chunk_part_select[dim] for dim in dims_out[iarray]])] = np.ascontiguousarray(temp).transpose(mapdims(dims_out[iarray], list(xarray_chunk_part_select.keys())))
                 else:
