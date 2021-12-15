@@ -75,7 +75,6 @@ def apply_func(func,xarrays,dims_apply, method_dims_no_apply='outer',filenames_o
             if (dim not in dimslib.keys() or (len(dimslib[dim]) == 1)):
                 dimslib[dim] = dimslib_temp
             else:
-                import pdb; pdb.set_trace()
 
                 if not ((len(dimslib_temp) == 1) or (dim in dims_apply_def) or (len(dimslib_temp) == len(dimslib[dim])) ):
                     raise ValueError('dimension '+str(dimslib_temp)+' of xarray '+str(xarray) +'is not consistent with dimension '+dimslib[dim]+' occurring in other input arrays. Please check. ')
