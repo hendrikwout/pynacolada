@@ -295,6 +295,7 @@ class broker (object):
                                 self.provides[key] = [item[key]]
 
 
+
             if self.reset_archive > 0 :
                 logging.info('Resetting archive of current broker')
                 if type(self.provides) is list:
