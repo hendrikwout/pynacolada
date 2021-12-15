@@ -262,7 +262,7 @@ class broker (object):
                                     'root','chain',
                                     'process','process_arguments',
                                     'stderr','stdout',
-                                    'executing_subprocess','archive']
+                                    'executing_subprocess','archive','return_from_history']
                                 ) and (key not in self.provides[ibroker_provides]):
                                     self.provides[ibroker_provides][key] = item[key]
 
@@ -290,7 +290,7 @@ class broker (object):
                                 'root','chain',
                                 'process','process_arguments',
                                 'stderr','stdout',
-                                'executing_subprocess','archive']
+                                'executing_subprocess','archive','return_from_history']
                             ) and (key not in self.provides):
                                 self.provides[key] = [item[key]]
 
@@ -377,7 +377,7 @@ class broker (object):
             for key,value in list(requests_parents[irequest_parent].items()):
 
                 if \
-                     ((key in ['archive','process','executing_subprocess','stderr','stdout','process_arguments']) or \
+                     ((key in ['archive','process','executing_subprocess','stderr','stdout','process_arguments','return_from_history']) or \
                      (((key not in self.parent_collection.get_lib_dataarrays().columns)) and \
                        (key not in self.parent_collection.get_lib_dataarrays().index.names)) or \
                              (type(value) is type(lambda x: x))):
