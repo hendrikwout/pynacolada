@@ -255,6 +255,19 @@ class broker (object):
                             self.provides[ibroker_provides]['archive'] = broker_provides['archive'](values_input)
                         else:
                             self.provides[ibroker_provides]['archive'] = None  # broker_provides['archive'](values_input)
+                    for item in self.requires[::-1]:
+                        if ('disable' not in item.keys()):
+                            for key in item.keys():
+                                if (key not in [
+                                    'root','chain',
+                                    'process','process_arguments',
+                                    'stderr','stdout',
+                                    'executing_subprocess','archive']
+                                ) and (key not in self.provides[ibroker_provides]):
+                                    self.provides[ibroker_provides][key] = item[key]
+
+
+
 
             else:
                 broker_provides = self.provides
@@ -270,6 +283,17 @@ class broker (object):
                         self.provides['archive'] = broker_provides['archive'](values_input)
                     else:
                         self.provides['archive'] = None #broker_provides['archive'](values_input)
+                for item in self.requires[::-1]:
+                    if ('disable' not in item.keys()):
+                        for key in item.keys():
+                            if (key not in [
+                                'root','chain',
+                                'process','process_arguments',
+                                'stderr','stdout',
+                                'executing_subprocess','archive']
+                            ) and (key not in self.provides[ibroker_provides]):
+                                self.provides[key] = [item[key]]
+
 
             if self.reset_archive > 0 :
                 logging.info('Resetting archive of current broker')
