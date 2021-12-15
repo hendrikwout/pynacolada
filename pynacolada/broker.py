@@ -291,7 +291,7 @@ class broker (object):
                                 'process','process_arguments',
                                 'stderr','stdout',
                                 'executing_subprocess','archive']
-                            ) and (key not in self.provides[ibroker_provides]):
+                            ) and (key not in self.provides):
                                 self.provides[key] = [item[key]]
 
 
