@@ -189,6 +189,7 @@ def extend_crop_interpolate(
                 dropnans=True,
                 add_newaxes=False
             )[0]
+        if debug:
             import pdb; pdb.set_trace()
     # x_interpolated = pcd.vectorized_functions.interpolate_delaunay_linear(
     #     x_extended,
