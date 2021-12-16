@@ -297,7 +297,10 @@ def apply_func(func,xarrays,dims_apply, method_dims_no_apply='outer',filenames_o
                     #import pdb; pdb.set_trace()
                     # print(array_chunk_part_transposed.shape)
                 else:
-                    array_chunk_part_transposed.append(np.ascontiguousarray(xarray.isel(xarray_chunk_part_select_def).values.transpose([xarraydims[ixarray_in].index(dim) for dim in xarray_chunk_part_dims])))
+                    try:
+                        array_chunk_part_transposed.append(np.ascontiguousarray(xarray.isel(xarray_chunk_part_select_def).values.transpose([xarraydims[ixarray_in].index(dim) for dim in xarray_chunk_part_dims])))
+                    except:
+                        import pdb; pdb.set_trace()
                     ##print('reading chunk and transposing: ',xarraydims[ixarray_in],'->',xarray_chunk_part_dims)
                 shape_out = [1]
                 next_idim = 0
