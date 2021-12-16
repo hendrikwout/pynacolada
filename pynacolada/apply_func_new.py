@@ -259,11 +259,12 @@ def apply_func(func,xarrays,dims_apply, method_dims_no_apply='outer',filenames_o
                         xarray_chunk_part_select[dim] = range(0,dimslib[dim].shape[0])
                         xarray_chunk_part_dims.append(dim)
 
-                #remove explicit selection of full dimension ranges to hopefully speed up xarray selection
                 xarray_chunk_part_select_def = {}
                 for dim,select in xarray_chunk_part_select.items():
-            
-                    if not ((select[0] == 0) and (select[-1] == (dimslib[dim].shape[0]-1))):
+
+                    # remove explicit selection of full dimension ranges to hopefully speed up xarray selection
+                    # we also exclude selection where dimension size of current array is 1
+                    if not ((select[0] == 0) and ((select[-1] == (dimslib[dim].shape[0]-1)) or (len(xarray['time']) == 1))):
                         xarray_chunk_part_select_def[dim] = select
 
                 ##print('reading part of chunk of array',str(ipart)+'/'+str(len(idxs_chunk_parts_current)), ichunk,ixarray_in)
