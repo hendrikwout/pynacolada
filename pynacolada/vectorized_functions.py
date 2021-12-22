@@ -91,6 +91,7 @@ def extend_crop_interpolate(
     grid_output_latitude_spacing = np.abs(np.median(np.ravel(grid_output[0][1:] - grid_output[0][:-1])))
     grid_output_longitude_spacing = np.abs(np.median(np.ravel(grid_output[1][...,1:] - grid_output[1][...,:-1])))
 
+    import pdb; pdb.set_trace()
     latitude_bottom_input = np.min(grid_output[0]) - grid_input_latitude_spacing*border_pixels #+ grid_output_latitude_spacing/2.
     latitude_top_input = np.max(grid_output[0]) + grid_input_latitude_spacing*border_pixels #- grid_output_latitude_spacing/2.
 
