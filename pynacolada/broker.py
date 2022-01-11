@@ -54,7 +54,7 @@ class broker (object):
             else:
                 self.__dict__[setting] = self.global_settings_defaults[setting]
 
-    def flush_history_file(history_dict, history_filename,history_ok=True):
+    def flush_history_file(self,history_dict, history_filename,history_ok=True):
         if (self.dummy != 'True') and (history_ok == True):
             if not os.path.isdir(os.path.dirname(history_filename)):
                 os.mkdir(os.path.dirname(history_filename))
