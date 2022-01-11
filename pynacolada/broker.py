@@ -145,11 +145,11 @@ class broker (object):
                 if (((self.reset_history - 1) > 0)):
                     if (self.requires[ibroker_requires]['process_arguments'] in history_dict.keys()):
                         del history_dict[self.requires[ibroker_requires]['process_arguments']]
-                    flush_history_file(history_dict,history_filename)
+                    self.flush_history_file(history_dict,history_filename)
 
                 if ((self.reset_archive - 1) > 0):
                     history_dict = {}
-                    flush_history_file(history_dict,history_filename)
+                    self.flush_history_file(history_dict,history_filename)
 
                 if (self.requires[ibroker_requires]['process_arguments'] in history_dict.keys()):
                     self.requires[ibroker_requires]['return_from_history'] = history_dict[self.requires[ibroker_requires]['process_arguments']]['return_from_subprocess']
@@ -243,7 +243,7 @@ class broker (object):
                 else:
                     raise IOError('subprocess return type not implemented')
 
-                flush_history_file(history_dict, history_filename,history_ok)
+                self.flush_history_file(history_dict, history_filename,history_ok)
                 logging.info('workaround to avoid simultaneous history and lock file access. Waiting for 1 second')
                 sleep(1)
 
