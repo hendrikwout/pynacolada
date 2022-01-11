@@ -54,6 +54,14 @@ class broker (object):
             else:
                 self.__dict__[setting] = self.global_settings_defaults[setting]
 
+    def flush_history_file(history_dict, history_filename,history_ok=True):
+        if (self.dummy != 'True') and (history_ok == True):
+            if not os.path.isdir(os.path.dirname(history_filename)):
+                os.mkdir(os.path.dirname(history_filename))
+            with open(history_filename, 'w') as history_file:
+                dump = yaml.dump(history_dict)
+                history_file.write(dump)
+
     def retrieve_input(self,debug=False):
         logging.info('--- BEGIN Collecting or generating coarse input data -- ')
         for ibroker_requires, broker_requires in enumerate(self.requires):
@@ -137,6 +145,7 @@ class broker (object):
                 if (((self.reset_history - 1) > 0) or ((self.reset_history - 1) > 0) or ( (self.reset_archive - 1) > 0)):
                     if (self.requires[ibroker_requires]['process_arguments'] in history_dict.keys()):
                         del history_dict[self.requires[ibroker_requires]['process_arguments']]
+                    flush_history_file(history_dict,history_filename)
 
                 if (self.requires[ibroker_requires]['process_arguments'] in history_dict.keys()):
                     self.requires[ibroker_requires]['return_from_history'] = history_dict[self.requires[ibroker_requires]['process_arguments']]['return_from_subprocess']
@@ -230,12 +239,7 @@ class broker (object):
                 else:
                     raise IOError('subprocess return type not implemented')
 
-                if (self.dummy != 'True') and (history_ok == True):
-                    if not os.path.isdir(os.path.dirname(history_filename)):
-                        os.mkdir(os.path.dirname(history_filename))
-                    with open(history_filename,'w') as history_file:
-                        dump = yaml.dump(history_dict)
-                        history_file.write( dump )
+                flush_history_file(history_dict, history_filename,history_ok)
                 logging.info('workaround to avoid simultaneous history and lock file access. Waiting for 1 second')
                 sleep(1)
 
