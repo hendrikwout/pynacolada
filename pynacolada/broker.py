@@ -145,7 +145,6 @@ class broker (object):
                 if (((self.reset_history - 1) > 0)):
                     if (self.requires[ibroker_requires]['process_arguments'] in history_dict.keys()):
                         del history_dict[self.requires[ibroker_requires]['process_arguments']]
-                    history_dict = {}
                     flush_history_file(history_dict,history_filename)
 
                 if ((self.reset_archive - 1) > 0):
