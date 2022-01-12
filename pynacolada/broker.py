@@ -299,7 +299,6 @@ class broker (object):
                     elif type(self.provides['archive']) is archive:
                         self.provides['archive'].remove(records=True)
                         self.provides['archive'].close()
-            import pdb; pdb.set_trace()
 
         if debug == True:
             import pdb; pdb.set_trace()
