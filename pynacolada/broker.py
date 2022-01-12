@@ -280,6 +280,7 @@ class broker (object):
 
         if self.reset_archive > 0 :
             logging.info('Resetting archive of current broker')
+            import pdb; pdb.set_Trace()
             if type(self.provides) is list:
                 for broker_current in self.provides:
                     if 'archive' in broker_current.keys():
