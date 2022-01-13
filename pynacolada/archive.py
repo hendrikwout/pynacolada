@@ -398,7 +398,7 @@ class collection (object):
             self,
             func,
             archive_out = None,
-            add_archive_out_to_collection=True,
+            add_archive_out_to_collection=False,
             update_pickle=True,
             **kwargs
     ):
