@@ -397,7 +397,7 @@ class broker (object):
                 apply_groups_in = requests_parents,
                 apply_groups_out=apply_groups_out,
                 archive_out = archive_out_filename,
-                *args,
+            add_archive_out_to_collection = True,
                 **self.operator_properties,
                 **kwargs)
             os.system('rm '+lockfile)
