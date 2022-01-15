@@ -258,7 +258,7 @@ def lookup_nearest(x_fix, y_fix, x_var):
     print(y_var_closest.shape)
     return y_var_closest[...,0]
 
-def interp1d(x_fix, y_fix, x_var,debug=False):
+def interp1d(x_fix, y_fix, x_var):
     '''
     interpolation along axis, and supports parallel vectorized independent iterpolations on multidimensional slices.
 
@@ -270,8 +270,6 @@ def interp1d(x_fix, y_fix, x_var,debug=False):
     # x_fix = x_fix.reshape([1]*(len(x_var.shape) - len(x_fix.shape))+list(x_fix.shape))
     # y_fix = y_fix.reshape([1]*(len(x_var.shape) - len(x_fix.shape))+list(y_fix.shape))
 
-    if debug == True:
-        import pdb; pdb.set_trace()
     #workaround flawed implementation apply_func
     if x_fix.shape[-2] != 1:
         x_fix = x_fix.reshape(list(x_fix.shape[:-1])+[1]+[x_fix.shape[-1]])
@@ -280,8 +278,6 @@ def interp1d(x_fix, y_fix, x_var,debug=False):
     if x_var.shape[-1] != 1:
         x_var = x_var.reshape(list(x_var.shape)+[1])
 
-    if debug == True:
-        import pdb; pdb.set_trace()
     # if 1 not in x_fix.shape:
     #     start_shape_weights = 0
     # else:
