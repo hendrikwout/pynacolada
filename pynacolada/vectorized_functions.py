@@ -389,7 +389,7 @@ def lookup_nearest(x_fix, y_fix, x_var):
     print(y_var_closest.shape)
     return y_var_closest[...,0]
 
-def interp1d(x_fix, y_fix, x_var,debug=False):
+def interp1d(x_fix, y_fix, x_var,debug=False,random=True):
     '''
     interpolation along axis, and supports parallel vectorized independent iterpolations on multidimensional slices.
 
@@ -444,21 +444,23 @@ def interp1d(x_fix, y_fix, x_var,debug=False):
 
     y_var_right =np.take_along_axis(y_fix,x_indices_right,axis=-1)
     y_var = np.take_along_axis(y_fix,x_indices_left,axis=-1) * weights + np.take_along_axis(y_fix,x_indices_right,axis=-1) * (1.-weights)
-    y_var_orig = np.array(y_var)
-    y_var_max = np.take_along_axis(y_fix,x_indices_left,axis=-1)
 
-    #maxidx = np.take_along_axis(maxidx[None,...],x_indices_left[...,None],axis=-1)
-    #maxidx = x_fix.shape[-1] - np.argmax(x_fix[...,::-1] == x_fix[...,::-1,None],axis=-1)[::-1] 
-    minidx = np.argmax(x_fix[...,None,:] == x_fix[...,None],axis=-1) 
+    if random ==True:
+        y_var_orig = np.array(y_var)
+        y_var_max = np.take_along_axis(y_fix,x_indices_left,axis=-1)
 
-    x_indices_min = np.take_along_axis(minidx[...,None,:],x_indices_left[...,None],axis=-1)[...,0]
-    y_var_min = np.take_along_axis(y_fix,np.clip(x_indices_min,0,y_fix.shape[-1]-1),axis=-1)
+        #maxidx = np.take_along_axis(maxidx[None,...],x_indices_left[...,None],axis=-1)
+        #maxidx = x_fix.shape[-1] - np.argmax(x_fix[...,::-1] == x_fix[...,::-1,None],axis=-1)[::-1]
+        minidx = np.argmax(x_fix[...,None,:] == x_fix[...,None],axis=-1)
 
-    weight_rand = np.random.rand(*y_var_min.shape)
-    select_for_random_y = ( (x_indices_min) != (x_indices_left)) & (weights == 1.)
-    if debug == True:
-        import pdb; pdb.set_trace()
-    y_var[select_for_random_y] = (y_var_min *weight_rand + y_var_max*(1-weight_rand))[select_for_random_y]
+        x_indices_min = np.take_along_axis(minidx[...,None,:],x_indices_left[...,None],axis=-1)[...,0]
+        y_var_min = np.take_along_axis(y_fix,np.clip(x_indices_min,0,y_fix.shape[-1]-1),axis=-1)
+
+        weight_rand = np.random.rand(*y_var_min.shape)
+        select_for_random_y = ( (x_indices_min) != (x_indices_left)) & (weights == 1.)
+        if debug == True:
+            import pdb; pdb.set_trace()
+        y_var[select_for_random_y] = (y_var_min *weight_rand + y_var_max*(1-weight_rand))[select_for_random_y]
     
     return y_var[...,0]
 
