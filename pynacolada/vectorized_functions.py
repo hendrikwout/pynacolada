@@ -445,7 +445,10 @@ def interp1d(x_fix, y_fix, x_var,debug=False):
     # x_indices_left = x_indices_left.reshape(x_indices_left.shape[:-1])
     # x_indices_right = x_indices_right.reshape(x_indices_right.shape[:-1])
 
-    y_var_right =np.take_along_axis(y_fix,x_indices_right,axis=-1) 
+
+    if debug == True:
+        import pdb; pdb.set_trace()
+    y_var_right =np.take_along_axis(y_fix,x_indices_right,axis=-1)
     y_var = np.take_along_axis(y_fix,x_indices_left,axis=-1) * weights + np.take_along_axis(y_fix,x_indices_right,axis=-1) * (1.-weights)
     y_var_orig = np.array(y_var)
     y_var_max = np.take_along_axis(y_fix,x_indices_left,axis=-1)
