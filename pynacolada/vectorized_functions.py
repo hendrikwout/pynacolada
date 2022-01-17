@@ -458,6 +458,7 @@ def interp1d(x_fix, y_fix, x_var,debug=False):
 
     weight_rand = np.random.rand(*y_var_min.shape)
     select_for_random_y = ( (x_indices_min) != (x_indices_left)) & (weights == 1.)
+    import pdb; pdb.set_trace()
     y_var[select_for_random_y] = (y_var_min *weight_rand + y_var_max*(1-weight_rand))[select_for_random_y]
     
     return y_var[...,0]
