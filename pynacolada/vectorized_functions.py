@@ -126,7 +126,7 @@ def extend_crop_interpolate(
     if ascending_lat_lon == True:
         latitude_sort_index = np.argsort(latitude_crop_input)
         latitude_crop_input = latitude_crop_input[latitude_sort_index]
-        longitude_sort_index = np.argsort(latitude_crop_input)
+        longitude_sort_index = np.argsort(longitude_crop_input)
         longitude_crop_input = longitude_crop_input[longitude_sort_index]
         if x is not None:
             if type(x) is xr.DataArray:
