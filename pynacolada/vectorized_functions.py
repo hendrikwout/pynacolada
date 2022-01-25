@@ -132,7 +132,7 @@ def extend_crop_interpolate(
             if type(x) is xr.DataArray:
                 x_crop = x_crop.isel(latitude=latitude_sort_index, longitude=longitude_sort_index).values
             else:
-                x_crop = x.take(latitude_sort_index,axis=-2).take(longitude_sort_index,axis=-1)
+                x_crop = x_crop.take(latitude_sort_index,axis=-2).take(longitude_sort_index,axis=-1)
 
     longitude_left_output = np.max([
         np.min(longitude_crop_input),
