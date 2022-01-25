@@ -74,7 +74,8 @@ def extend_crop_interpolate(
         interpolation=True,
         return_grid_output=False,
         debug=False,
-        border_pixels=5
+        border_pixels=5,
+        ascending_lat_lon = False
     ):
     """
     purpose:
@@ -122,6 +123,16 @@ def extend_crop_interpolate(
         else:
             x_crop = x.take(latitude_crop_input_index,axis=-2).take(longitude_crop_input_index,axis=-1)
 
+    if ascending_lat_lon == True:
+        latitude_sort_index = np.argsort(latitude_crop_input)
+        latitude_crop_input = latitude_crop_input[latitude_sort_index]
+        longitude_sort_index = np.argsort(latitude_crop_input)
+        longitude_crop_input = longitude_crop_input[longitude_sort_index]
+        if x is not None:
+            if type(x) is xr.DataArray:
+                x_crop = x_crop.isel(latitude=latitude_sort_index, longitude=longitude_sort_index).values
+            else:
+                x_crop = x.take(latitude_sort_index,axis=-2).take(longitude_sort_index,axis=-1)
 
     longitude_left_output = np.max([
         np.min(longitude_crop_input),
