@@ -324,6 +324,7 @@ def apply_func_wrapper(
                 elif mode in ['numpy_output_to_disk_in_chunks', 'numpy_output_to_disk_no_chunks']:
 
                     if mode == 'numpy_output_to_disk_in_chunks':
+                        import pdb; pdb.set_trace()
                         xarray_function_wrapper(func, dataarrays_wrapper(*tuple(dataarrays_group_in)),
                                                 filenames_out=filenames_out, attributes=attributes_dataarrays_out, release=True,
                                                 initialize_array=initialize_array, copy_coordinates=copy_coordinates, **kwargs)
@@ -413,6 +414,7 @@ class collection (object):
 
         lib_dataarrays = self.get_lib_dataarrays()
         dataarrays = self.get_dataarrays()
+        import pdb; pdb.set_trace()
         apply_func_wrapper(
             func,
             lib_dataarrays = lib_dataarrays,
