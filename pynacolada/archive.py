@@ -276,7 +276,7 @@ def apply_func_wrapper(
 
                 # filter coordinates that are listed in the library index (these are not treated under space but separately, eg., 'time').
                 if 'output_dims' in kwargs.keys():
-                    logging('update space attribute according to the new dimensions output_dims')
+                    logging.info('update space attribute according to the new dimensions specified in "output_dims"')
 
                     attributes_space_dict_out = {}
                     if attributes_dataarrays_out[ifile]['space'] is not None:
@@ -309,12 +309,11 @@ def apply_func_wrapper(
                         if value is None:
                             dict_index_space.append(key)
                         else:
-                            dic_index_space.append(key+':'+str(value))
+                            dict_index_space.append(key+':'+str(value))
 
                     attributes_dataarrays_out[ifile]['space'] = '_'.join(dict_index_space)
 
                         # DataArray.attrs['space'] = dict_index_space
-                    import pdb; pdb.set_trace()
 
                 index_keys = ['variable','source','time','space']
                 index_out = []
@@ -367,7 +366,6 @@ def apply_func_wrapper(
                 elif mode in ['numpy_output_to_disk_in_chunks', 'numpy_output_to_disk_no_chunks']:
 
                     if mode == 'numpy_output_to_disk_in_chunks':
-                        import pdb; pdb.set_trace()
                         xarray_function_wrapper(func, dataarrays_wrapper(*tuple(dataarrays_group_in)),
                                                 filenames_out=filenames_out, attributes=attributes_dataarrays_out, release=True,
                                                 initialize_array=initialize_array, copy_coordinates=copy_coordinates, **kwargs)
