@@ -277,6 +277,7 @@ def apply_func_wrapper(
                 # filter coordinates that are listed in the library index (these are not treated under space but separately, eg., 'time').
                 if ('space' not in extra_attributes.keys()) and ('output_dims' in kwargs.keys()):
                     logging.info('update space attribute according to the new dimensions specified in "output_dims"')
+                    import pdb; pdb.set_trace()
 
                     attributes_space_dict_out = {}
                     if attributes_dataarrays_out[ifile]['space'] is not None:
