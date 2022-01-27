@@ -1430,7 +1430,7 @@ class archive (object):
                     #parse filename according to file_pattern
                     if 'path_pickle' not in self.__dict__.keys():
                         raise ValueError ('self.path_pickle is not set')
-                    fnout = os.path.dirname(self.path_pickle)+'/'+''.join(np.array(list(zip(self.file_pattern.split('"')[::2],[{**dict(zip(self.lib_dataarrays.index.names,idx)),**columns}[key] for key in self.file_pattern.split('"')[1::2]]+['']))).ravel())
+                    fnout = os.path.dirname(self.path_pickle)+'/'+''.join(np.array(list(zip(self.file_pattern.split('"')[::2],[{**dict(zip(self.lib_dataarrays.index.names,idx)),**columns}[key] for key in self.file_pattern.split('"')[1::2]][:10]+['']))).ravel())
                     print("File pointer for ",idx," is not known, so I'm dumping a new file under ",fnout)
                     #fnout = self.lib_dataarrays.loc[idx]['absolute_path']
                     if (not force_overwrite_dataarrays) and (os.path.isfile(fnout)):
