@@ -276,32 +276,42 @@ def apply_func_wrapper(
 
                 # filter coordinates that are listed in the library index (these are not treated under space but separately, eg., 'time').
                 if 'output_dims' in kwargs.keys():
+                    logging('update space attribute according to the new dimensions output_dims')
+
+                    attributes_space_dict_out = {}
+                    if attributes_dataarrays_out[ifile]['space'] is not None:
+                        for space_part in attributes_dataarrays_out[ifile]['space'].split('_'):
+                            if ':' not in space_part:
+                                space_key,space_value = space_part, None
+                            else:
+                                space_key,space_value = space_part.split(':')
+                            attributes_space_dict_out[space_key] = space_value
+
                     output_dims = kwargs['output_dims']
 
                     space_coordinates = list(output_dims.keys())
-                    for key in self.lib_dataarrays.index.names:
+                    for key in lib_dataarrays.index.names:
                         if key in space_coordinates:
                             space_coordinates.remove(key)
 
-                    spacing = {}
                     for coordinate in space_coordinates:
                         spacing_temp = (output_dims[coordinate][1] - output_dims[coordinate][0])
                         if not np.any(
                                 output_dims[coordinate][1:] != (output_dims[coordinate][:-1] + spacing_temp)):
-                            spacing[coordinate] = str(output_dims[coordinate][0]) + ',' + str(
+                            attributes_space_dict_out[coordinate] = str(output_dims[coordinate][0]) + ',' + str(
                                 output_dims[coordinate][-1]) + ',' + str(spacing_temp)
                         else:
-                            spacing[coordinate] = 'irregular'
-                    dict_index_space = [key + ':' + str(value) for key, value in spacing.items()]
-                    dict_index_space = '_'.join(dict_index_space)
+                            attributes_space_dict_out[coordinate] = 'irregular'
 
-                    if ('irregular' in dic_index_space) and \
-                        'space' in attributes_dataarrays_out[ifile].keys()) and \
-                            (attributes_dataarrays_out[ifile][ 'space'] is not None
-                    ):
-                        attributes_dataarrays_out[ifile]['space'] = attributes_dataarrays_out[ifile][ 'space']+'_'+dict_index_space
-                    else:
-                        attributes_dataarrays_out[ifile]['space'] = dict_index_space
+                    dict_index_space = []
+                    #dict_index_space = [key + ':' + str(value) for key, value in spacing.items()]
+                    for key,value in attributes_space_dict_out.items():
+                        if value is None:
+                            dict_index_space.append(key)
+                        else:
+                            dic_index_space.append(key+':'+str(value))
+
+                    attributes_dataarrays_out[ifile]['space'] = '_'.join(dict_index_space)
 
                         # DataArray.attrs['space'] = dict_index_space
                     import pdb; pdb.set_trace()
