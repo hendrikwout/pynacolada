@@ -390,7 +390,6 @@ class broker (object):
         if debug == True:
             import pdb; pdb.set_trace()
 
-        import pdb; pdb.set_trace()
         if self.dummy != 'True':
             self.parent_collection.apply_func(
                 self.operator,

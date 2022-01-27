@@ -273,6 +273,39 @@ def apply_func_wrapper(
                 for key, value in extra_attributes.items():
                     attributes_dataarrays_out[ifile][key] = value
 
+
+                # filter coordinates that are listed in the library index (these are not treated under space but separately, eg., 'time').
+                if 'output_dims' in kwargs.keys():
+                    output_dims = kwargs['output_dims']
+
+                    space_coordinates = list(output_dims.keys())
+                    for key in self.lib_dataarrays.index.names:
+                        if key in space_coordinates:
+                            space_coordinates.remove(key)
+
+                    spacing = {}
+                    for coordinate in space_coordinates:
+                        spacing_temp = (output_dims[coordinate][1] - output_dims[coordinate][0])
+                        if not np.any(
+                                output_dims[coordinate][1:] != (output_dims[coordinate][:-1] + spacing_temp)):
+                            spacing[coordinate] = str(output_dims[coordinate][0]) + ',' + str(
+                                output_dims[coordinate][-1]) + ',' + str(spacing_temp)
+                        else:
+                            spacing[coordinate] = 'irregular'
+                    dict_index_space = [key + ':' + str(value) for key, value in spacing.items()]
+                    dict_index_space = '_'.join(dict_index_space)
+
+                    if ('irregular' in dic_index_space) and \
+                        'space' in attributes_dataarrays_out[ifile].keys()) and \
+                            (attributes_dataarrays_out[ifile][ 'space'] is not None
+                    ):
+                        attributes_dataarrays_out[ifile]['space'] = attributes_dataarrays_out[ifile][ 'space']+'_'+dict_index_space
+                    else:
+                        attributes_dataarrays_out[ifile]['space'] = dict_index_space
+
+                        # DataArray.attrs['space'] = dict_index_space
+                    import pdb; pdb.set_trace()
+
                 index_keys = ['variable','source','time','space']
                 index_out = []
                 for key in index_keys:
@@ -414,7 +447,6 @@ class collection (object):
 
         lib_dataarrays = self.get_lib_dataarrays()
         dataarrays = self.get_dataarrays()
-        import pdb; pdb.set_trace()
         apply_func_wrapper(
             func,
             lib_dataarrays = lib_dataarrays,
