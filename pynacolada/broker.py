@@ -206,9 +206,13 @@ class broker (object):
                             'number_of_requests': 1
                         }
                 else:
+                    logging.info('waiting for subprocess: '+broker_requires['stdout'].name)
+                    logging.info('                     '+broker_requires['stderr'].name)
                     broker_requires['executing_subprocess'].wait()
                     self.requires[ibroker_requires]['stderr'].close()
                     self.requires[ibroker_requires]['stdout'].close()
+                    logging.info('finished    subprocess: '+broker_requires['stdout'].name)
+                    logging.info('                        '+broker_requires['stderr'].name)
                     return_from_subprocess = open(self.requires[ibroker_requires]['stdout'].name,'r').readlines()[-1][:-1]
 
                     if self.requires[ibroker_requires]['process_arguments'] in history_dict.keys():
@@ -391,13 +395,14 @@ class broker (object):
             import pdb; pdb.set_trace()
 
         if self.dummy != 'True':
+            os.system('touch '+lockfile)
             self.parent_collection.apply_func(
                 self.operator,
                 query=query,
                 apply_groups_in = requests_parents,
                 apply_groups_out=apply_groups_out,
                 archive_out = archive_out_filename,
-            add_archive_out_to_collection = True, # TODO: should be False (default) but need to check why that gives problems.
+                add_archive_out_to_collection = True, # TODO: should be False (default) but need to check why that gives problems.
                 **self.operator_properties,
                 **kwargs)
             os.system('rm '+lockfile)
