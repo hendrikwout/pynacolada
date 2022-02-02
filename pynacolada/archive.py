@@ -40,6 +40,7 @@ def apply_func_wrapper(
     groupby=None,
     apply_groups_in=[],
     apply_groups_out=[],
+    groups_for_index_level = [],
     divide_into_groups_extra = [],
     mode = 'numpy_output_to_disk_in_chunks',
     inherit_attributes = False,
@@ -68,7 +69,7 @@ def apply_func_wrapper(
 
     divide_into_groups = []
     for name in lib_dataarrays.index.names:
-        if (name not in apply_groups_in_df.columns):
+        if (name not in apply_groups_in_df.columns) and (name not in groups_for_index_level):
             divide_into_groups.append(name)
     for name in divide_into_groups_extra:
         if name not in divide_into_groups:
