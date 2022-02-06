@@ -40,7 +40,7 @@ class broker (object):
 
     def global_settings(self,**kwargs):
         self.global_settings_defaults = {
-            'conda_environment_export': 'blabla',
+            'conda_environment_export': '/tmp/anaconda/bin',
             'dummy': 'False',
             'reset_archive': 0,
             'reset_lock':0,
@@ -207,7 +207,7 @@ class broker (object):
                         }
                 else:
                     logging.info('waiting for subprocess: '+broker_requires['stdout'].name)
-                    logging.info('                     '+broker_requires['stderr'].name)
+                    logging.info('                        '+broker_requires['stderr'].name)
                     broker_requires['executing_subprocess'].wait()
                     self.requires[ibroker_requires]['stderr'].close()
                     self.requires[ibroker_requires]['stdout'].close()
@@ -486,3 +486,5 @@ class broker (object):
 
         #     return_request['archive'] = self.provides[0]['archive']
         return str(return_request).replace(' ','')
+
+
