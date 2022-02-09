@@ -190,7 +190,9 @@ def extend_crop_interpolate(
         )
 
         if x is not None:
+            workaround_2_dim = False
             if len(x_crop.shape) == 2:
+                workaround_2_dim = True
                 x_crop = x_crop[np.newaxis]
             x_interpolated = interpolate_delaunay_linear(
                 x_crop,
@@ -200,6 +202,8 @@ def extend_crop_interpolate(
                 dropnans=True,
                 add_newaxes=False
             )
+            if workaround_2_dim:
+                x_interpolated = x_inerpolated[0]
         if debug:
             import pdb; pdb.set_trace()
     # x_interpolated = pcd.vectorized_functions.interpolate_delaunay_linear(
