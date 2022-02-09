@@ -203,7 +203,7 @@ def extend_crop_interpolate(
                 add_newaxes=False
             )
             if workaround_2_dim:
-                x_interpolated = x_inerpolated[0]
+                x_interpolated = x_interpolated[0]
         if debug:
             import pdb; pdb.set_trace()
     # x_interpolated = pcd.vectorized_functions.interpolate_delaunay_linear(
