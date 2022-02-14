@@ -327,6 +327,7 @@ def apply_func_wrapper(
                     if (archive_out.file_pattern is None):
                         raise ValueError("I don't know how to write the data file to disk. Please set to file_pattern")
 
+                    import pdb; pdb.set_trace()
                     filename_out = os.path.dirname(archive_out.path_pickle) + '/' + ''.join(np.array(list(
                         zip(archive_out.file_pattern.split('"')[::2],
                             [attributes_dataarrays_out[ifile][key] for key in archive_out.file_pattern.split('"')[1::2]] + [
