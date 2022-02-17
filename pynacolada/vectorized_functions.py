@@ -223,6 +223,8 @@ def extend_crop_interpolate(
         return_value.append(x_interpolated)
 
 
+    if debug == True:
+        import pdb; pdb.set_trace()
     if return_grid_output:
         return_value.append(grid_output_revised)#(latitude_output,longitude_output)
     else:
