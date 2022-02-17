@@ -79,7 +79,7 @@ def extend_crop_interpolate(
     ):
     """
     purpose:
-        perform area cropping. But also auto-extending so that
+        perform area cropping and/or interpolation. But also auto-extending the input domain so that
         one can always choose longitude ranges between -180 and 360 degrees.
 
     input arguments:
