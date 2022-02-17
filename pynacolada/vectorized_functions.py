@@ -156,7 +156,7 @@ def extend_crop_interpolate(
 
     grid_output_revised = []
     grid_output_revised.append(
-        grid_output[0][(grid_output[0] >= (latitude_bottom_output - tolerance_for_grid_match)) & (grid_output[0] <= latitude_top_output + tolerance_for_grid_match))]
+        grid_output[0][(grid_output[0] >= (latitude_bottom_output - tolerance_for_grid_match)) & (grid_output[0] <= (latitude_top_output + tolerance_for_grid_match))]
     )
     grid_output_revised.append(
         grid_output[1][(grid_output[1] >= (longitude_left_output - tolerance_for_grid_match)) & (grid_output[1] <= (longitude_right_output + tolerance_for_grid_match))]
