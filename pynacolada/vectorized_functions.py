@@ -104,7 +104,7 @@ def extend_crop_interpolate(
 
     select_longitude_crop_input_index = \
         (grid_input_longitude_extended >= (longitude_left_input - tolerance_for_grid_match)) & \
-        (grid_input_longitude_extended <= (longitude_right_input - tolerance_for_grid_match ))
+        (grid_input_longitude_extended <= (longitude_right_input + tolerance_for_grid_match ))
 
     longitude_crop_input_index = \
         grid_input_longitude_extended_index[ select_longitude_crop_input_index ]
