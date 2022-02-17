@@ -112,8 +112,8 @@ def extend_crop_interpolate(
     longitude_crop_input = grid_input_longitude_extended[select_longitude_crop_input_index]
 
     latitude_crop_input_index = np.where(
-        (grid_input[0] >= latitude_bottom_input) &
-        (grid_input[0] <= latitude_top_input)
+        (grid_input[0] >= (latitude_bottom_input - tolerance_for_grid_match)) &
+        (grid_input[0] <= (latitude_top_input + tolerance_for_grid_match))
     )[0]
     latitude_crop_input = grid_input[0][latitude_crop_input_index]
 
