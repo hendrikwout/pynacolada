@@ -75,7 +75,8 @@ def extend_crop_interpolate(
         return_grid_output=False,
         debug=False,
         border_pixels=5,
-        ascending_lat_lon = False
+        ascending_lat_lon = False,
+        tolerance_for_grid_match = 1.e-9
     ):
     """
     purpose:
@@ -134,6 +135,7 @@ def extend_crop_interpolate(
             else:
                 x_crop = x_crop.take(latitude_sort_index,axis=-2).take(longitude_sort_index,axis=-1)
 
+    # ensure that output grid is inside the cropped input grid
     longitude_left_output = np.max([
         np.min(longitude_crop_input),
         np.min(grid_output[1]) - grid_output_longitude_spacing/2.
@@ -154,10 +156,10 @@ def extend_crop_interpolate(
 
     grid_output_revised = []
     grid_output_revised.append(
-        grid_output[0][(grid_output[0] > latitude_bottom_output) & (grid_output[0] < latitude_top_output)]
+        grid_output[0][(grid_output[0] >= (latitude_bottom_output - tolerance_for_grid_match)) & (grid_output[0] <= latitude_top_output + tolerance_for_grid_match))]
     )
     grid_output_revised.append(
-        grid_output[1][(grid_output[1] > longitude_left_output) & (grid_output[1] < longitude_right_output)]
+        grid_output[1][(grid_output[1] >= (longitude_left_output - tolerance_for_grid_match)) & (grid_output[1] <= (longitude_right_output + tolerance_for_grid_match))]
     )
 
     if debug == True:
