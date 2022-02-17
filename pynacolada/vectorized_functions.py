@@ -227,9 +227,9 @@ def extend_crop_interpolate(
         return_value.append(grid_output_revised)#(latitude_output,longitude_output)
     else:
         if (len(grid_output_revised[0]) != len(grid_output[0])) or \
-                np.any(grid_output_revised[0] != grid_output[0]) or \
+                (np.max(np.abs(grid_output_revised[0] - grid_output[0])) >= tolerance_for_grid_match) or \
            (len(grid_output_revised[1]) != len(grid_output[1])) or \
-                np.any(grid_output_revised[1] != grid_output[1]):
+                (np.max(np.abs(grid_output_revised[1] - grid_output[1])) >= tolerance_for_grid_match)
             raise ValueError('Predifined output grid is different from actual output grid, '
                              'so you may need that output. Please set return_output_grid to true.')
 
