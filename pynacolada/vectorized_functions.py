@@ -103,8 +103,8 @@ def extend_crop_interpolate(
     longitude_right_input = np.max(grid_output[1]) + grid_input_longitude_spacing*border_pixels #- grid_output_longitude_spacing/2.
 
     select_longitude_crop_input_index = \
-        (grid_input_longitude_extended >= longitude_left_input) & \
-        (grid_input_longitude_extended <= longitude_right_input)
+        (grid_input_longitude_extended >= (longitude_left_input - tolerance_for_grid_match) & \
+        (grid_input_longitude_extended <= (longitude_right_input - tolerance_for_grid_match ))
 
     longitude_crop_input_index = \
         grid_input_longitude_extended_index[ select_longitude_crop_input_index ]
