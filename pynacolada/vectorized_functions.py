@@ -160,6 +160,9 @@ def extend_crop_interpolate(
         grid_output[1][(grid_output[1] > longitude_left_output) & (grid_output[1] < longitude_right_output)]
     )
 
+    if debug == True:
+        import pdb; pdb.set_trace()
+
     if (not interpolation) or (\
            (len(grid_output_revised[0]) == len(latitude_crop_input)) and \
            (not np.any(np.abs(grid_output_revised[0] - latitude_crop_input) >
