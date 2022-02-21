@@ -349,7 +349,6 @@ def interpolate_delaunay_linear(values,xylist,uvlist,remove_duplicate_points=Fal
     # print(uvstack.shape)
     # print(xystack.shape) 
     from scipy.spatial import Delaunay
-    import pdb; pdb.set_trace()
     tri = Delaunay(xystack)
     # print(uvstack.shape)
     simplex = tri.find_simplex(uvstack) 
