@@ -314,7 +314,7 @@ def biascorrect_quantiles(series_biased,series_reference,**kwargs):
 
     return series_corrected
 
-def interpolate_delaunay_linear(values,xylist,uvlist,remove_duplicate_points=False ,dropnans=False,fill_value=np.nan,add_newaxes=True):
+def interpolate_delaunay_linear(values,xylist,uvlist,remove_duplicate_points=False ,dropnans=True,fill_value=np.nan,add_newaxes=True):
     d = len(xylist)
 
     uvshape = uvlist[0].shape
