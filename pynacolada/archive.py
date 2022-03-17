@@ -1290,7 +1290,6 @@ class archive (object):
 
                       if (archive_out.file_pattern is None):
                           raise ValueError("I don't know how to write the data file to disk. Please set to file_pattern")
-                      import pdb; pdb.set_trace()
                       filenames_out.append(os.path.dirname(archive_out.path_pickle)+'/'+''.join(np.array(list(zip(archive_out.file_pattern.split('"')[::2],[attributes[-1][key] for key in archive_out.file_pattern.split('"')[1::2]]+['']))).ravel()))
                       ifile +=1
 
@@ -1456,7 +1455,6 @@ class archive (object):
                     if 'path_pickle' not in self.__dict__.keys():
                         raise ValueError ('self.path_pickle is not set')
                     fnout = os.path.dirname(self.path_pickle)+'/'+''.join(np.array(list(zip(self.file_pattern.split('"')[::2],[{**dict(zip(self.lib_dataarrays.index.names,idx)),**columns}[key] for key in self.file_pattern.split('"')[1::2]]+['']))).ravel())
-                    import pdb; pdb.set_trace()
                     print("File pointer for ",idx," is not known, so I'm dumping a new file under ",fnout)
                     #fnout = self.lib_dataarrays.loc[idx]['absolute_path']
                     if (not force_overwrite_dataarrays) and (os.path.isfile(fnout)):
