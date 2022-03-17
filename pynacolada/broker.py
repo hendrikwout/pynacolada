@@ -359,13 +359,15 @@ class broker (object):
                     and (requests_parents[irequest_parent]['disable'] == True):
                 del requests_parents[irequest_parent]
 
+        parent_collection_lib_dataarrays = self.parent_collection.get_lib_dataarrays()
+
         for irequest_parent,request_parent in list(reversed(list(enumerate(requests_parents)))):
             for key,value in list(requests_parents[irequest_parent].items()):
 
                 if \
                      ((key in ['archive','process','executing_subprocess','stderr','stdout','process_arguments']) or \
-                     (((key not in self.parent_collection.get_lib_dataarrays().columns)) and \
-                       (key not in self.parent_collection.get_lib_dataarrays().index.names)) or \
+                     (((key not in parent_collection_lib_dataarrays.columns)) and \
+                       (key not in parent_collection_lib_dataarrays.index.names)) or \
                              (type(value) is type(lambda x: x))):
                  del requests_parents[irequest_parent][key]
 
