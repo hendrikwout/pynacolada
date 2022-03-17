@@ -433,7 +433,6 @@ def apply_func_wrapper(
                     del dataarrays_group_in[idataarray]
 
                 if update_pickle:
-                    import pdb; pdb.set_trace()
                     logging.info('update archive_out start')
                     archive_out.update(force_overwrite_pickle =True)
                     logging.info('update archive_out end')
