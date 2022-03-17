@@ -538,7 +538,7 @@ class archive (object):
             read_lib_dataarrays = self.lib_dataarrays.copy()
         for idx,row in enumerate(read_lib_dataarrays.to_dict('records')):
             if dataarrays:
-                CMD ='rm '+row.absolute_path
+                CMD ='rm '+row['absolute_path']
                 os.system(CMD)
                 # if 'available' not in self.lib_dataarrays.columns:
                 #     self.lib_dataarrays['available'] = ""
