@@ -939,6 +939,7 @@ class archive (object):
             if all_variables_available_in_this_group:
                   dataarrays_for_func = []
 
+                  logging.info('start iterrows')
                   for index_group,columns in group_columns.loc[apply_merge_index].iterrows():
                       index_array_dict =   {**dict(columns),**dict(zip(apply_merge_index.names,index_group))}#**dict(zip(apply_merge_index.names,index_group))} **dict(zip(groupby,index)),
                       index_array_tuple_ordered =  tuple([index_array_dict[key] for key in self.lib_dataarrays.index.names])
@@ -948,11 +949,13 @@ class archive (object):
                           import pdb; pdb.set_trace()
                       else:
                           dataarrays_for_func.append(self.dataarrays[index_array_tuple_ordered])
+                  logging.info('end iterrows')
 
                   filenames_out = []
 
                   attributes = []
                   ifile = 0
+                  logging.info('start iterrows')
                   for index_group,group_columns in apply_merge_out_df.iterrows():
                       index_array_out_dict = {**dict(zip(groupby,index_multi)),**dict(zip(apply_merge_out_df.columns,group_columns))}
                       attributes.append(index_array_out_dict)
@@ -972,6 +975,7 @@ class archive (object):
                       #     raise ValueError("I don't know how to write the data file to disk. Please set to file_pattern")
                       #filenames_out.append(os.path.dirname(archive_out.path_pickle)+'/'+''.join(np.array(list(zip(archive_out.file_pattern.split('"')[::2],[attributes[-1][key] for key in archive_out.file_pattern.split('"')[1::2]]+['']))).ravel()))
                       ifile +=1
+                  logging.info('end iterrows')
                   #  ifile = 0
                   #  for index_group,group_columns in apply_merge_out_df.iterrows():
                   #      index_array_out_tuple_ordered =  tuple([attributes[ifile][key] for key in archive_out.lib_dataarrays.index.names])
