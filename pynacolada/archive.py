@@ -112,7 +112,6 @@ def apply_func_wrapper(
 
         apply_this_group_in_df = apply_groups_in_df.copy()
 
-        import pdb; pdb.set_trace()
         for idx_group_in, row in apply_this_group_in_df.iterrows():
             for column in apply_this_group_in_df.columns:
                 if row[column] is None:
