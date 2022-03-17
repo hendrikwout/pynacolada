@@ -230,6 +230,8 @@ def apply_func_wrapper(
             for idx_group_out, row in enumerate(table_this_group_out.to_dict('records')):
                 attributes_dataarrays_out.append({})
 
+                logging.info('start determining attributes of output files')
+
                 if inherit_attributes:
                     if table_this_group_in.index.names[0] is None:  # trivial case where no group_in selection is made
                         attributes_in = \
@@ -323,8 +325,12 @@ def apply_func_wrapper(
                 for key in index_keys:
                     index_out.append(attributes_dataarrays_out[ifile][key])
 
+                logging.info('end determining attributes of output files')
+
+                logging.info('check current intended array is already available in the output')
                 dataarrays_out_already_available.append(tuple(index_out) in archive_out.lib_dataarrays.index)
 
+                logging.info('Start determining output filenames')
                 if mode in ['numpy_output_to_disk_in_chunks', 'numpy_output_to_disk_no_chunks']:
                     if (archive_out.file_pattern is None):
                         raise ValueError("I don't know how to write the data file to disk. Please set to file_pattern")
@@ -341,10 +347,13 @@ def apply_func_wrapper(
                     filenames_out.append(filename_out)
 
                 ifile += 1
+                logging.info('End determining output filenames')
+            logging.info('check whether any array is available in the output. If yes, then do not calculate.')
             all_dataarrays_out_already_available = np.prod(dataarrays_out_already_available)
             if all_dataarrays_out_already_available and not force_recalculate:
                 logging.info('All output data is already available in the output archive and force_recalculate is switched False. Skipping group "'+str(idx)+'"')
             else:
+
                 if force_recalculate and all_dataarrays_out_already_available:
                     logging.info('all output dataarrays were available but force_recalulate is set True, so I force recaculation')
 
@@ -367,7 +376,7 @@ def apply_func_wrapper(
                         temp_dataarrays[itemp_dataarray].close()
 
                 elif mode in ['numpy_output_to_disk_in_chunks', 'numpy_output_to_disk_no_chunks']:
-
+                    logging.info('starting apply_func')
                     if mode == 'numpy_output_to_disk_in_chunks':
                         xarray_function_wrapper(func, dataarrays_wrapper(*tuple(dataarrays_group_in)),
                                                 filenames_out=filenames_out, attributes=attributes_dataarrays_out, release=True,
@@ -411,9 +420,10 @@ def apply_func_wrapper(
                                 temp_dataarrays[idataarray].to_netcdf(filenames_out[idataarray])
                                 temp_dataarrays[idataarray].close()
 
+                    logging.info('ending apply_func')
+
                     for ixr_out, filename_out in enumerate(filenames_out):
-                        import pdb; pdb.set_trace()
-                        loggin.info('add_dataarray start')
+                        logginf.info('add_dataarray start')
                         archive_out.add_dataarray(filename_out)
                         loggin.info('add_dataarray end')
                 else:
