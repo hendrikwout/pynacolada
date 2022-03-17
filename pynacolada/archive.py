@@ -263,6 +263,7 @@ def apply_func_wrapper(
                     else:
                         attributes_dataarrays_out[ifile][key] = \
                             table_this_group_in.iloc[min(ifile, len(dataarrays_group_in) - 1)][key]
+                import pdb; pdb.set_trace()
                 for key in row.index:
                     attributes_dataarrays_out[ifile][key] = row[key]
 
