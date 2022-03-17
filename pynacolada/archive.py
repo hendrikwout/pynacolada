@@ -184,7 +184,7 @@ def apply_func_wrapper(
 
             apply_groups_out_df_this_group = apply_groups_out_df.copy()
 
-            print('converting label functions where necessary')
+            logging.info('converting label functions where necessary')
             for idx_group_out, row in enumerate(apply_groups_out_df.to_dict('records')):
                 for key, value in row.items():
                     if type(apply_groups_out_df_this_group.loc[idx_group_out, key]).__name__ == 'function':
@@ -444,15 +444,19 @@ class collection (object):
         self.archives =  archives
 
     def get_lib_dataarrays(self):
+        logging.info('start build common library from collection of archives')
         lib_dataarrays = pd.DataFrame()
         for archive in self.archives:
             lib_dataarrays = lib_dataarrays.append(archive.lib_dataarrays).sort_index()
+        logging.info('end build common library from collection of archives')
         return lib_dataarrays
 
     def get_dataarrays(self):
+        logging.info('start build common dataarray pool from collection of archives')
         dataarrays = {}
         for archive in self.archives:
             dataarrays = {**dataarrays, **archive.dataarrays}
+        logging.info('end build common dataarray pool from collection of archives')
         return dataarrays
 
     def apply_func(
@@ -471,6 +475,7 @@ class collection (object):
             write_mode = 'add_to_external_archive'
         else:
             write_mode = 'add_to_current_archive'
+
 
         lib_dataarrays = self.get_lib_dataarrays()
         dataarrays = self.get_dataarrays()
