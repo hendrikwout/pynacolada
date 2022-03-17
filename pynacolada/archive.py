@@ -423,9 +423,9 @@ def apply_func_wrapper(
                     logging.info('ending apply_func')
 
                     for ixr_out, filename_out in enumerate(filenames_out):
-                        logginf.info('add_dataarray start')
+                        logging.info('add_dataarray start')
                         archive_out.add_dataarray(filename_out)
-                        loggin.info('add_dataarray end')
+                        logging.info('add_dataarray end')
                 else:
                     ValueError('mode ' + mode + ' not implemented')
                 for idataarray in reversed(range(len(dataarrays_group_in))):
@@ -434,9 +434,9 @@ def apply_func_wrapper(
 
                 if update_pickle:
                     import pdb; pdb.set_trace()
-                    loggin.info('update archive_out start')
+                    logging.info('update archive_out start')
                     archive_out.update(force_overwrite_pickle =True)
-                    loggin.info('update archive_out end')
+                    logging.info('update archive_out end')
 
 
 class collection (object):
