@@ -185,7 +185,7 @@ def apply_func_wrapper(
             apply_groups_out_df_this_group = apply_groups_out_df.copy()
 
             print('converting label functions where necessary')
-            for idx_group_out, row in apply_groups_out_df.iterrows():
+            for idx_group_out, row in enumerate(apply_groups_out_df.to_dict('records'):
                 for key, value in row.items():
                     if type(apply_groups_out_df_this_group.loc[idx_group_out, key]).__name__ == 'function':
                         apply_groups_out_df_this_group.loc[idx_group_out, key] = apply_groups_out_df.loc[
@@ -197,7 +197,7 @@ def apply_func_wrapper(
             table_this_group_out = apply_groups_out_df_this_group
 
             dataarrays_group_in = []
-            for idx_group_in, row in table_this_group_in.iterrows():
+            for idx_group_in, row in enumerate(table_this_group_in.to_dict('records')):
                 if table_this_group_in.index.names[0] is None:  # trivial case where no group_in selection is made
                     index_dataarray = [dict(zip(table_this_group_in.columns, row))[key] for key in
                                        lib_dataarrays.index.names]
