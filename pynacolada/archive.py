@@ -197,7 +197,7 @@ def apply_func_wrapper(
             table_this_group_out = apply_groups_out_df_this_group
 
             dataarrays_group_in = []
-            for idx_group_in, row in enumerate(table_this_group_in.to_dict('records')):
+            for idx_group_in, row in table_this_group_in.iterrows():
                 if table_this_group_in.index.names[0] is None:  # trivial case where no group_in selection is made
                     index_dataarray = [dict(zip(table_this_group_in.columns, row))[key] for key in
                                        lib_dataarrays.index.names]
