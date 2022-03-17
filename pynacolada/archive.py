@@ -227,7 +227,7 @@ def apply_func_wrapper(
             attributes_dataarrays_out = []
             filenames_out = []
             dataarrays_out_already_available = []
-            for idx_group_out, row in table_this_group_out.iterrows():
+            for idx_group_out, row in enumerate(table_this_group_out.to_dict('records')):
                 attributes_dataarrays_out.append({})
 
                 if inherit_attributes:
@@ -506,7 +506,7 @@ class archive (object):
     def sel_lib(self,sel):
         lib_dataarrays_out = self.lib_dataarrays_out[sel]
         archive_out = archive()
-        for index,lib_dataarray in lib_dataarays_out.iterrows():
+        for index,lib_dataarray in enumerate(lib_dataarays_out.to_dict('records')):
             archive_out.add_dataarray(self.dataarrays[index])
 
     def remove(self,query=None,update_pickle = True,dataarrays=True,records=False):
@@ -519,7 +519,7 @@ class archive (object):
             read_lib_dataarrays = self.lib_dataarrays.query(query).copy()
         else:
             read_lib_dataarrays = self.lib_dataarrays.copy()
-        for idx,row in read_lib_dataarrays.iterrows():
+        for idx,row in enumerate(read_lib_dataarrays.to_dict('records')):
             if dataarrays:
                 CMD ='rm '+row.absolute_path
                 os.system(CMD)
@@ -555,7 +555,7 @@ class archive (object):
 
     def close(self,delete_archive=False):
         lib_dataarrays_temp = self.lib_dataarrays.copy()
-        for index,columns in lib_dataarrays_temp.iterrows():
+        for index,columns in enumerate(lib_dataarrays_temp.to_dict('records')):
             self.remove_by_index(index=index,delete_on_disk=(delete_archive==True))
 
         del lib_dataarrays_temp
@@ -841,7 +841,7 @@ class archive (object):
         #     lib_dataarrays_out = self.lib_dataarrays.copy()
 
         archive_out = archive()
-        for index,columns in self.lib_dataarrays.iterrows():
+        for index,columns in enumerate(self.lib_dataarrays.to_dict('records')):
             dataarray_out_temp = function(self.dataarrays[index])
             for key,value in self.dataarrays[index].attrs.items():
                 dataarray_out_temp.attrs[key] = value
