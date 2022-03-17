@@ -444,15 +444,11 @@ class collection (object):
         self.archives =  archives
 
     def get_lib_dataarrays(self):
-        logging.info('start build common library from collection of archives')
-        lib_dataarrays = pd.DataFrame()
-        for archive in self.archives:
-            lib_dataarrays = lib_dataarrays.append(archive.lib_dataarrays).sort_index()
-        logging.info('end build common library from collection of archives')
-        return lib_dataarrays
+        logging.info('Build common library from collection of archives')
+        return pd.concat([archive.lib_dataarrays for archive in self.archives]).sort_index()
 
     def get_dataarrays(self):
-        logging.info('start build common dataarray pool from collection of archives')
+        logging.info('Start build common dataarray pool from collection of archives')
         dataarrays = {}
         for archive in self.archives:
             dataarrays = {**dataarrays, **archive.dataarrays}
