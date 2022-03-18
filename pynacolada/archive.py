@@ -575,7 +575,7 @@ class archive (object):
 
     def close(self,delete_archive=False):
         lib_dataarrays_temp = self.lib_dataarrays.copy()
-        for index,columns in enumerate(lib_dataarrays_temp.to_dict('records')):
+        for index,columns in lib_dataarrays_temp.iterrows():
             self.remove_by_index(index=index,delete_on_disk=(delete_archive==True))
 
         del lib_dataarrays_temp
