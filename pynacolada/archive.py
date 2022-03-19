@@ -539,7 +539,7 @@ class archive (object):
             read_lib_dataarrays = self.lib_dataarrays.query(query).copy()
         else:
             read_lib_dataarrays = self.lib_dataarrays.copy()
-        for idx,row in enumerate(read_lib_dataarrays.to_dict('records')):
+        for idx,row in read_lib_dataarrays.iterrows():
             if dataarrays:
                 CMD ='rm '+row['absolute_path']
                 os.system(CMD)
