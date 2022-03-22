@@ -546,10 +546,12 @@ class archive (object):
                 # if 'available' not in self.lib_dataarrays.columns:
                 #     self.lib_dataarrays['available'] = ""
                 #     self.lib_dataarrays['available'] = True
-            if records:
-                self.lib_dataarrays = self.lib_dataarrays.drop(idx)
-            else:
-                self.lib_dataarrays.loc[idx]['available'] = False
+
+            is self.lib_dataarrays.index.contains(idx):
+                if records:
+                    self.lib_dataarrays = self.lib_dataarrays.drop(idx)
+                else:
+                    self.lib_dataarrays.loc[idx]['available'] = False
         if update_pickle:
             self.update(force_overwrite_pickle =True)
 
