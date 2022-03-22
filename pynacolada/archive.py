@@ -547,7 +547,7 @@ class archive (object):
                 #     self.lib_dataarrays['available'] = ""
                 #     self.lib_dataarrays['available'] = True
 
-            is self.lib_dataarrays.index.contains(idx):
+            if self.lib_dataarrays.index.contains(idx):
                 if records:
                     self.lib_dataarrays = self.lib_dataarrays.drop(idx)
                 else:
