@@ -76,7 +76,8 @@ def extend_crop_interpolate(
         debug=False,
         border_pixels=5,
         ascending_lat_lon = False,
-        tolerance_for_grid_match = 1.e-9
+        tolerance_for_grid_match = 1.e-9,
+        dropnans=True
     ):
     """
     purpose:
@@ -204,7 +205,7 @@ def extend_crop_interpolate(
                 meshgrid_input_crop,
                 np.meshgrid(*grid_output_revised,indexing='ij'),
                 remove_duplicate_points=True,
-                dropnans=True,
+                dropnans=dropnans,
                 add_newaxes=False
             )
             if workaround_2_dim:
