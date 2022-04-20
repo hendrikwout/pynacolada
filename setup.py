@@ -9,6 +9,13 @@ setup(
     packages=['pynacolada'],
     url='http://www.nowebsite.com',
     license='LICENSE.txt',
+    install_requires=[
+        'yaml',
+        'xarray',
+        'netCDF4',
+        'numpy',
+        ],
+
     description='easy and customized Processing huge amounts of gridded Climate Data.',
     long_description=open('README.md').read(),
 )
