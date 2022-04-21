@@ -455,8 +455,6 @@ class broker (object):
                     return_request_common_keys[0][key] = return_request[0][key]
             return_request = return_request_common_keys
 
-
-
         else:
             return_request = dict()
             for key in self.provides.keys():
