@@ -74,11 +74,14 @@ def extend_crop_interpolate(
         interpolation=True,
         return_grid_output=False,
         debug=False,
-        border_pixels=5
+        border_pixels=5,
+        ascending_lat_lon = False,
+        tolerance_for_grid_match = 1.e-9,
+        dropnans=True
     ):
     """
     purpose:
-        perform area cropping. But also auto-extending so that
+        perform area cropping and/or interpolation. But also auto-extending the input domain so that
         one can always choose longitude ranges between -180 and 360 degrees.
 
     input arguments:
@@ -101,8 +104,8 @@ def extend_crop_interpolate(
     longitude_right_input = np.max(grid_output[1]) + grid_input_longitude_spacing*border_pixels #- grid_output_longitude_spacing/2.
 
     select_longitude_crop_input_index = \
-        (grid_input_longitude_extended >= longitude_left_input) & \
-        (grid_input_longitude_extended <= longitude_right_input)
+        (grid_input_longitude_extended >= (longitude_left_input - tolerance_for_grid_match)) & \
+        (grid_input_longitude_extended <= (longitude_right_input + tolerance_for_grid_match ))
 
     longitude_crop_input_index = \
         grid_input_longitude_extended_index[ select_longitude_crop_input_index ]
@@ -110,8 +113,8 @@ def extend_crop_interpolate(
     longitude_crop_input = grid_input_longitude_extended[select_longitude_crop_input_index]
 
     latitude_crop_input_index = np.where(
-        (grid_input[0] >= latitude_bottom_input) &
-        (grid_input[0] <= latitude_top_input)
+        (grid_input[0] >= (latitude_bottom_input - tolerance_for_grid_match)) &
+        (grid_input[0] <= (latitude_top_input + tolerance_for_grid_match))
     )[0]
     latitude_crop_input = grid_input[0][latitude_crop_input_index]
 
@@ -122,7 +125,18 @@ def extend_crop_interpolate(
         else:
             x_crop = x.take(latitude_crop_input_index,axis=-2).take(longitude_crop_input_index,axis=-1)
 
+    if ascending_lat_lon == True:
+        latitude_sort_index = np.argsort(latitude_crop_input)
+        latitude_crop_input = latitude_crop_input[latitude_sort_index]
+        longitude_sort_index = np.argsort(longitude_crop_input)
+        longitude_crop_input = longitude_crop_input[longitude_sort_index]
+        if x is not None:
+            if type(x) is xr.DataArray:
+                x_crop = x_crop.isel(latitude=latitude_sort_index, longitude=longitude_sort_index).values
+            else:
+                x_crop = x_crop.take(latitude_sort_index,axis=-2).take(longitude_sort_index,axis=-1)
 
+    # ensure that output grid is inside the cropped input grid
     longitude_left_output = np.max([
         np.min(longitude_crop_input),
         np.min(grid_output[1]) - grid_output_longitude_spacing/2.
@@ -143,11 +157,14 @@ def extend_crop_interpolate(
 
     grid_output_revised = []
     grid_output_revised.append(
-        grid_output[0][(grid_output[0] > latitude_bottom_output) & (grid_output[0] < latitude_top_output)]
+        grid_output[0][(grid_output[0] >= (latitude_bottom_output - tolerance_for_grid_match)) & (grid_output[0] <= (latitude_top_output + tolerance_for_grid_match))]
     )
     grid_output_revised.append(
-        grid_output[1][(grid_output[1] > longitude_left_output) & (grid_output[1] < longitude_right_output)]
+        grid_output[1][(grid_output[1] >= (longitude_left_output - tolerance_for_grid_match)) & (grid_output[1] <= (longitude_right_output + tolerance_for_grid_match))]
     )
+
+    if debug == True:
+        import pdb; pdb.set_trace()
 
     if (not interpolation) or (\
            (len(grid_output_revised[0]) == len(latitude_crop_input)) and \
@@ -179,17 +196,21 @@ def extend_crop_interpolate(
         )
 
         if x is not None:
+            workaround_2_dim = False
             if len(x_crop.shape) == 2:
+                workaround_2_dim = True
                 x_crop = x_crop[np.newaxis]
             x_interpolated = interpolate_delaunay_linear(
                 x_crop,
                 meshgrid_input_crop,
                 np.meshgrid(*grid_output_revised,indexing='ij'),
                 remove_duplicate_points=True,
-                dropnans=True,
+                dropnans=dropnans,
                 add_newaxes=False
             )
-        if debug:
+            if workaround_2_dim:
+                x_interpolated = x_interpolated[0]
+        if debug == True:
             import pdb; pdb.set_trace()
     # x_interpolated = pcd.vectorized_functions.interpolate_delaunay_linear(
     #     x_extended,
@@ -203,14 +224,15 @@ def extend_crop_interpolate(
         return_value.append(x_interpolated)
 
 
+    if debug == True:
+        import pdb; pdb.set_trace()
     if return_grid_output:
         return_value.append(grid_output_revised)#(latitude_output,longitude_output)
     else:
         if (len(grid_output_revised[0]) != len(grid_output[0])) or \
-                np.any(grid_output_revised[0] != grid_output[0]) or \
+                (np.max(np.abs(grid_output_revised[0] - grid_output[0])) >= tolerance_for_grid_match) or \
            (len(grid_output_revised[1]) != len(grid_output[1])) or \
-                np.any(grid_output_revised[1] != grid_output[1]):
-            import pdb; pdb.set_trace()
+                (np.max(np.abs(grid_output_revised[1] - grid_output[1])) >= tolerance_for_grid_match):
             raise ValueError('Predifined output grid is different from actual output grid, '
                              'so you may need that output. Please set return_output_grid to true.')
 
