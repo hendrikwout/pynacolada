@@ -210,6 +210,7 @@ def extend_crop_interpolate(
                 np.any(grid_output_revised[0] != grid_output[0]) or \
            (len(grid_output_revised[1]) != len(grid_output[1])) or \
                 np.any(grid_output_revised[1] != grid_output[1]):
+            import pdb; pdb.set_trace()
             raise ValueError('Predifined output grid is different from actual output grid, '
                              'so you may need that output. Please set return_output_grid to true.')
 
