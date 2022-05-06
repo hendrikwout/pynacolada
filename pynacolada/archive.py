@@ -557,12 +557,12 @@ class archive (object):
                 #     self.lib_dataarrays['available'] = ""
                 #     self.lib_dataarrays['available'] = True
 
-            import pdb; pdb.set_trace()
             if idx in self.lib_dataarrays.index:
                 if reset_lib:
                     self.lib_dataarrays = self.lib_dataarrays.drop(idx)
                 else:
                     self.lib_dataarrays.loc[idx]['available'] = False
+            import pdb; pdb.set_trace()
         if update_pickle:
             self.update(force_overwrite_pickle =True)
 
