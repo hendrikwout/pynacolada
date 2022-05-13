@@ -1,4 +1,5 @@
 #import dask.array as da
+import pynacolada as pcd
 import tempfile
 import os
 import netCDF4 as nc4
@@ -30,7 +31,11 @@ ds = xr.open_dataset( input_file,)['Band1'].rename({'lat':'latitude'}).rename({'
 #input_file = '/projects/C3S_EUBiodiversity/data/case_klimpala/aggregation-30-years/indicators-annual/cropped_to_africa/bias_corrected/cmip5_daily/temperature-daily-mean_annual_mean_IPSL-CM5A-MR_rcp85_r1i1p1_bias-corrected_to_era5_id0daily_1950-01-01_2100-12-31_id0_aggregation-30-year-median_grid_of_IPSL-CM5A-MR_latitude:irregular_longitude:-42.5,65.0,2.5.nc'
 input_file = '/home/woutersh/projects/KLIMPALA_SF/data/test/temperature-daily-mean_annual_mean_IPSL-CM5A-MR_rcp85_r1i1p1_bias-corrected_to_era5_id0daily_1950-01-01_2100-12-31_id0_aggregation-30-year-median_grid_of_IPSL-CM5A-MR_latitude:irregular_longitude:-42.5,65.0,2.5.nc'
 ds2 = xr.open_dataarray(input_file)
-xarrays = [ds,ds2]
+xarrays = [ds.isel(
+    latitude  = ( (ds.latitude  > -10) & (ds.latitude  < 20)),
+    longitude = ( (ds.longitude > -15) & (ds.longitude < 20))
+        ),
+            ds2]
 
 dims_apply_names = ['latitude','longitude'] #input
 
@@ -38,8 +43,8 @@ dims_apply_names = ['latitude','longitude'] #input
 coordinates_output = None
 coordinates_output = { #input
 #        'time':{ 'coordinates':ds2.time},
-        'latitude':{ 'coordinates':ds.latitude,'chunksize':3500},
-        'longitude':{ 'coordinates':ds.longitude,'chunksize':3500},
+        'latitude':{ 'coordinates':xarrays[0].latitude,'chunksize':3500,'overlap':50},
+        'longitude':{ 'coordinates':xarrays[0].longitude,'chunksize':2500,'overlap':50},
         }
 
 
@@ -268,6 +273,9 @@ for ixarray,xarray in enumerate(xarrays+xarrays_out):
                     identical_xarrays(xarray[dimname],coordinates_output[dimname]['coordinates'])
                ):
                 xarrays_shapes_in_chunks[ixarray].insert(0,coordinates_output[dimname]['chunksize'])
+                if 'overlap' in coordinates_output[dimname]:
+                    xarrays_shapes_in_chunks[ixarray][0] += coordinates_output[dimname]['overlap']
+
                 xarrays_chunks_apply[ixarray] = True
             else:
                 xarrays_shapes_in_chunks[ixarray].insert(0,len(xarray[dimname]))
@@ -276,7 +284,6 @@ for ixarray,xarray in enumerate(xarrays+xarrays_out):
             xarrays_shapes_in_chunks[ixarray].insert(0,None)
             xarrays_shapes[ixarray].insert(0,None)
 
-import pdb; pdb.set_trace()
 
 logging.info('adding size of __chunk__ dimensions')
 
@@ -303,7 +310,7 @@ logging.info('xarrays shapes for '+str(dims_no_apply.keys()) +' + '+str(dims_app
 logging.info('  -> original xarrays: '+str(xarrays_shapes))
 logging.info('  ->  chunked xarrays: '+str(xarrays_shapes_in_chunks))
 
-maximum_memory_size = 3*10**8
+maximum_memory_size = 3*10**9
 logging.info('determining input chunk format that fits our maximum memory size input of '+str(maximum_memory_size))
 
 chunks_memory_sizes =     [int(xarray.nbytes/xarray.size) for xarray in xarrays+xarrays_out]
@@ -402,7 +409,10 @@ for index_no_apply in tqdm.tqdm(chunks_no_apply):
         if dimname_apply in number_of_chunks_apply_dims.keys():
             dim_apply_start = np.mod(idx_mod/dim_fac, number_of_chunks_apply_dims[dimname_apply] )
             chunk_start.insert(0,int(dim_apply_start * coordinates_output[dimname_apply]['chunksize']))
-            chunk_end.insert(0,int(chunk_start[0]+  coordinates_output[dimname_apply]['chunksize']))
+            chunk_end.insert(0,int(chunk_start[0] +  coordinates_output[dimname_apply]['chunksize']))
+            if 'overlap' in coordinates_output[dimname_apply]:
+                chunk_end[0] += coordinates_output[dimname_apply]['overlap']
+            chunk_end[0] = np.min([chunk_end[0],len(coordinates_output[dimname_apply]['coordinates'])])
             idx_mod -= dim_apply_start*dim_fac
             dim_fac *= number_of_chunks_apply_dims[dimname_apply]
 
@@ -441,11 +451,41 @@ for index_no_apply in tqdm.tqdm(chunks_no_apply):
                         xarrays_selection_chunk[ixarray][dimname] = range(chunk_start[idim],chunk_end[idim])
                     elif dimname in dims_no_apply.keys():
                         xarrays_selection_chunk[ixarray][dimname] = range(chunk_start[idim],chunk_end[idim])
-                    # else:
-                    #     xarrays_selection_chunk[ixarray][dimname] = None
-        # for idim in range(len(index_no_apply)):
-        #     dimname = list(dims_no_apply_lengths.keys())[idim]
-        #     if xarrays_shapes_in_chunks[ixarray][idim] is not None:
+                    else:
+                        xarrays_selection_chunk[ixarray][dimname] = range(0,xarrays_shapes_in_chunks[ixarray][idim])
+
+    xarrays_selection_chunk_in = xarrays_selection_chunk[:len(xarrays)]
+    xarrays_selection_chunk_out = xarrays_selection_chunk[len(xarrays):len(xarrays+xarrays_out)]
+
+    chunks_in = []
+    for ixarray,xarray in enumerate(xarrays):
+        chunks_in.append(xarray.isel(xarrays_selection_chunk_in[ixarray]).transpose(*tuple(xarrays_selection_chunk_in[ixarray].keys())))
+
+    # meshgrid_fine = np.meshgrid(
+    #     chunks_in[1]['latitude'],
+    #     chunks_in[1]['longitude'],
+    #     indexing='ij')
+
+    pcd.vectorized_functions.extend_crop_interpolate(
+        chunks_in[1].values,
+        (chunks_in[1].latitude.values, chunks_in[1].latitude.values,),
+        (chunks_out[0].latitude.values, chunks_in[0].latitude.values,),
+        # interpolation=True,
+        # return_grid_output=False,
+        # debug=False,
+        # border_pixels=5,
+        # ascending_lat_lon = False,
+        # tolerance_for_grid_match = 1.e-9
+    )
+    import pdb; pdb.set_trace()
+
+
+
+            # else:
+            #     xarrays_selection_chunk[ixarray][dimname] = None
+            # for idim in range(len(index_no_apply)):
+            #     dimname = list(dims_no_apply_lengths.keys())[idim]
+            #     if xarrays_shapes_in_chunks[ixarray][idim] is not None:
         #         if dimname != '__chunk__':
 
         #             if (dimname in dims_apply_names) and \
@@ -455,7 +495,9 @@ for index_no_apply in tqdm.tqdm(chunks_no_apply):
         #                 xarrays_selection_chunk[ixarray][dimname] = range(chunk_start,chunk_end)
         #             else:
         #                 xarrays_selection_chunk[ixarray][dimname] = None
-    logging.debug('xarray selection: '+str(xarrays_selection_chunk))
+    logging.debug('xarray selection in  : '+str(xarrays_selection_chunk_in))
+    logging.debug('xarray selection out : '+str(xarrays_selection_chunk_out))
+    import pdb; pdb.set_trace()
 
                         # number_of_chunks = []
 # for ixarray in range(len(xarrays)):
