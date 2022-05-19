@@ -1,5 +1,4 @@
 #import dask.array as da
-import pynacolada as pcd
 import tempfile
 import os
 import netCDF4 as nc4
@@ -13,6 +12,9 @@ import pandas as pd
 import numpy as np
 import tqdm
 import logging
+import sys
+sys.path.insert(0, 'lib/pynacolada/')
+import pynacolada as pcd
 #ProgressBar().register()
 # if __name__ == '__main__':
 #input_file = r'Y:\Unit_RMA\_OneBackup\RMA_RDM\GIS_data\Vlaanderen\BBK_Verharding\2018_beta\BBK2018v01\BBK1_18\BBK1_18.tif'
@@ -27,24 +29,25 @@ import logging
 #input_file = '/projects/C3S_EUBiodiversity/data/ancillary/GMTED2010/gmted2010_mean_30.nc'
 input_file = '/home/woutersh/projects/KLIMPALA_SF/data/ancillary/GMTED2010/gmted2010_mean_30.nc'
 ds = xr.open_dataset( input_file,)['Band1'].rename({'lat':'latitude'}).rename({'lon':'longitude'})
+ds = ds.isel(
+    latitude  = ( (ds.latitude  > -5) & (ds.latitude  < 15)),
+    longitude = ( (ds.longitude > -10) & (ds.longitude < 15))
+        )
 
 #input_file = '/projects/C3S_EUBiodiversity/data/case_klimpala/aggregation-30-years/indicators-annual/cropped_to_africa/bias_corrected/cmip5_daily/temperature-daily-mean_annual_mean_IPSL-CM5A-MR_rcp85_r1i1p1_bias-corrected_to_era5_id0daily_1950-01-01_2100-12-31_id0_aggregation-30-year-median_grid_of_IPSL-CM5A-MR_latitude:irregular_longitude:-42.5,65.0,2.5.nc'
 input_file = '/home/woutersh/projects/KLIMPALA_SF/data/test/temperature-daily-mean_annual_mean_IPSL-CM5A-MR_rcp85_r1i1p1_bias-corrected_to_era5_id0daily_1950-01-01_2100-12-31_id0_aggregation-30-year-median_grid_of_IPSL-CM5A-MR_latitude:irregular_longitude:-42.5,65.0,2.5.nc'
 ds2 = xr.open_dataarray(input_file)
-xarrays = [ds.isel(
-    latitude  = ( (ds.latitude  > -10) & (ds.latitude  < 20)),
-    longitude = ( (ds.longitude > -15) & (ds.longitude < 20))
-        ),
-            ds2]
+xarrays = [ds2]
 
-dims_apply_names = ['latitude','longitude'] #input
+# this also sets the order of (inner) output dimensions as expected by the function
+dims_apply_names = ['latitude','longitude']
 
 
-coordinates_output = None
+# this also defines the order in which the output dimensions are being constructed, allowing for transposing the output on the fly.
 coordinates_output = { #input
 #        'time':{ 'coordinates':ds2.time},
-        'latitude':{ 'coordinates':xarrays[0].latitude,'chunksize':3500,'overlap':50},
-        'longitude':{ 'coordinates':xarrays[0].longitude,'chunksize':2500,'overlap':50},
+        'latitude':{ 'coordinates':ds.latitude,'chunksize':500,'overlap':50},
+        'longitude':{ 'coordinates':ds.longitude,'chunksize':1000,'overlap':50},
         }
 
 
@@ -171,6 +174,9 @@ for coordinates_output_orig in coordinates_output.keys():
     coordinates_output_new[coordinates_output_orig] = coordinates_output[coordinates_output_orig]
 coordinates_output = sort_dict_by_keys(coordinates_output_new, list(coordinates_output.keys()))
 
+for dimname in dims_apply_names:
+    if dimname not in coordinates_output:
+        raise IOError('I cannot track the dimension size and coordinates of '+dimname+' please specify in output_coordinates')
 
 
     # for ixarray_output,xarray_coordinates_output in xarrays_coordinates_output:
@@ -251,7 +257,8 @@ if filenames_out is not None:
         xrtemp.to_netcdf(fnout)
         xrtemp.close()
         ncouts.append(nc4.Dataset(fnout, 'a'))
-        ncouts[ixarray_out].createVariable('__xarray_data_variable__', "f", tuple(xarrays_coordinates_output[ixarray_out].keys()))
+        ncouts[ixarray_out].createVariable('__xarray_data_variable__', "f", tuple(xarrays_coordinates_output[ixarray_out].keys()),fill_value=0.)
+        #ncouts[ixarray_out].variables['__xarray_data_variable__'][:] = 0.
         ncouts[ixarray_out].close()
         xarrays_out.append(xr.open_dataarray(fnout))
 
@@ -310,7 +317,7 @@ logging.info('xarrays shapes for '+str(dims_no_apply.keys()) +' + '+str(dims_app
 logging.info('  -> original xarrays: '+str(xarrays_shapes))
 logging.info('  ->  chunked xarrays: '+str(xarrays_shapes_in_chunks))
 
-maximum_memory_size = 3*10**9
+maximum_memory_size = 2*10**7
 logging.info('determining input chunk format that fits our maximum memory size input of '+str(maximum_memory_size))
 
 chunks_memory_sizes =     [int(xarray.nbytes/xarray.size) for xarray in xarrays+xarrays_out]
@@ -392,6 +399,14 @@ if current_memory_size > maximum_memory_size:
 logging.info('Start looping over chunks and create selection from xarray inputs')
 
 chunks_no_apply = list(product(*tuple([list(range(int(a))) for a in list(chunks_number_no_apply.values())])))
+
+
+logging.debug('closing xarrays_out, which we used above to easily calculate the dimension/memory shaping. Data is written out directly through disk for saving memory. ')
+for ixarray_out, xarray_out in enumerate(xarrays_out):
+    xarrays_out[ixarray_out].close()
+    ncouts[ixarray_out] = nc4.Dataset(filenames_out_work[ixarray_out],'a')
+
+
 for index_no_apply in tqdm.tqdm(chunks_no_apply):
     logging.debug('dimension selection for '+\
                   str(dims_no_apply.keys)+\
@@ -433,6 +448,7 @@ for index_no_apply in tqdm.tqdm(chunks_no_apply):
         if dimname != '__chunk__':
             chunk_start.insert(0,int(chunk_sizes_no_apply[dimname] * index_no_apply[idim]))
             chunk_end.insert(0,int(chunk_start[0] + chunk_sizes_no_apply[dimname]))
+            chunk_end[0] = np.min([chunk_end[0],len(coordinates_output[dimname]['coordinates'])])
         else:
             chunk_start.insert(0,None)
             chunk_end.insert(0,None)
@@ -456,48 +472,148 @@ for index_no_apply in tqdm.tqdm(chunks_no_apply):
 
     xarrays_selection_chunk_in = xarrays_selection_chunk[:len(xarrays)]
     xarrays_selection_chunk_out = xarrays_selection_chunk[len(xarrays):len(xarrays+xarrays_out)]
+    logging.debug('xarrays selection in  : '+str(xarrays_selection_chunk_in))
+    logging.debug('xarrays selection out : '+str(xarrays_selection_chunk_out))
 
     chunks_in = []
+    coordinates_in = []
     for ixarray,xarray in enumerate(xarrays):
+
         chunks_in.append(xarray.isel(xarrays_selection_chunk_in[ixarray]).transpose(*tuple(xarrays_selection_chunk_in[ixarray].keys())))
+
+    dims_not_found = {}
+    for dim,coordinate_output in coordinates_output.items():
+        dimfound = False
+        for ixarray,xarray in enumerate(xarrays):
+            if (dim in xarray.coords) and (identical_xarrays(coordinate_output['coordinates'],xarray.coords[dim])):
+                dimfound = True
+
+        if dimfound == False:
+            dims_not_found[dim] = coordinates_output[dim]['coordinates'].isel(
+                {dim:range(chunk_start[dims_all.index(dim)], chunk_end[dims_all.index(dim)])}
+
+            )
+    #chunk_coordinates_output = coordinates_output[dim].isel(art})
+    logging.info('adding output coordinates that are missing in the input files:' + str(dims_not_found))
 
     # meshgrid_fine = np.meshgrid(
     #     chunks_in[1]['latitude'],
     #     chunks_in[1]['longitude'],
     #     indexing='ij')
 
-    pcd.vectorized_functions.extend_crop_interpolate(
-        chunks_in[1].values,
-        (chunks_in[1].latitude.values, chunks_in[1].latitude.values,),
-        (chunks_out[0].latitude.values, chunks_in[0].latitude.values,),
+    def func ( x_coarse,**coordinates_fine):
+        import pdb; pdb.set_trace()
+        return (pcd.vectorized_functions.extend_crop_interpolate( \
+        x_coarse.values, \
+        (x_coarse.latitude.values,x_coarse.longitude.values), \
+        (coordinates_fine['latitude'].values,coordinates_fine['longitude']), \
         # interpolation=True,
         # return_grid_output=False,
         # debug=False,
         # border_pixels=5,
         # ascending_lat_lon = False,
         # tolerance_for_grid_match = 1.e-9
-    )
+    ))
+
+
+    chunks_out = func(*chunks_in,**dims_not_found)
+
     import pdb; pdb.set_trace()
+    # chunks_out = pcd.vectorized_functions.extend_crop_interpolate(
+    #     chunks_in[0].values,
+    #     (chunks_in[0].latitude.values, chunks_in[0].longitude.values,),
+    #     (dims_not_found['latitude'].values, dims_not_found['longitude'].values),
+    #     # interpolation=True,
+    #     # return_grid_output=False,
+    #     # debug=False,
+    #     # border_pixels=5,
+    #     # ascending_lat_lon = False,
+    #     # tolerance_for_grid_match = 1.e-9
+    # )
+    if type(chunks_out).__name__ not in ['tuple', 'list']:
+        # list_output = False
+        chunks_out= [chunks_out]
+
+    for ichunk_in in reversed(range(len(chunks_in))):
+        chunks_in[ichunk_in].close()
+        del chunks_in[ichunk_in]
+
+    for ixarray_out,chunk_out in enumerate(chunks_out):
+        logging.debug('xarray selection of chunk output '+str(ixarray_out)+': ' + str(xarrays_selection_chunk_out[ixarray_out]))
+
+        xarrays_selection_chunk_out_ordered = sort_dict_by_keys(xarrays_selection_chunk_out[ixarray_out],list(xarrays_coordinates_output[ixarray_out].keys()))
+        #if type(chunk_out) == type(np.array([])):
+        if type(chunk_out) != xr.core.dataarray.DataArray:
+            chunk_out_coordinates = {}
+            for dimname in xarrays_selection_chunk_out[ixarray_out].keys():
+                chunk_out_coordinates[dimname] = xarrays_coordinates_output[ixarray_out][dimname]['coordinates'].isel({dimname:xarrays_selection_chunk_out[ixarray_out][dimname]})
+
+            chunk_out_xarray = xr.DataArray(chunk_out,coords=chunk_out_coordinates)
+        else:
+            chunk_out_xarray = chunk_out
+
+        logging.debug('xarray selection ordered for output array '+str(ixarray_out)+': ' + str(xarrays_selection_chunk_out_ordered))
 
 
+        chunk_out_xarray_ordered = chunk_out_xarray.transpose(*tuple(xarrays_selection_chunk_out_ordered.keys()))
+        # chunk_profile =
 
+        logging.debug('re-ordered output shape: '+str(chunk_out_xarray.shape) +' -> '+ str(chunk_out_xarray_ordered.shape))
+        indexing_for_output_array = tuple([dim_selection for dim_selection in xarrays_selection_chunk_out_ordered.values()])
+        logging.debug('index of chunk in netcdf output '+str(ixarray_out)+': ' + str(indexing_for_output_array))
+        logging.debug('this should fit in netcdf total output shape '+str(ncouts[ixarray_out].variables['__xarray_data_variable__'].shape))
+
+
+        logging.debug('acquiring previous values for consolidating chunk overlapping values')
+        test = ncouts[ixarray_out].variables['__xarray_data_variable__'][indexing_for_output_array].filled(fill_value=0)
+
+        overlap_weights = np.ones_like(test)
+        idim = 0
+        for dim,selection_chunk_out in xarrays_selection_chunk_out_ordered.items():
+            # overlap_weights_dim = np.ones((len(xarrays_selection_chunk_out_ordered[dim],)))
+            #reshape(list(range(idim-1))+overlap_weights.shape[idim])
+            if 'overlap' in coordinates_output[dim]:
+                if xarrays_selection_chunk_out_ordered[dim][0] == 0:
+                    left = np.ones(coordinates_output[dim]['overlap'])
+                else:
+                    left = np.arange(0,coordinates_output[dim]['overlap'],1)/coordinates_output[dim]['overlap']
+                if xarrays_selection_chunk_out_ordered[dim][-1] == (len(coordinates_output[dim]['coordinates']) - 1):
+                    right = np.ones(coordinates_output[dim]['overlap'])
+                else:
+                    right = np.arange(coordinates_output[dim]['overlap'],0,-1)/coordinates_output[dim]['overlap']
+                middle = np.ones(((len(xarrays_selection_chunk_out_ordered[dim]) - 2 * coordinates_output[dim]['overlap'],)))
+                overlap_weights_dim = np.concatenate([left,middle,right])
+                overlap_weights_dim = overlap_weights_dim.reshape([1]*idim+[overlap_weights.shape[idim]]+[1]*(len(overlap_weights.shape) - idim -1))
+                overlap_weights *= overlap_weights_dim
+            idim += 1
+
+        ncouts[ixarray_out].variables['__xarray_data_variable__'][indexing_for_output_array] = test + np.array(chunk_out_xarray_ordered.values,dtype='float32')*overlap_weights
+        logging.debug('.... finished')
+    for ichunk_out in range(len(chunks_out)):
+        if type(chunks_out[ichunk_out]) == xr.core.dataarray.DataArray:
+            chunks_out[ichunk_out].close()
+
+        del chunks_out[ichunk_out]
+        # import pdb; pdb.set_trace()
+
+for incout in range(len(ncouts)):
+    ncouts[incout].close()
+    os.system('mv '+filenames_out_work[incout]+' '+filenames_out[incout])
             # else:
-            #     xarrays_selection_chunk[ixarray][dimname] = None
+            #     xarrays_selection_chunk[ixarray_out][dimname] = None
             # for idim in range(len(index_no_apply)):
             #     dimname = list(dims_no_apply_lengths.keys())[idim]
-            #     if xarrays_shapes_in_chunks[ixarray][idim] is not None:
+            #     if xarrays_shapes_in_chunks[ixarray_out][idim] is not None:
         #         if dimname != '__chunk__':
 
         #             if (dimname in dims_apply_names) and \
         #                     (dimname in coordinates_output) and \
         #                     ('chunksize' in coordinates_output[dimname]) and \
         #                     identical_xarrays(xarray[dimname], coordinates_output[dimname]['coordinates']):
-        #                 xarrays_selection_chunk[ixarray][dimname] = range(chunk_start,chunk_end)
+        #                 xarrays_selection_chunk[ixarray_out][dimname] = range(chunk_start,chunk_end)
         #             else:
         #                 xarrays_selection_chunk[ixarray][dimname] = None
-    logging.debug('xarray selection in  : '+str(xarrays_selection_chunk_in))
-    logging.debug('xarray selection out : '+str(xarrays_selection_chunk_out))
-    import pdb; pdb.set_trace()
+    # import pdb; pdb.set_trace()
 
                         # number_of_chunks = []
 # for ixarray in range(len(xarrays)):

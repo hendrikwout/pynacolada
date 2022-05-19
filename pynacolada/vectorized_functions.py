@@ -102,6 +102,7 @@ def extend_crop_interpolate(
     longitude_left_input  = np.min(grid_output[1]) - grid_input_longitude_spacing*border_pixels #+ grid_output_longitude_spacing/2.
     longitude_right_input = np.max(grid_output[1]) + grid_input_longitude_spacing*border_pixels #- grid_output_longitude_spacing/2.
 
+    import pdb; pdb.set_trace()
     select_longitude_crop_input_index = \
         (grid_input_longitude_extended >= (longitude_left_input - tolerance_for_grid_match)) & \
         (grid_input_longitude_extended <= (longitude_right_input + tolerance_for_grid_match ))
@@ -183,8 +184,8 @@ def extend_crop_interpolate(
         if x is not None:
             x_interpolated = x_crop
     else:
-        logging.warning(
-        'Warning. Making a small gridshift to avoid problems in case of coinciding input and output grid locations in the Delaunay triangulation')
+        logging.info(
+        'Making a small gridshift to avoid problems in case of coinciding input and output grid locations in the Delaunay triangulation')
         latitude_crop_input_workaround = np.clip(np.float64(latitude_crop_input + 0.000001814),
         -90., 90)
         longitude_crop_input_workaround = np.float64(longitude_crop_input + 0.00001612)
@@ -336,7 +337,7 @@ def interpolate_delaunay_linear(values,xylist,uvlist,remove_duplicate_points=Fal
         if xy.shape != xylist[0].shape:
             raise ValueError('Dimension of xylist['+str(i)+'] should be be equal to xylist[0].')
 
-    print( values.shape[:len(xylist[0].shape)] ,  xylist[0].shape)
+    #print( values.shape[:len(xylist[0].shape)] ,  xylist[0].shape)
     if values.shape[-len(xylist[0].shape):] != xylist[0].shape:
         raise ValueError('Inner dimensions of "values" '+str(values.shape)+' should be equal to the dimensions of the arrays in xylist '+ str(xylist[0].shape)+'.')
 
@@ -408,7 +409,7 @@ def lookup_nearest(x_fix, y_fix, x_var):
 
     x_indices_closest = np.expand_dims(np.argmin(np.abs(distances),axis=-1) ,axis=-1)
     y_var_closest = np.take_along_axis(y_fix,x_indices_closest,axis=-1) 
-    print(y_var_closest.shape)
+    #print(y_var_closest.shape)
     return y_var_closest[...,0]
 
 def interp1d(x_fix, y_fix, x_var,debug=False,random=True):
