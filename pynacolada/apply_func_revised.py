@@ -544,9 +544,6 @@ for index_no_apply in tqdm.tqdm(chunks_no_apply):
     if type(chunks_out).__name__ not in ['tuple', 'list']:
         # list_output = False
         chunks_out= [chunks_out]
-    if lfirst:
-        while( len(chunks_out) < len(xarrays_out)):
-
 
     for ichunk_in in reversed(range(len(chunks_in))):
         chunks_in[ichunk_in].close()
@@ -606,7 +603,7 @@ for index_no_apply in tqdm.tqdm(chunks_no_apply):
         if type(chunks_out[ichunk_out]) == xr.core.dataarray.DataArray:
             chunks_out[ichunk_out].close()
 
-        del chunks_out[ichunk_out]
+        #del chunks_out[ichunk_out]
         # import pdb; pdb.set_trace()
 
 for incout in range(len(ncouts)):
