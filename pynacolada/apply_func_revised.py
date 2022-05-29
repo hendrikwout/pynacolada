@@ -30,8 +30,8 @@ import pynacolada as pcd
 input_file = '/home/woutersh/projects/KLIMPALA_SF/data/ancillary/GMTED2010/gmted2010_mean_30.nc'
 ds = xr.open_dataset( input_file,)['Band1'].rename({'lat':'latitude'}).rename({'lon':'longitude'})
 ds = ds.isel(
-    latitude  = ( (ds.latitude  > -5) & (ds.latitude  < 15)),
-    longitude = ( (ds.longitude > -10) & (ds.longitude < 15))
+    latitude  = ( (ds.latitude  > -5) & (ds.latitude  < 5)),
+    longitude = ( (ds.longitude > -10) & (ds.longitude < 5))
         )
 
 #input_file = '/projects/C3S_EUBiodiversity/data/case_klimpala/aggregation-30-years/indicators-annual/cropped_to_africa/bias_corrected/cmip5_daily/temperature-daily-mean_annual_mean_IPSL-CM5A-MR_rcp85_r1i1p1_bias-corrected_to_era5_id0daily_1950-01-01_2100-12-31_id0_aggregation-30-year-median_grid_of_IPSL-CM5A-MR_latitude:irregular_longitude:-42.5,65.0,2.5.nc'
