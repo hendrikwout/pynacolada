@@ -214,13 +214,9 @@ def apply_func_wrapper(
                 if tuple(index_dataarray) in dataarrays.keys():
                     dataarrays_group_in.append(dataarrays[tuple(index_dataarray)])
                 else:
-                    dataarrays_group_in.append(
-                        xr.open_dataarray(
-                            os.path.dirname(
-                                os.path.realpath(row_of_dataarray.path_pickle)
-                            )+'/'+row_of_dataarray.path
-                        )
-                    )
+                    import pdb; pdb.set_trace()
+                    dataarrays_group_in.append(xr.open_dataarray(row_of_dataarray.absolute_path))
+                    os.path.dirname(os.path.realpath(archive_out.path_pickle))+'/'+row_of_dataarray.path
 
             # ??????
             # for dataarray in dataarrays_group_in:
@@ -348,9 +344,7 @@ def apply_func_wrapper(
                                 '']))).ravel())
                     # index_out =
                     # if archive_out.lib_dataarrays.index[df['absolute_path'] == filename].tolist() == index_out
-                    absolute_paths = archive_out.lib_dataarrays.apply(lambda x: os.path.realpath(os.path.dirname(x['path_pickle']))+'/'+x['path'])
-                    import pdb; pdb.set_trace()
-                    if (filename_out in absolute_paths) and (not dataarrays_out_already_available[ifile]):
+                    if (filename_out in archive_out.lib_dataarrays.absolute_path.unique()) and (not dataarrays_out_already_available[ifile]):
                         raise ValueError(
                             'filename ' + filename_out + ' already exists and not already managed/within the output archive. Consider revising the output file_pattern.')
                     filenames_out.append(filename_out)
@@ -528,15 +522,13 @@ class archive (object):
             if reset == True:
                 self.remove(reset_lib=True)
                 os.system('rm '+path_pickle)
-
-        if os.path.isfile(path_pickle):
-            self.lib_dataarrays = pd.read_pickle(path_pickle)
-        else:
-            self.lib_dataarrays = pd.DataFrame(
-                index=empty_multiindex(
-                    ['variable', 'source', 'time', 'space']
-                ),
-                columns=['path', 'available']).iloc[1:]
+                self.lib_dataarrays = pd.DataFrame(
+                    index=empty_multiindex(
+                        ['variable', 'source', 'time', 'space']
+                    ),
+                    columns=['path', 'available']).iloc[1:]
+            else:
+                self.lib_dataarrays = pd.read_pickle(path_pickle)
 
         self.set_path_pickle(path_pickle)
         # if path is not None:
@@ -615,7 +607,7 @@ class archive (object):
         self.dataarrays[index].close()
         del self.dataarrays[index]
         if delete_on_disk:
-            os.system('rm '+os.path.dirname(self.lib_dataarrays.loc[index].path_pickle)+'/'+self.lib_dataarrays.loc[index].path)
+            os.system('rm '+self.lib_dataarrays.loc[index].absolute_path)
         print(self.lib_dataarrays.loc[index].absolute_path_as_cache)
         if (self.lib_dataarrays.loc[index].absolute_path_as_cache is not None):
             print(np.isnan(self.lib_dataarrays.loc[index].absolute_path_as_cache))
