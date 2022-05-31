@@ -304,7 +304,7 @@ def apply_func_wrapper(
                     space_coordinates = list(output_dims.keys())
                     for key in lib_dataarrays.index.names:
                         if key in space_coordinates:
-                            space_coordinates.remove_old(key)
+                            space_coordinates.remove(key)
 
                     for coordinate in space_coordinates:
                         spacing_temp = (output_dims[coordinate][1] - output_dims[coordinate][0])
@@ -522,7 +522,7 @@ class archive (object):
         self.not_dataarray_attributes = ['ncvariable', 'path']
 
         self.dataarrays = {}
-        #self.coordinates = {}
+        self.coordinates = {}
 
         if os.path.isfile(path_pickle):
             if reset == True:
@@ -1047,7 +1047,7 @@ class archive (object):
             space_coordinates = list(DataArray.dims)
             for key in self.lib_dataarrays.index.names:
                 if key in space_coordinates:
-                    space_coordinates.remove_old(key)
+                    space_coordinates.remove(key)
 
             if ('space' not in dict_index.keys()) or (dict_index['space'] is None) or reset_space:
                 spacing = {}
