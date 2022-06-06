@@ -174,16 +174,16 @@ def extend_crop_interpolate(
                          (grid_input_longitude_spacing / 10.)))
         ):
         if not interpolation:
-            logging.info("I'm keeping original grid and spacing, so skipping "
+            logging.debug("I'm keeping original grid and spacing, so skipping "
                          "interpolation and returning cropped field directly.")
             grid_output_revised = (latitude_crop_input,longitude_crop_input)
         else:
-            logging.info('output grid is identical to cropped input grid. '
+            logging.debug('output grid is identical to cropped input grid. '
        'Skipping interpolation and returning cropped field directly.')
         if x is not None:
             x_interpolated = x_crop
     else:
-        logging.info(
+        logging.debug(
         'Making a small gridshift to avoid problems in case of coinciding input and output grid locations in the Delaunay triangulation')
         latitude_crop_input_workaround = np.clip(np.float64(latitude_crop_input + 0.000001814),
         -90., 90)

@@ -289,7 +289,7 @@ class broker (object):
                     if 'archive' in broker_current.keys():
                         if type(broker_current['archive']) is str:
                             archive_out = archive(broker_current['root'] + '/' + broker_current['archive'])
-                            archive_out.remove(records=True)
+                            archive_out.remove(reset_lib=True)
                             archive_out.close()
                         elif type(broker_current['archive']) is archive:
                             broker_current['archive'].remove(records=True)
@@ -298,7 +298,7 @@ class broker (object):
                 if 'archive' in self.provides.keys():
                     if type(self.provides['archive']) is str:
                         archive_out = archive(self.provides['root'] + '/' + self.provides['archive'])
-                        archive_out.remove(records=True)
+                        archive_out.remove(reset_lib=True)
                         archive_out.close()
                     elif type(self.provides['archive']) is archive:
                         self.provides['archive'].remove(records=True)

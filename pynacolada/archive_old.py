@@ -11,7 +11,7 @@ import logging
 import sys
 from tqdm import tqdm
 import tempfile
-from . import apply_func
+from . import apply_func_old
 import netCDF4 as nc4
 
 def parse_to_dataframe(list_or_dict_or_dataframe):

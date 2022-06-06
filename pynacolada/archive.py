@@ -342,17 +342,12 @@ def apply_func_wrapper(
                     if (archive_out.file_pattern is None):
                         raise ValueError("I don't know how to write the data file to disk. Please set to file_pattern")
 
-                    filename_out = os.path.dirname(archive_out.path_pickle) + '/' + ''.join(np.array(list(
-                        zip(archive_out.file_pattern.split('"')[::2],
-                            [attributes_dataarrays_out[ifile][key] for key in archive_out.file_pattern.split('"')[1::2]] + [
-                                '']))).ravel())
-                    # index_out =
-                    # if archive_out.lib_dataarrays.index[df['absolute_path'] == filename].tolist() == index_out
-                    absolute_paths = archive_out.lib_dataarrays.apply(lambda x: os.path.realpath(os.path.dirname(x['path_pickle']))+'/'+x['path'])
-                    import pdb; pdb.set_trace()
-                    if (filename_out in absolute_paths) and (not dataarrays_out_already_available[ifile]):
-                        raise ValueError(
-                            'filename ' + filename_out + ' already exists and not already managed/within the output archive. Consider revising the output file_pattern.')
+                    # filename_out = os.path.dirname(archive_out.path_pickle) + '/' + ''.join(np.array(list(
+                    #     zip(archive_out.file_pattern.split('"')[::2],
+                    #         [attributes_dataarrays_out[ifile][key] for key in archive_out.file_pattern.split('"')[1::2]] + [
+                    #             '']))).ravel())
+
+                    filename_out = os.path.dirname(archive_out.path_pickle)+'/'+archive_out.file_pattern
                     filenames_out.append(filename_out)
 
                 ifile += 1
@@ -433,7 +428,7 @@ def apply_func_wrapper(
 
                     for ixr_out, filename_out in enumerate(filenames_out):
                         logging.info('add_dataarray start')
-                        archive_out.add_dataarray_old(filename_out)
+                        archive_out.add_dataarray(filename_out)
                         logging.info('add_dataarray end')
                 else:
                     ValueError('mode ' + mode + ' not implemented')
@@ -441,10 +436,10 @@ def apply_func_wrapper(
                     dataarrays_group_in[idataarray].close()
                     del dataarrays_group_in[idataarray]
 
-                if update_pickle:
-                    logging.info('update archive_out start')
-                    archive_out.update(force_overwrite_pickle =True)
-                    logging.info('update archive_out end')
+                # if update_pickle:
+                #     logging.info('update archive_out start')
+                #     archive_out.update(force_overwrite_pickle =True)
+                #     logging.info('update archive_out end')
 
 
 class collection (object):
