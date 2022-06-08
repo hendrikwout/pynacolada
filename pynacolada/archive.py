@@ -48,8 +48,6 @@ def apply_func_wrapper(
     query=None,
     extra_attributes={},
     post_apply=None,
-    initialize_array=None,
-    copy_coordinates=False,
     update_pickle=True,
     force_recalculate=False,
     #lib_dataarrays = self.lib_dataarrays
@@ -383,8 +381,7 @@ def apply_func_wrapper(
                     logging.info('starting apply_func')
                     if mode == 'numpy_output_to_disk_in_chunks':
                         xarray_function_wrapper(func, dataarrays_wrapper(*tuple(dataarrays_group_in)),
-                                                filenames_out=filenames_out, attributes=attributes_dataarrays_out, release=True,
-                                                initialize_array=initialize_array, copy_coordinates=copy_coordinates, **kwargs)
+                                                xarrays_output_filenames=filenames_out, **kwargs)
                     elif mode == 'numpy_output_to_disk_no_chunks':
                         temp_dataarrays = xarray_function_wrapper(func, dataarrays_wrapper(*tuple(dataarrays_group_in)),
                                                                   **kwargs)

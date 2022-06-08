@@ -349,7 +349,7 @@ class broker (object):
         if self.reset_lock > 0:
             os.system('rm ' + lockfile)
         while os.path.isfile(lockfile):
-            logging.info('archive locked with "' + lockfile + '" . Waiting for another process to release it.')
+            logging.warning('archive locked with "' + lockfile + '" . Waiting for another process to release it.')
             sleep(1)
 
         requests_parents = [broker_requires.copy() for broker_requires in sources]
