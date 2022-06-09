@@ -48,9 +48,10 @@ def apply_func_wrapper(
     query=None,
     extra_attributes={},
     post_apply=None,
-    update_pickle=True,
     force_recalculate=False,
+    update_pickle=True,
     #lib_dataarrays = self.lib_dataarrays
+
     **kwargs,
 ):
 
@@ -352,12 +353,15 @@ def apply_func_wrapper(
                 logging.info('End determining output filenames')
             logging.info('check whether any array is available in the output. If yes, then do not calculate.')
             all_dataarrays_out_already_available = np.prod(dataarrays_out_already_available)
+            some_dataarrays_out_already_available = (np.sum(dataarrays_out_already_available) > 0)
             if all_dataarrays_out_already_available and not force_recalculate:
                 logging.info('All output data is already available in the output archive and force_recalculate is switched False. Skipping group "'+str(idx)+'"')
             else:
 
-                if force_recalculate and all_dataarrays_out_already_available:
-                    logging.info('all output dataarrays were available but force_recalulate is set True, so I force recaculation')
+                if force_recalculate and some_dataarrays_out_already_available:
+                    logging.info('some output dataarrays were available but force_recalulate is set True, so I force recaculation'
+                                 'and overwrite output files')
+                    kwargs['overwrite_output_filenames'] = True
 
                 if mode == 'xarray':
                     print('making a temporary dataarray copy to prevent data hanging around into memory afterwards')
@@ -380,7 +384,7 @@ def apply_func_wrapper(
                 elif mode in ['numpy_output_to_disk_in_chunks', 'numpy_output_to_disk_no_chunks']:
                     logging.info('starting apply_func')
                     if mode == 'numpy_output_to_disk_in_chunks':
-                        xarray_function_wrapper(func, dataarrays_wrapper(*tuple(dataarrays_group_in)),
+                        filenames_out = xarray_function_wrapper(func, dataarrays_wrapper(*tuple(dataarrays_group_in)),
                                                 xarrays_output_filenames=filenames_out, **kwargs)
                     elif mode == 'numpy_output_to_disk_no_chunks':
                         temp_dataarrays = xarray_function_wrapper(func, dataarrays_wrapper(*tuple(dataarrays_group_in)),

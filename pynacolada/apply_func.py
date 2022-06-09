@@ -50,7 +50,11 @@ def get_coordinates_attributes(coords):
         #     # is month type
 
         # monthly spacing
-        if np.apply_along_axis(lambda y: np.sum((y[1:] - y[:-1] != 1), 0), 0,
+        if coords['time'] is None:
+            coordinates_attributes['time'] = None
+        elif str(coords['time'].dtype).startswith('int') :
+            coordinates_attributes['time'] = 'integer_'+str(coords['time'].values[0])+'_'+str(coords['time'].values[-1])
+        elif np.apply_along_axis(lambda y: np.sum((y[1:] - y[:-1] != 1), 0), 0,
                                np.vectorize(lambda x: int(x[:4]) * 12 + int(x[5:7]))(
                                    coords['time'].values.astype('str'))).item() == 0:
             coordinates_attributes['time'] = \
@@ -163,6 +167,7 @@ def apply_func(
         tempfile_dir=False,
         ignore_memory_limit = False,
         overwrite_output_filenames = False,
+        pass_missing_output_coordinates = False,
     ):
     #input_file = '/projects/C3S_EUBiodiversity/data/ancillary/GMTED2010/gmted2010_mean_30.nc'
 
@@ -195,9 +200,12 @@ def apply_func(
         output_dimensions_new = {}
         for dimdict in xarrays_output_dimensions:
             for dimname in dimdict.keys():
-                if dimname not in output_dimensions_new.keys():
-                    logging.info('adding missing output_dimensions from xarrays_output_dimensions for '+dimname+': '+dimdict[dimname])
-                    output_dimensions_new[dimname] = dimdict[dimname]
+                try:
+                 if dimname not in output_dimensions_new.keys():
+                     logging.info('adding missing output_dimensions from xarrays_output_dimensions for '+dimname+': '+dimdict[dimname])
+                     output_dimensions_new[dimname] = dimdict[dimname]
+                except:
+                    import pdb; pdb.set_trace()
         logging.debug('overriding values and order of previous output_dimensions.')
 
         if output_dimensions is None:
@@ -253,7 +261,7 @@ def apply_func(
     number_of_chunks_apply = 1
     number_of_chunks_apply_dims = {}
     for dimname,dimattr in output_dimensions.items():
-        if 'chunksize' in output_dimensions[dimname]:
+        if ('chunksize' in output_dimensions[dimname]):
             number_of_chunks_apply_dims[dimname] = int(np.ceil(len(output_dimensions[dimname]['coords'])/output_dimensions[dimname]['chunksize']))
             number_of_chunks_apply *= number_of_chunks_apply_dims[dimname] #np.ceil(len(output_dimensions[dimname]['coords'])/output_dimensions[dimname]['chunksize'])
 
@@ -282,12 +290,12 @@ def apply_func(
     if len(xarrays_output_filenames) != len(xarrays_output_dimensions):
         raise IOError('number of output files are not the same as the number of expected output xarrays')
 
-    output_coords = { key : output_dimensions[key]['coords'] for key in output_dimensions.keys()}
+    output_coords = { key : (output_dimensions[key]['coords'] ) for key in output_dimensions.keys()}
 
     xarrays_output_coords = []
     for ixarray_out,xarray_output_dimensions in enumerate(xarrays_output_dimensions):
         xarrays_output_coords.append(
-            {key: xarray_output_dimensions[key]['coords'] for key in xarray_output_dimensions.keys()}
+            {key: (xarray_output_dimensions[key]['coords'] ) for key in xarray_output_dimensions.keys()}
         )
 
 
@@ -298,8 +306,9 @@ def apply_func(
         shape = []
         dims = []
         for dim,coord in xarrays_output_coords[ixarray_out].items():
-            shape.append(len(coord))
-            dims.append(dim)
+            if coord is not None:
+                shape.append(len(coord))
+                dims.append(dim)
         size = np.product(shape)
         nbytes = 4 * size
         xarrays_out.append(
@@ -326,7 +335,9 @@ def apply_func(
             #print(dimname,ixarray,xarrays_shapes_in_chunks)
             if dimname in xarray.dims:
                 if (
+
                         (dimname in output_dimensions) and
+                        #(output_dimensions[dimname] != None) and
                         ('chunksize' in list(output_dimensions[dimname].keys())) and
                         identical_xarrays(xarray.coords[dimname],output_dimensions[dimname]['coords'])
                    ):
@@ -336,8 +347,12 @@ def apply_func(
 
                     xarrays_chunks_apply[ixarray] = True
                 else:
-                    xarrays_shapes_in_chunks[ixarray].insert(0,len(xarray.coords[dimname]))
-                xarrays_shapes[ixarray].insert(0,xarray.shape[xarray.dims.index(dimname)])
+                    # if dimname in xarray.dims: # this case already caught above
+                        xarrays_shapes_in_chunks[ixarray].insert(0,len(xarray.coords[dimname]))
+                        xarrays_shapes[ixarray].insert(0,xarray.shape[xarray.dims.index(dimname)])
+                    # else:
+                    #     xarrays_shapes_in_chunks[ixarray].insert(0, None)
+                    #     xarrays_shapes[ixarray].insert(0,None)#xarray.shape[xarray.dims.index(dimname)])
             else:
                 xarrays_shapes_in_chunks[ixarray].insert(0,None)
                 xarrays_shapes[ixarray].insert(0,None)
@@ -545,19 +560,30 @@ def apply_func(
 
         dims_not_found = {}
         for dim,coordinate_output in output_dimensions.items():
-            dimfound = False
-            for ixarray,xarray in enumerate(xarrays):
-                if (dim in xarray.coords) and (identical_xarrays(coordinate_output['coords'],xarray.coords[dim])):
-                    dimfound = True
+            if output_dimensions[dim]['coords'] is not None:
+                dimfound = False
+                for ixarray,xarray in enumerate(xarrays):
+                       if (dim in xarray.dims) and (coordinate_output['coords'] is not None) and (identical_xarrays(coordinate_output['coords'],xarray.coords[dim])):
+                           dimfound = True
 
-            if dimfound == False:
-                dims_not_found[dim] = output_dimensions[dim]['coords'].isel(
-                    {dim:range(chunk_start[dims_all.index(dim)], chunk_end[dims_all.index(dim)])}
+                if dimfound == False:
+                    dims_not_found[dim] = coordinate_output['coords'].isel(
+                        {dim:slice(chunk_start[dims_all.index(dim)], chunk_end[dims_all.index(dim)])}
 
-                )
+                    )
         #chunk_output_dimensions = output_dimensions[dim].isel(art})
-        if (first_chunks == True) and (len(dims_not_found ) > 0):
-            logging.info('Output coordinates that are missing in the input files are found for '+str(dims_not_found.keys())+'. So we pass them to the function.')
+            if (len(dims_not_found) > 0):
+                if (pass_missing_output_coordinates == True):
+                    if (first_chunks == True):
+                        logging.info('Output coordinates that are missing in the input files are found for '+str(dims_not_found.keys())+'. So we pass them to the function.')
+                    pass_dims_not_found = dims_not_found
+                else:
+                    if (first_chunks == True):
+                        logging.warning('Output coordinates that are missing in the input files are found for '+str(dims_not_found.keys())+". So the function doesn't know about it!")
+                    pass_dims_not_found = {}
+            else:
+                pass_dims_not_found = {}
+
 
         # meshgrid_fine = np.meshgrid(
         #     chunks_in[1]['latitude'],
@@ -577,7 +603,7 @@ def apply_func(
         #     # tolerance_for_grid_match = 1.e-9
         # ))
 
-        chunks_out = func(*chunks_in,**dims_not_found)
+        chunks_out = func(*chunks_in,**pass_dims_not_found)
 
         # chunks_out = pcd.vectorized_functions.extend_crop_interpolate(
         #     chunks_in[0].values,
@@ -656,9 +682,13 @@ def apply_func(
                 # coordinates_attributes = get_coordinates_attributes(xarrays_output_coords[incout])
                 coordinates_attributes = get_coordinates_attributes(xarrays_output_coords[ixarray_out])
                 for dim in dims_apply_names:
-                    if ((dim in xarrays_out[ixarray_out].dims) and not identical_xarrays(xarrays_out[ixarray_out].coords[dim],xarrays_output_coords[ixarray_out][dim])) and \
-                            (dim in coordinates_attributes.keys()):
-                        attributes_out[dim] = coordinates_attributes[dim]
+                    # if coordinates_attributes[dim] is None:
+                    #     import pdb; pdb.set_trace()
+                    #     if dim not in attributes_out.keys():
+                    #         coordinates_attributes[dim] = 'None'
+                        if ((dim in xarrays_out[ixarray_out].dims) and not identical_xarrays(xarrays_out[ixarray_out].coords[dim],xarrays_output_coords[ixarray_out][dim])) and \
+                                (dim in coordinates_attributes.keys()):
+                            attributes_out[dim] = coordinates_attributes[dim]
 
                 if ('latitude' in dims_apply_names) or ('longitude' in dims_apply_names):
                     if (( 'latitude' in xarrays[0].dims) and (not identical_xarrays(xarrays_output_coords[ixarray_out]['latitude'],xarrays[0][dim]))) and \
@@ -690,7 +720,6 @@ def apply_func(
                     IOError('Function output chunk has different shape than expected output dimensions.')
 
                 logging.info('acquiring real output filename for xarray out number '+str(ixarray_out)+' and setting output (temporary filename)')
-                import pdb; pdb.set_trace()
                 xarrays_output_filenames_real.append(
                     name_from_pattern(
                         xarrays_output_filenames[ixarray_out],
@@ -738,8 +767,11 @@ def apply_func(
                 logging.info('creating netcdf file '+fnout)
                 ncouts.append(nc4.Dataset(fnout, 'a'))
 
-                ncouts[ixarray_out].createVariable(chunk_out_xarray_ordered.name, "f", tuple(xarrays_output_dimensions[ixarray_out].keys()),fill_value=0.)
+                try:
+                    ncouts[ixarray_out].createVariable(chunk_out_xarray_ordered.name, "f", tuple(xarrays_output_coords_final[ixarray_out].keys()),fill_value=0.)
                 #ncouts[ixarray_out].variables['__xarray_data_variable__'][:] = 0.
+                except:
+                    import pdb; pdb.set_trace()
 
                 logging.info('setting netcdf variable attributes: '+str(attributes_out))
 
@@ -807,9 +839,10 @@ def apply_func(
         #     raise ValueError(
         #         'filename ' + filename_out + ' already exists and not already managed/within the output archive. Consider revising the output file_pattern.')
 
-        CMD = 'mv '+xarrays_output_filenames_work[incout]+' '+xarrays_output_filenames[incout]
+        CMD = 'mv '+xarrays_output_filenames_work[incout]+' '+xarrays_output_filenames_real[incout]
         logging.info('Moving temporary output to actual netcdf: '+CMD)
         os.system(CMD)
+    return xarrays_output_filenames_real
 
 
 if __name__ == '__main__':
@@ -823,7 +856,6 @@ if __name__ == '__main__':
     #input_file = '/projects/C3S_EUBiodiversity/data/case_klimpala/aggregation-30-years/indicators-annual/cropped_to_africa/bias_corrected/cmip5_daily/temperature-daily-mean_annual_mean_IPSL-CM5A-MR_rcp85_r1i1p1_bias-corrected_to_era5_id0daily_1950-01-01_2100-12-31_id0_aggregation-30-year-median_grid_of_IPSL-CM5A-MR_latitude:irregular_longitude:-42.5,65.0,2.5.nc'
     input_file = '/home/woutersh/projects/KLIMPALA_SF/data/test/temperature-daily-mean_annual_mean_IPSL-CM5A-MR_rcp85_r1i1p1_bias-corrected_to_era5_id0daily_1950-01-01_2100-12-31_id0_aggregation-30-year-median_grid_of_IPSL-CM5A-MR_latitude:irregular_longitude:-42.5,65.0,2.5.nc'
     ds2 = xr.open_dataarray(input_file)
-    xarrays = [ds2]
 
     # this also sets the order of (inner) output dimensions as expected by the function
     dims_apply_names = ['latitude','longitude']
@@ -836,15 +868,17 @@ if __name__ == '__main__':
         'longitude':{ 'coords':ds.longitude,'chunksize':1000,'overlap':50},
         'latitude':{ 'coords':ds.latitude,'chunksize':500,'overlap':50},
     }
+    #xarrays = [ds2,ds.latitude,ds.longitude]
+    xarrays = [ds2,ds.latitude,ds.longitude]
+
     xarrays_output_dimensions = [] #default
     #xarrays_output_filenames =
 
-
-    def func(x_coarse, **coordinates_fine):
+    def func(x_coarse, latitude,longitude):
         out = (pcd.vectorized_functions.extend_crop_interpolate( \
             x_coarse.values, \
             (x_coarse.latitude.values, x_coarse.longitude.values), \
-            (coordinates_fine['latitude'].values, coordinates_fine['longitude'].values), \
+            (latitude.values, longitude.values), \
             # interpolation=True,
             # return_grid_output=False,
             # debug=False,
@@ -853,8 +887,8 @@ if __name__ == '__main__':
             # tolerance_for_grid_match = 1.e-9
         ))
         coords = dict(x_coarse.coords)
-        coords['latitude'] =  coordinates_fine['latitude']
-        coords['longitude'] =  coordinates_fine['longitude']
+        coords['latitude'] =  latitude
+        coords['longitude'] =  longitude
         xrout = xr.DataArray(out,dims=x_coarse.dims,coords=coords)
         xrout.name = x_coarse.name
         xrout.attrs = x_coarse.attrs
@@ -872,4 +906,5 @@ if __name__ == '__main__':
     #squeeze_apply_dims = False,
         tempfile_dir='/tmp/',
         overwrite_output_filenames=True,
+        pass_missing_output_coordinates=False,
     )
