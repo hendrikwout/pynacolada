@@ -354,8 +354,10 @@ def apply_func_wrapper(
             logging.info('check whether any array is available in the output. If yes, then do not calculate.')
             all_dataarrays_out_already_available = np.prod(dataarrays_out_already_available)
             some_dataarrays_out_already_available = (np.sum(dataarrays_out_already_available) > 0)
+
             if all_dataarrays_out_already_available and not force_recalculate:
                 logging.info('All output data is already available in the output archive and force_recalculate is switched False. Skipping group "'+str(idx)+'"')
+                import pdb; pdb.set_trace()
             else:
 
                 if force_recalculate and some_dataarrays_out_already_available:

@@ -162,13 +162,14 @@ def apply_func(
         dims_apply_names = [],
         xarrays_output_filenames = [],
         maximum_memory_size_bytes = 2 * 10 ** 7 ,
-        output_dimensions={},
-        xarrays_output_dimensions = [],
+        output_dimensions=None,
+        xarrays_output_dimensions = None,
         tempfile_dir=False,
         ignore_memory_limit = False,
-        overwrite_output_filenames = False,
+        overwrite_output_filenames = True,
         pass_missing_output_coordinates = False,
     ):
+
     #input_file = '/projects/C3S_EUBiodiversity/data/ancillary/GMTED2010/gmted2010_mean_30.nc'
 
     # xarrays_output_dimensions = [ #input
@@ -196,20 +197,17 @@ def apply_func(
     #     output_dimensions_sort_keys = []
 
     logging.debug('adding missing output dimensions from specified xarrays_coordinates_output')
-    if xarrays_output_dimensions != []:
+    if xarrays_output_dimensions is not None:
         output_dimensions_new = {}
         for dimdict in xarrays_output_dimensions:
             for dimname in dimdict.keys():
-                try:
                  if dimname not in output_dimensions_new.keys():
                      logging.info('adding missing output_dimensions from xarrays_output_dimensions for '+dimname+': '+dimdict[dimname])
                      output_dimensions_new[dimname] = dimdict[dimname]
-                except:
-                    import pdb; pdb.set_trace()
         logging.debug('overriding values and order of previous output_dimensions.')
 
         if output_dimensions is None:
-            output_dimensions = {}
+            output_dimensions = dict()
 
         for output_dimensions_orig in output_dimensions.keys():
             output_dimensions_new[output_dimensions_orig] = output_dimensions[output_dimensions_orig]
@@ -282,10 +280,13 @@ def apply_func(
     #         logging.info('adding no apply dimensions to the default output_dimensions '+dimname+': '+coordinates)
     #         output_dimensions[dimname] = {'coords':coordinates}
 
-    while (len(xarrays_output_dimensions) < len(xarrays_output_filenames) ):
-        logging.info('No coordinates output xarrays are set manually, so we guess them from the output_dimensions.'
-                     'We do this here already so that we can take it into account in the memory size and optimal chunking.')
-        xarrays_output_dimensions.append(output_dimensions)
+    if xarrays_output_dimensions is None:
+        xarrays_output_dimensions = list()
+
+        while (len(xarrays_output_dimensions) < len(xarrays_output_filenames) ):
+            logging.info('No coordinates output xarrays are set manually, so we guess them from the output_dimensions.'
+                         'We do this here already so that we can take it into account in the memory size and optimal chunking.')
+            xarrays_output_dimensions.append(output_dimensions)
 
     if len(xarrays_output_filenames) != len(xarrays_output_dimensions):
         raise IOError('number of output files are not the same as the number of expected output xarrays')
@@ -709,23 +710,23 @@ def apply_func(
                     shape.append(len(xarrays_output_coords_final[ixarray_out][dim]))
                     dims.append(dim)
 
-                logging.info('checking consistency of expected output format between function output chunk and expected array output.')
+                logging.info('final xarrays output coordinates derived from functino output:\n'+ str(xarrays_output_coords_final[ixarray_out]))
+                logging.info('checking consistency of expected output format between function output chunk and expected array output as given above.')
 
                 if ixarray_out >= len(xarrays_out):
-                    IOError('Function output has at least '+str(ixarray_output+1)+' output xarrays, but only '+str(len(xarrays_output)+' is/are expected.'))
+                    raise IOError('Function output has at least '+str(ixarray_output+1)+' output xarrays, but only '+str(len(xarrays_output)+' is/are expected.'))
 
                 if dims != xarrays_out[ixarray_out].dims:
-                    IOError('Function output chunk has different dimensions than expected output dimensions.')
+                    logging.warning('Function output chunk has different dimensions ('+str(dims)+') than expected output dimensions ('+str(xarrays_out[ixarray_out].dims)+'). This may deteriorate optimal memory usage. Please specify the output dimensions with output_dimensions or xarrays_output_dimenions.')
+
                 if shape != xarrays_out[ixarray_out].shape:
-                    IOError('Function output chunk has different shape than expected output dimensions.')
+                    logging.warning('Function output chunk has different shape ('+str(shape)+') than expected output shape ('+str(xarrays_out[ixarray_out].shape)+'). This may deteriorate optimal memory usage. Please specify the output dimensions with output_dimensions or xarrays_output_dimenions.')
 
                 logging.info('acquiring real output filename for xarray out number '+str(ixarray_out)+' and setting output (temporary filename)')
                 xarrays_output_filenames_real.append(
                     name_from_pattern(
                         xarrays_output_filenames[ixarray_out],
-                        {**attributes_out,**{'variable':chunk_out_xarray_ordered.name}}
-                    )
-                )
+                        {**attributes_out,**{'variable':chunk_out_xarray_ordered.name}} ) )
 
                 if os.path.isfile(xarrays_output_filenames_real[ixarray_out]):
                     if overwrite_output_filenames == False:
@@ -752,6 +753,7 @@ def apply_func(
                         logging.info("Using temporary output in specified tempfile_dir: " + xarrays_output_filenames_work[-1])
 
                 xrtemp = xr.Dataset()
+                import pdb; pdb.set_trace()
                 #for ixarray_out in range(len(xarrays_output_dimensions)):
                 for dimname, coords in xarrays_output_coords_final[ixarray_out].items():
                     xrtemp[dimname] = coords
@@ -793,6 +795,7 @@ def apply_func(
 
             logging.debug('acquiring previous values for consolidating chunk overlapping values')
             # try:
+            import pdb; pdb.set_trace()
             test = ncouts[ixarray_out].variables[chunk_out_xarray_ordered.name][indexing_for_output_array].filled(fill_value=0)
             #   except:
             #       import pdb; pdb.set_trace()
@@ -842,69 +845,71 @@ def apply_func(
         CMD = 'mv '+xarrays_output_filenames_work[incout]+' '+xarrays_output_filenames_real[incout]
         logging.info('Moving temporary output to actual netcdf: '+CMD)
         os.system(CMD)
+    del xarrays_output_dimensions
     return xarrays_output_filenames_real
 
 
-if __name__ == '__main__':
-    input_file = '/home/woutersh/projects/KLIMPALA_SF/data/ancillary/GMTED2010/gmted2010_mean_30.nc'
-    ds = xr.open_dataset( input_file,)['Band1'].rename({'lat':'latitude'}).rename({'lon':'longitude'})
-    ds = ds.isel(
-        latitude  = ( (ds.latitude  > -5) & (ds.latitude  < 5)),
-        longitude = ( (ds.longitude > -10) & (ds.longitude < 5))
-    )
-
-    #input_file = '/projects/C3S_EUBiodiversity/data/case_klimpala/aggregation-30-years/indicators-annual/cropped_to_africa/bias_corrected/cmip5_daily/temperature-daily-mean_annual_mean_IPSL-CM5A-MR_rcp85_r1i1p1_bias-corrected_to_era5_id0daily_1950-01-01_2100-12-31_id0_aggregation-30-year-median_grid_of_IPSL-CM5A-MR_latitude:irregular_longitude:-42.5,65.0,2.5.nc'
-    input_file = '/home/woutersh/projects/KLIMPALA_SF/data/test/temperature-daily-mean_annual_mean_IPSL-CM5A-MR_rcp85_r1i1p1_bias-corrected_to_era5_id0daily_1950-01-01_2100-12-31_id0_aggregation-30-year-median_grid_of_IPSL-CM5A-MR_latitude:irregular_longitude:-42.5,65.0,2.5.nc'
-    ds2 = xr.open_dataarray(input_file)
-
-    # this also sets the order of (inner) output dimensions as expected by the function
-    dims_apply_names = ['latitude','longitude']
-
-    ignore_memory_limit = False
-
-    # this also defines the order in which the output dimensions are being constructed, allowing for transposing the output on the fly.
-    output_dimensions = { #input
-        #        'time':{ 'coords':ds2.time},
-        'longitude':{ 'coords':ds.longitude,'chunksize':1000,'overlap':50},
-        'latitude':{ 'coords':ds.latitude,'chunksize':500,'overlap':50},
-    }
-    #xarrays = [ds2,ds.latitude,ds.longitude]
-    xarrays = [ds2,ds.latitude,ds.longitude]
-
-    xarrays_output_dimensions = [] #default
-    #xarrays_output_filenames =
-
-    def func(x_coarse, latitude,longitude):
-        out = (pcd.vectorized_functions.extend_crop_interpolate( \
-            x_coarse.values, \
-            (x_coarse.latitude.values, x_coarse.longitude.values), \
-            (latitude.values, longitude.values), \
-            # interpolation=True,
-            # return_grid_output=False,
-            # debug=False,
-            # border_pixels=5,
-            # ascending_lat_lon = False,
-            # tolerance_for_grid_match = 1.e-9
-        ))
-        coords = dict(x_coarse.coords)
-        coords['latitude'] =  latitude
-        coords['longitude'] =  longitude
-        xrout = xr.DataArray(out,dims=x_coarse.dims,coords=coords)
-        xrout.name = x_coarse.name
-        xrout.attrs = x_coarse.attrs
-        return xrout, xrout
-    apply_func(
-        func,
-        xarrays,
-        dims_apply_names = ['latitude','longitude'],
-        xarrays_output_filenames = [
-            '/home/woutersh/projects/KLIMPALA_SF/data/test_output/testing.nc',
-            '/home/woutersh/projects/KLIMPALA_SF/data/test_output/testing2.nc'],
-        #attributes = None,
-        output_dimensions=output_dimensions,
-        maximum_memory_size_bytes=2 * 10 ** 7,
-    #squeeze_apply_dims = False,
-        tempfile_dir='/tmp/',
-        overwrite_output_filenames=True,
-        pass_missing_output_coordinates=False,
-    )
+# if __name__ == '__main__':
+#     input_file = '/home/woutersh/projects/KLIMPALA_SF/data/ancillary/GMTED2010/gmted2010_mean_30.nc'
+#     ds = xr.open_dataset( input_file,)['Band1'].rename({'lat':'latitude'}).rename({'lon':'longitude'})
+#     ds = ds.isel(
+#         latitude  = ( (ds.latitude  > -5) & (ds.latitude  < 5)),
+#         longitude = ( (ds.longitude > -10) & (ds.longitude < 5))
+#     )
+#
+#     #input_file = '/projects/C3S_EUBiodiversity/data/case_klimpala/aggregation-30-years/indicators-annual/cropped_to_africa/bias_corrected/cmip5_daily/temperature-daily-mean_annual_mean_IPSL-CM5A-MR_rcp85_r1i1p1_bias-corrected_to_era5_id0daily_1950-01-01_2100-12-31_id0_aggregation-30-year-median_grid_of_IPSL-CM5A-MR_latitude:irregular_longitude:-42.5,65.0,2.5.nc'
+#     input_file = '/home/woutersh/projects/KLIMPALA_SF/data/test/temperature-daily-mean_annual_mean_IPSL-CM5A-MR_rcp85_r1i1p1_bias-corrected_to_era5_id0daily_1950-01-01_2100-12-31_id0_aggregation-30-year-median_grid_of_IPSL-CM5A-MR_latitude:irregular_longitude:-42.5,65.0,2.5.nc'
+#     ds2 = xr.open_dataarray(input_file)
+#
+#     # this also sets the order of (inner) output dimensions as expected by the function
+#     dims_apply_names = ['latitude','longitude']
+#
+#     ignore_memory_limit = False
+#
+#     # this also defines the order in which the output dimensions are being constructed, allowing for transposing the output on the fly.
+#     output_dimensions = { #input
+#         #        'time':{ 'coords':ds2.time},
+#         'longitude':{ 'coords':ds.longitude,'chunksize':1000,'overlap':50},
+#         'latitude':{ 'coords':ds.latitude,'chunksize':500,'overlap':50},
+#     }
+#     #xarrays = [ds2,ds.latitude,ds.longitude]
+#     xarrays = [ds2,ds.latitude,ds.longitude]
+#
+#     xarrays_output_dimensions = [] #default
+#     #xarrays_output_filenames =
+#
+#     def func(x_coarse, latitude,longitude):
+#         out = (pcd.vectorized_functions.extend_crop_interpolate( \
+#             x_coarse.values, \
+#             (x_coarse.latitude.values, x_coarse.longitude.values), \
+#             (latitude.values, longitude.values), \
+#             # interpolation=True,
+#             # return_grid_output=False,
+#             # debug=False,
+#             # border_pixels=5,
+#             # ascending_lat_lon = False,
+#             # tolerance_for_grid_match = 1.e-9
+#         ))
+#         coords = dict(x_coarse.coords)
+#         coords['latitude'] =  latitude
+#         coords['longitude'] =  longitude
+#         xrout = xr.DataArray(out,dims=x_coarse.dims,coords=coords)
+#         xrout.name = x_coarse.name
+#         xrout.attrs = x_coarse.attrs
+#         return xrout, xrout
+#     apply_func(
+#         func,
+#         xarrays,
+#         dims_apply_names = ['latitude','longitude'],
+#         xarrays_output_filenames = [
+#             '/home/woutersh/projects/KLIMPALA_SF/data/test_output/testing.nc',
+#             '/home/woutersh/projects/KLIMPALA_SF/data/test_output/testing2.nc'],
+#         #attributes = None,
+#         output_dimensions=output_dimensions,
+#         maximum_memory_size_bytes=2 * 10 ** 7,
+#     #squeeze_apply_dims = False,
+#         tempfile_dir='/tmp/',
+#         overwrite_output_filenames=True,
+#         pass_missing_output_coordinates=False,
+#     )
+#
