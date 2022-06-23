@@ -92,8 +92,8 @@ def apply_func_wrapper(
         divide_into_groups = ['dummy_group']
         read_lib_dataarrays['dummy_group'] = ""
     groups_in_loop = read_lib_dataarrays.reset_index().groupby(divide_into_groups)
-    print('Looping over data array input groups: ', list(groups_in_loop))
-    for idx, group in tqdm(groups_in_loop):
+    logging.info('Looping over data array input groups: '+ str([groupkeyvalues[0] for groupkeyvalues in groups_in_loop]) )
+    for idx, group in tqdm(groups_in_loop,position=0):
 
         def always_tuple(idx):
             if type(idx) is not tuple:
@@ -690,7 +690,7 @@ class archive (object):
             if ('ncvariable' not in kwargs.keys()) or ((type(kwargs['ncvariable']).__name__ == 'float') and np.isnan(kwargs['ncvariable'])):
 
 
-                print('Opening file:',filepath_for_reading, '(original file: '+filepath+')')
+                logging.info('Opening file:',filepath_for_reading, '(original file: '+filepath+')')
                 if 'variable' in kwargs.keys():
                         # print('reading',filepath,ncvariable)
                     # try:
@@ -769,7 +769,8 @@ class archive (object):
                 dict_index['time'] = \
                     'daily_'+str(DataArray.time[0].values)[:10]+'_'+str(DataArray.time[-1].values)[:10]
             else:
-                raise ValueError('time dimension not implemented')
+                dict_index['time'] = 'irregular'
+                logging.warning('Warning. No time dimension found')
 
             #DataArray.attrs['time'] = dict_index['time']
 
@@ -822,12 +823,13 @@ class archive (object):
                         '']))).ravel())
             if index in self.lib_dataarrays.index:
                 if (method == 'copy_force_overwrite'):
-                    logging.warning('overwriting existing index '+str(index))
                     # if (self.lib_dataarrays.loc[index].path is not None) and \
                     # (os.path.realpath(destination_file) == os.path.realpath(self.lib_dataarrays.loc[index].path):
                     if (self.lib_dataarrays.loc[index].path is not None):
-                        if os.path.isfile(self.lib_dataarrays.loc[index].path):
-                            os.remove(self.lib_dataarrays.loc[index].path)
+                        filename = os.path.realpath(os.path.dirname(self.path_pickle)) + '/' + self.lib_dataarrays.loc[ index].path
+                        logging.warning('overwriting existing index ' + str(index) + ': ' + filename)
+                        if os.path.isfile(filename):
+                            os.remove(filename)
                         else:
                             logging.warning("I could not track previous file in library. So I'm not deleting")
                     self.lib_dataarrays.loc[index]  = None
@@ -863,10 +865,10 @@ class archive (object):
 
                 if key not in ['ncvariable','path']:
                     try:
-                        logging.info('setting attribute '+key+' to '+value)
+                        logging.info('setting attribute '+key+' to '+str(value))
+                        ncvar.setncattr(key, value)
                     except:
                         import pdb; pdb.set_trace()
-                    ncvar.setncattr(key,value)
 
             ncfile.close()
 
@@ -885,7 +887,7 @@ class archive (object):
                 self.lib_dataarrays.loc[index] = None
                 logging.debug('workaround index_names are forgotten when assigning first row')
                 self.lib_dataarrays.index.names = lib_dataarrays_index_names
-            self.lib_dataarrays[key].loc[index] = value
+            self.lib_dataarrays.at[index,key] = value
 
         if sort_lib == True:
             self.lib_dataarrays.sort_index(inplace=True)
@@ -914,7 +916,7 @@ class archive (object):
                 filepath_as_cache = tempfile.mktemp(prefix=os.path.basename(filepath)[:-3]+'_',suffix='.nc',dir=cache_to_tempdir)
                 CMD='cp '+filepath+' '+filepath_as_cache
 
-                print('caching to temporary file: ',CMD)
+                logging.info('caching to temporary file: '+CMD)
                 os.system(CMD)
                 filepath_for_reading = filepath_as_cache
             else:
@@ -922,7 +924,7 @@ class archive (object):
                 filepath_for_reading = filepath
                 if cache_to_ram:
                     CMD='cat '+filepath_for_reading+' > /dev/null'
-                    print('caching to ram:',CMD)
+                    logging.info('caching to ram: '+CMD)
                     os.system(CMD)
 
             # ncvariable: variable as seen on disk
@@ -932,7 +934,7 @@ class archive (object):
                 if 'variable' in kwargs.keys():
                     ncvariable = kwargs['variable']
 
-                print('Opening file:',filepath_for_reading, '(original file: '+filepath+')')
+                logging.info('Opening file: '+filepath_for_reading+ ' (original file: '+filepath+')')
                 if ncvariable is not None:
                     # print('reading',filepath,ncvariable)
                     # try:
@@ -1014,7 +1016,7 @@ class archive (object):
                 else:
                     dict_columns[key] = kwargs[key]
             if ('time' not in dict_index.keys()) or (dict_index['time'] is None) or (type(dict_index['time']).__name__ == 'float') and (  np.isnan(dict_index['time']).any()):
-                print('Guessing time coordinate from DataArray')
+                logging.info('Guessing time coordinate from DataArray')
                 # is month type
 
                 #monthly spacing
@@ -1121,11 +1123,11 @@ class archive (object):
             self.lib_dataarrays.sort_index(inplace=True)
 
             if release_dataarray_pointer:
-                print('closing',index)
+                logging.info('closing '+str(index))
                 self.dataarrays[index].close()
                 if cache_to_tempdir:
                     CMD='rm '+filepath_as_cache
-                    print('Released pointer, so removing cached file: ',CMD)
+                    logging.info('Released pointer, so removing cached file: '+CMD)
                     os.system(CMD)
                 # del self.dataarrays[index]
                 #self.lib_dataarrays.loc[index,'dataarray_pointer'] = None
@@ -1193,7 +1195,7 @@ class archive (object):
             apply_merge_out_df = pd.DataFrame.from_dict([dict(zip(apply_merge_out.keys(),v)) for v in itertools.product(*apply_merge_out.values())])
 
         if len(apply_merge_out_df) == 0:
-            print('creating automatic single output table')
+            logging.info('creating automatic single output table')
             apply_merge_out_dict = {}
             for column in apply_merge_df.columns:
                 apply_merge_out_dict[column] = ['from__'+'__'.join(apply_merge_df[column].unique())]
@@ -1249,7 +1251,7 @@ class archive (object):
                       index_array_tuple_ordered =  tuple([index_array_dict[key] for key in self.lib_dataarrays.index.names])
 
                       if (self.mode == 'passive') and (not self.lib_dataarrays.loc[index]['absolute_path'].isnull().any() ):
-                          print('to be implemented')
+                          logging.critical('to be implemented')
                           import pdb; pdb.set_trace()
                       else:
                           dataarrays_for_func.append(self.dataarrays[index_array_tuple_ordered])
@@ -1500,7 +1502,7 @@ class archive (object):
             apply_merge_out_df = pd.DataFrame.from_dict([dict(zip(apply_merge_out.keys(),v)) for v in itertools.product(*apply_merge_out.values())])
 
         if len(apply_merge_out_df) == 0:
-            print('creating automatic single output table')
+            logging.info('creating automatic single output table')
             apply_merge_out_dict = {}
             for column in apply_merge_df.columns:
                 apply_merge_out_dict[column] = ['from__'+'__'.join(apply_merge_df[column].unique())]
@@ -1553,7 +1555,7 @@ class archive (object):
                       index_array_tuple_ordered =  tuple([index_array_dict[key] for key in self.lib_dataarrays.index.names])
 
                       if (self.mode == 'passive') and (not self.lib_dataarrays.loc[index]['absolute_path'].isnull().any() ):
-                          print('to be implemented')
+                          logging.critical('to be implemented')
                           import pdb; pdb.set_trace()
                       else:
                           dataarrays_for_func.append(self.dataarrays[index_array_tuple_ordered])
@@ -1598,7 +1600,7 @@ class archive (object):
                     temp_dataarrays = xarray_function_wrapper(func,dataarrays_wrapper(*tuple(dataarrays_for_func)),**kwargs)
 
                     if type(temp_dataarrays) != tuple:
-                        print('this is a workaround in case we get a single dataarray instead of tuple of dataarrays from the wrapper function. This needs revision')
+                        logging.info('this is a workaround in case we get a single dataarray instead of tuple of dataarrays from the wrapper function. This needs revision')
                         idataarray = 0
                         for key,value in attributes[idataarray].items():
                             if key not in self.not_dataarray_attributes:
@@ -1745,7 +1747,7 @@ class archive (object):
                     if 'path_pickle' not in self.__dict__.keys():
                         raise ValueError ('self.path_pickle is not set')
                     fnout = os.path.dirname(self.path_pickle)+'/'+''.join(np.array(list(zip(self.file_pattern.split('"')[::2],[{**dict(zip(self.lib_dataarrays.index.names,idx)),**columns}[key] for key in self.file_pattern.split('"')[1::2]]+['']))).ravel())
-                    print("File pointer for ",idx," is not known, so I'm dumping a new file under ",fnout)
+                    logging.info("File pointer for "+idx+" is not known, so I'm dumping a new file under "+fnout)
                     #fnout = self.lib_dataarrays.loc[idx]['absolute_path']
                     if (not force_overwrite_dataarrays) and (os.path.isfile(fnout)):
                         raise IOError(fnout+' exists. Use force_overwrite_dataarrays to overwrite file')
@@ -1772,7 +1774,7 @@ class archive (object):
                             self.dataarrays[idx].name = value
 
                     os.system('rm '+fnout)
-                    self.dataarrays[idx].to_netcdf(fnout);print('file written to: '+fnout)
+                    self.dataarrays[idx].to_netcdf(fnout);logging.info('file written to: '+fnout)
                     self.remove_by_index(idx,update_pickle=False)
                     self.add_dataarray_old(fnout)
                     #self.dataarrays[idx]
@@ -1787,7 +1789,7 @@ class archive (object):
                 #self.dataarrays[idx].attrs['path'] = self.lib_dataarrays.loc[idx]['path']
             else:
 
-                print("Assuming variable for ",idx," exists in file "+columns['absolute_path'])
+                logging.info("Assuming variable for "+str(idx)+" exists in file "+str(columns['absolute_path']))
                 if 'path' not in self.lib_dataarrays.columns:
                     self.lib_dataarrays['path'] = None
 
@@ -1796,7 +1798,7 @@ class archive (object):
                     if 'path' not in self.lib_dataarrays.columns:
                         self.lib_dataarrays['path'] = None
                     self.lib_dataarrays['path'].loc[idx] =  os.path.relpath(columns['absolute_path'],os.path.dirname(self.path_pickle))
-                    print("relative file path to "+os.path.dirname(self.path_pickle)+" is "+self.lib_dataarrays['path'].loc[idx])
+                    logging.info("relative file path to "+os.path.dirname(self.path_pickle)+" is "+self.lib_dataarrays['path'].loc[idx])
                 #os.path.commonprefix([columns['absolute_path'],lib_dirname])
                 elif ((columns['path'] is not None) and (type(columns['path']) is str)):
                     if 'absolute_path' not in self.lib_dataarrays.columns:
@@ -1834,7 +1836,7 @@ class archive (object):
 
         if type(path).__name__ == 'list':
             # eg., -> files_wildcard = '*_*_*_*.nc'
-            print('Guessing files from file list...(this procedure may need revision)')
+            logging.info('Guessing files from file list...(this procedure may need revision)')
             #allkwargs = {**dict(zip(lib_dataarrays_temp.index.names, index)),**dict(dataarray),**kwargs}
             filenames = path
             for filename in filenames:
@@ -1891,12 +1893,12 @@ class archive (object):
         temp_path_pickle = lib_dirname+'/'+lib_basename
 
 
-        print('apply settings according to yaml file and kwargs')
+        logging.info('apply settings according to yaml file and kwargs')
         if path_settings is None:
             path_settings = temp_path_pickle+'.yaml'
         elif not os.path.isfile(path_settings):
             raise IOError('Settings file '+path_settings+ ' not found.')
-        print(temp_path_pickle)
+        logging.info(temp_path_pickle)
         if os.path.isfile(temp_path_pickle):
             self.path_pickle = temp_path_pickle
 
@@ -1908,7 +1910,7 @@ class archive (object):
 
 
         if os.path.isfile(path_settings):
-            print('settings file found')
+            logging.info('settings file found')
             with open(path_settings) as file:
                 for key,value in yaml.safe_load(file):
                     if key in self.settings_keys:
@@ -1926,7 +1928,7 @@ class archive (object):
         #     self.file_pattern = file_pattern
 
 
-        print('reading the dataarrays from the pickle file')
+        logging.info('reading the dataarrays from the pickle file')
 
         if type(query) == str:
             read_lib_dataarrays = pd.read_pickle(temp_path_pickle).query(query,engine='python')
@@ -1938,7 +1940,7 @@ class archive (object):
 
         for column in read_lib_dataarrays.columns:
             if column not in self.lib_dataarrays.columns:
-                print('adding column '+column+' from the original set to avoid errors when the query result is empty and gets queried again')
+                logging.info('adding column '+column+' from the original set to avoid errors when the query result is empty and gets queried again')
                 self.lib_dataarrays[column] = ""
 
         for index,columns in read_lib_dataarrays.iterrows():
@@ -1952,18 +1954,18 @@ class archive (object):
 
             if (absolute_path is not None) and (absolute_path not in self.lib_dataarrays.absolute_path):
                 #if index[0] == 'mslhf_0001':
-                print('Opening file : '+absolute_path)
+                logging.info('Opening file : '+absolute_path)
                 self.add_dataarray_old(absolute_path,skip_unavailable=skip_unavailable,release_dataarray_pointer =True,cache_to_tempdir=False,cache_to_ram=cache_to_ram,**({**dict(zip(read_lib_dataarrays.index.names,index)),**columns}),**extra_attributes)
 
         if add_file_pattern_matches and (self.file_pattern is not None):
             files_wildcard = lib_dirname+'/'+''.join(np.array(list(zip(self.file_pattern.split('"')[::2],['*']*len(self.file_pattern.split('"')[1::2])+['']))).ravel())
-            print('file_pattern is '+self.file_pattern+' and add_file_pattern_matches == True, so scanning and adding files that match the wildcard: ',files_wildcard+' that are not in the library yet')
+            logging.info('file_pattern is '+self.file_pattern+' and add_file_pattern_matches == True, so scanning and adding files that match the wildcard: ',files_wildcard+' that are not in the library yet')
             # eg., -> files_wildcard = '*_*_*_*.nc'
             filenames = glob.glob(files_wildcard)
             for filename in filenames:
                 if filename not in self.lib_dataarrays.absolute_path:
                     path = os.path.relpath(filename,os.path.dirname(temp_path_pickle))
-                    print('Opening file : '+filename)
+                    logging.info('Opening file : '+filename)
                     self.add_dataarray_old(filename,skip_unavailable=skip_unavailable, release_dataarray_pointer = True, cache_to_tempdir=False,path=path,cache_to_ram=cache_to_ram,reset_space=reset_space,**extra_attributes)
 
         # import pdb; pdb.set_trace()
@@ -1986,7 +1988,7 @@ class archive (object):
 
             if (absolute_path is not None) and (absolute_path not in self.lib_dataarrays.absolute_path):
                 #if index[0] == 'mslhf_0001':
-                print('Opening file : '+absolute_path)
+                logging.info('Opening file : '+absolute_path)
                 self.add_dataarray_old(absolute_path,skip_unavailable=skip_unavailable,release_dataarray_pointer =release_dataarray_pointer,cache_to_tempdir=cache_to_tempdir,cache_to_ram=cache_to_ram,reset_space=reset_space,**({**dict(zip(read_lib_dataarrays.index.names,idx)),**columns}),**extra_attributes)
 
 

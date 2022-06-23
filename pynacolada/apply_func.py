@@ -75,7 +75,7 @@ def get_coordinates_attributes(coords):
                 'daily_' + str(coords['time'][0].values)[:10] + '_' + str(coords['time'][-1].values)[:10]
         else:
             coordinates_attributes['time'] = 'irregular'
-            logging('warning. No time dimension found')
+            logging.info('warning. No time dimension found')
 
         # DataArray.attrs['time'] = dict_index['time']
 
@@ -158,10 +158,10 @@ def sort_dict_by_keys(dict_input, dict_input_sort_keys):
 
 def apply_func(
         func,
-        xarrays,
+        xarrays_in,
         dims_apply_names = [],
         xarrays_output_filenames = [],
-        maximum_memory_size_bytes = 2 * 10 ** 7 ,
+        maximum_memory_size_bytes = 2 * 10 ** 8 ,
         output_dimensions=None,
         xarrays_output_dimensions = None,
         tempfile_dir=False,
@@ -183,7 +183,7 @@ def apply_func(
     logging.info('collecting the dimensions occuring in the xarrays over which the function is not applied')
     dims_no_apply  = {}
 
-    for ixarray,xarray in enumerate(xarrays):
+    for ixarray,xarray in enumerate(xarrays_in):
         for dimname in xarray.dims:
             if (dimname not in dims_no_apply) and (dimname not in dims_apply_names):
                 dims_no_apply[dimname] = xarray[dimname]
@@ -214,12 +214,15 @@ def apply_func(
         output_dimensions = sort_dict_by_keys(output_dimensions_new,list(output_dimensions.keys()))
 
 
-    output_dimensions_new = {}
-    for dimname,coordinates in dims_no_apply.items():
 
-        if dimname not in output_dimensions_new.keys():
-            logging.info('adding no apply dimensions to the default output_dimensions '+dimname)
-            output_dimensions_new[dimname] = {'coords':coordinates}
+    output_dimensions_new = {}
+
+    for xarray in xarrays_in:
+        for dimname in xarray.dims:
+            if dimname in list(dims_no_apply.keys())+dims_apply_names:
+                if dimname not in output_dimensions_new.keys():
+                    logging.info('adding apply dimensions from input xarray to the default output_dimensions ' + dimname)
+                    output_dimensions_new[dimname] = {'coords': xarray[dimname]}
 
     if output_dimensions is None:
         output_dimensions = {}
@@ -229,12 +232,11 @@ def apply_func(
     output_dimensions = sort_dict_by_keys(output_dimensions_new, list(output_dimensions.keys()))
 
     output_dimensions_new = {}
-    for dimname in dims_apply_names:
-        for xarray in xarrays:
-            if dimname in xarray.coords.keys():
-                if dimname not in output_dimensions_new.keys():
-                    logging.info('adding apply dimensions from input xarray to the default output_dimensions ' + dimname)
-                    output_dimensions_new[dimname] = {'coords': xarray[dimname]}
+    for dimname,coordinates in dims_no_apply.items():
+
+        if dimname not in output_dimensions_new.keys():
+            logging.info('adding no apply dimensions to the default output_dimensions '+dimname)
+            output_dimensions_new[dimname] = {'coords':coordinates}
 
     if output_dimensions is None:
         output_dimensions = {}
@@ -300,90 +302,165 @@ def apply_func(
         )
 
 
+
+    def get_fake_xarrays_out(xarrays_output_coords):
+        xarrays_out = []
+        for ixarray_out in range(len(xarrays_output_coords)):
+            shape = []
+            dims = []
+            for dim,coord in xarrays_output_coords[ixarray_out].items():
+                if coord is not None:
+                    shape.append(len(coord))
+                    dims.append(dim)
+            size = np.product(shape)
+            nbytes = 4 * size
+            xarrays_out.append(
+                Namespace(**{
+                               'coords':  xarrays_output_coords[ixarray_out],
+                               'shape':shape,
+                               'dims':dims,
+                               'size': size,
+                                'nbytes':nbytes}
+                          )
+            )
+        return xarrays_out
     logging.info('Creating fake xarray outputs, '
                  'which we use to determine the no apply chunk sizes and the expected memory usage.')
-    xarrays_out = []
-    for ixarray_out in range(len(xarrays_output_coords)):
-        shape = []
-        dims = []
-        for dim,coord in xarrays_output_coords[ixarray_out].items():
-            if coord is not None:
-                shape.append(len(coord))
-                dims.append(dim)
-        size = np.product(shape)
-        nbytes = 4 * size
-        xarrays_out.append(
-            Namespace(**{
-                           'coords':  xarrays_output_coords[ixarray_out],
-                           'shape':shape,
-                           'dims':dims,
-                           'size': size,
-                            'nbytes':nbytes}
-                      )
-        )
+    xarrays_out = get_fake_xarrays_out(xarrays_output_coords)
 
 
-    xarrays_all = list(xarrays)+list(xarrays_out)
-    xarrays_shapes_in_chunks = [list() for i in range(len(xarrays_all))]
-    xarrays_shapes = [list() for i in range(len(xarrays_all))]
-    #xarrays_shapes_in_chunks_cumulative = [1]*len(xarrays)
+    def get_xarrays_shapes(
+            xarrays,
+            dims_apply_names,
+            dims_no_apply,
+            output_dimensions,
+    ):
+        xarrays_shapes_chunks = [list() for i in range(len(xarrays))]
+        xarrays_shapes = [list() for i in range(len(xarrays))]
+        # xarrays_in_shapes_chunks_cumulative = [1]*len(xarrays)
+        # xarrays_dims_transposed = [[]]*len(xarrays)
+
+        xarrays_chunks_apply = [False] * len(xarrays)
+        for ixarray, xarray in enumerate(xarrays):
+            for idim, dimname in reversed(list(enumerate(dims_apply_names))):
+                # print(dimname,ixarray,xarrays_in_shapes_chunks)
+                if dimname in xarray.dims:
+                    if (
+
+                            (dimname in output_dimensions) and
+                            # (output_dimensions[dimname] != None) and
+                            ('chunksize' in list(output_dimensions[dimname].keys())) and
+                            identical_xarrays(xarray.coords[dimname], output_dimensions[dimname]['coords'])
+                    ):
+                        xarrays_shapes_chunks[ixarray].insert(0, output_dimensions[dimname]['chunksize'])
+                        if 'overlap' in output_dimensions[dimname]:
+                            xarrays_shapes_chunks[ixarray][0] += output_dimensions[dimname]['overlap']
+
+                        xarrays_chunks_apply[ixarray] = True
+                    else:
+                        # if dimname in xarray.dims: # this case already caught above
+                        xarrays_shapes_chunks[ixarray].insert(0, len(xarray.coords[dimname]))
+                        xarrays_shapes[ixarray].insert(0, xarray.shape[xarray.dims.index(dimname)])
+                    # else:
+                    #     xarrays_shapes_chunks[ixarray].insert(0, None)
+                    #     xarrays_shapes[ixarray].insert(0,None)#xarray.shape[xarray.dims.index(dimname)])
+                else:
+                    xarrays_shapes_chunks[ixarray].insert(0, None)
+                    xarrays_shapes[ixarray].insert(0, None)
+
+        if number_of_chunks_apply > 1:
+            for ixarray, xarray in enumerate(xarrays):
+                if xarrays_chunks_apply[ixarray] == True:
+                    xarrays_shapes_chunks[ixarray].insert(0, number_of_chunks_apply)
+                else:
+                    xarrays_shapes_chunks[ixarray].insert(0, None)
+                xarrays_shapes[ixarray].insert(0, None)
+
+        for idim, dimname in reversed(list(enumerate(dims_no_apply))):
+            for ixarray, xarray in enumerate(xarrays):
+                if dimname != '__chunk__':  # inner extra chunk dimension is already considered in previous loop
+                    if dimname in xarray.dims:
+                        xarrays_shapes_chunks[ixarray].insert(0, len(xarray.coords[dimname]))
+                        xarrays_shapes[ixarray].insert(0, len(xarray.coords[dimname]))
+                    else:
+                        xarrays_shapes_chunks[ixarray].insert(0, None)
+                        xarrays_shapes[ixarray].insert(0, None)
+        return xarrays_shapes, xarrays_shapes_chunks
+
+    xarrays_in_shapes, xarrays_in_shapes_chunks = get_xarrays_shapes(
+        xarrays_in, dims_apply_names, dims_no_apply, output_dimensions)
+    xarrays_out_shapes, xarrays_out_shapes_chunks = get_xarrays_shapes(
+        xarrays_out, dims_apply_names, dims_no_apply, output_dimensions)
+
+    # xarrays_shapes_out = [list() for i in range(len(xarrays_out))]
+    # xarrays_shapes_out = [list() for i in range(len(xarrays_out))]
+    #xarrays_in_shapes_chunks_cumulative = [1]*len(xarrays)
     #xarrays_dims_transposed = [[]]*len(xarrays)
 
 
-    xarrays_chunks_apply = [False]*len(xarrays_all)
-    for ixarray,xarray in enumerate(xarrays_all):
-        for idim,dimname in reversed(list(enumerate(dims_apply_names))):
-            #print(dimname,ixarray,xarrays_shapes_in_chunks)
-            if dimname in xarray.dims:
-                if (
+    # xarrays_chunks_apply = [False]*len(xarrays_all)
+    # for ixarray,xarray in enumerate(xarrays_all):
+    #     for idim,dimname in reversed(list(enumerate(dims_apply_names))):
+    #         #print(dimname,ixarray,xarrays_in_shapes_chunks)
+    #         if dimname in xarray.dims:
+    #             if (
 
-                        (dimname in output_dimensions) and
-                        #(output_dimensions[dimname] != None) and
-                        ('chunksize' in list(output_dimensions[dimname].keys())) and
-                        identical_xarrays(xarray.coords[dimname],output_dimensions[dimname]['coords'])
-                   ):
-                    xarrays_shapes_in_chunks[ixarray].insert(0,output_dimensions[dimname]['chunksize'])
-                    if 'overlap' in output_dimensions[dimname]:
-                        xarrays_shapes_in_chunks[ixarray][0] += output_dimensions[dimname]['overlap']
+    #                     (dimname in output_dimensions) and
+    #                     #(output_dimensions[dimname] != None) and
+    #                     ('chunksize' in list(output_dimensions[dimname].keys())) and
+    #                     identical_xarrays(xarray.coords[dimname],output_dimensions[dimname]['coords'])
+    #                ):
+    #                 xarrays_in_shapes_chunks[ixarray].insert(0,output_dimensions[dimname]['chunksize'])
+    #                 if 'overlap' in output_dimensions[dimname]:
+    #                     xarrays_in_shapes_chunks[ixarray][0] += output_dimensions[dimname]['overlap']
 
-                    xarrays_chunks_apply[ixarray] = True
-                else:
-                    # if dimname in xarray.dims: # this case already caught above
-                        xarrays_shapes_in_chunks[ixarray].insert(0,len(xarray.coords[dimname]))
-                        xarrays_shapes[ixarray].insert(0,xarray.shape[xarray.dims.index(dimname)])
-                    # else:
-                    #     xarrays_shapes_in_chunks[ixarray].insert(0, None)
-                    #     xarrays_shapes[ixarray].insert(0,None)#xarray.shape[xarray.dims.index(dimname)])
-            else:
-                xarrays_shapes_in_chunks[ixarray].insert(0,None)
-                xarrays_shapes[ixarray].insert(0,None)
+    #                 xarrays_chunks_apply[ixarray] = True
+    #             else:
+    #                 # if dimname in xarray.dims: # this case already caught above
+    #                     xarrays_in_shapes_chunks[ixarray].insert(0,len(xarray.coords[dimname]))
+    #                     xarrays_shapes[ixarray].insert(0,xarray.shape[xarray.dims.index(dimname)])
+    #                 # else:
+    #                 #     xarrays_in_shapes_chunks[ixarray].insert(0, None)
+    #                 #     xarrays_shapes[ixarray].insert(0,None)#xarray.shape[xarray.dims.index(dimname)])
+    #         else:
+    #             xarrays_in_shapes_chunks[ixarray].insert(0,None)
+    #             xarrays_shapes[ixarray].insert(0,None)
 
 
-    logging.info('adding size of __chunk__ dimensions')
 
-    if number_of_chunks_apply > 1:
-        for ixarray,xarray in enumerate(xarrays_all):
-            if xarrays_chunks_apply[ixarray] == True:
-                xarrays_shapes_in_chunks[ixarray].insert(0,number_of_chunks_apply)
-            else:
-                xarrays_shapes_in_chunks[ixarray].insert(0,None)
-            xarrays_shapes[ixarray].insert(0,None)
 
-    for idim,dimname in reversed(list(enumerate(dims_no_apply))):
-        for ixarray,xarray in enumerate(xarrays_all):
-            if dimname != '__chunk__': #inner extra chunk dimension is already considered in previous loop
-                if dimname in xarray.dims:
-                    xarrays_shapes_in_chunks[ixarray].insert(0,len(xarray.coords[dimname]))
-                    xarrays_shapes[ixarray].insert(0, len(xarray.coords[dimname]))
-                else:
-                    xarrays_shapes_in_chunks[ixarray].insert(0,None)
-                    xarrays_shapes[ixarray].insert(0, None)
+
+    # logging.info('adding size of __chunk__ dimensions')
+
+    # if number_of_chunks_apply > 1:
+    #     for ixarray,xarray in enumerate(xarrays_all):
+    #         if xarrays_chunks_apply[ixarray] == True:
+    #             xarrays_in_shapes_chunks[ixarray].insert(0,number_of_chunks_apply)
+    #         else:
+    #             xarrays_in_shapes_chunks[ixarray].insert(0,None)
+    #         xarrays_shapes[ixarray].insert(0,None)
+
+    # for idim,dimname in reversed(list(enumerate(dims_no_apply))):
+    #     for ixarray,xarray in enumerate(xarrays_all):
+    #         if dimname != '__chunk__': #inner extra chunk dimension is already considered in previous loop
+    #             if dimname in xarray.dims:
+    #                 xarrays_in_shapes_chunks[ixarray].insert(0,len(xarray.coords[dimname]))
+    #                 xarrays_shapes[ixarray].insert(0, len(xarray.coords[dimname]))
+    #             else:
+    #                 xarrays_in_shapes_chunks[ixarray].insert(0,None)
+    #                 xarrays_shapes[ixarray].insert(0, None)
 
 
     logging.info('xarrays shapes for '+str(dims_no_apply.keys()) +' + '+str(dims_apply_names)+' : ')
-    logging.info('  -> original xarrays: '+str(xarrays_shapes))
-    logging.info('  ->  chunked xarrays: '+str(xarrays_shapes_in_chunks))
+    logging.info('  -> original xarrays in: '+str(xarrays_in_shapes))
+    logging.info('  ->  chunked xarrays in: '+str(xarrays_in_shapes_chunks))
+    logging.info('  -> original xarrays out: '+str(xarrays_out_shapes))
+    logging.info('  ->  chunked xarrays in: '+str(xarrays_out_shapes_chunks))
     logging.info('determining input chunk format that fits our maximum memory size input of '+str(maximum_memory_size_bytes))
+
+    xarrays_all = list(xarrays_in)+list(xarrays_out)
+    xarrays_shapes_chunks = xarrays_in_shapes_chunks+xarrays_out_shapes_chunks
+    xarrays_shapes = xarrays_in_shapes+xarrays_out_shapes
 
     chunks_memory_sizes =     [int(xarray.nbytes/xarray.size) for xarray in xarrays_all]
     chunks_memory_sizes_dim = [[int(xarray.nbytes/xarray.size)] for xarray in xarrays_all]
@@ -391,9 +468,9 @@ def apply_func(
     iteration_over_apply_dims = list(reversed(list(enumerate(dims_all))[-len(dims_apply_names):]))
     for idim,dimname in iteration_over_apply_dims:
         for ixarray,xarray in enumerate(xarrays_all):
-            if xarrays_shapes_in_chunks[ixarray][idim] != None:
-                chunks_memory_sizes[ixarray] *= xarrays_shapes_in_chunks[ixarray][idim]
-                chunks_memory_sizes_dim[ixarray].insert(0,xarrays_shapes_in_chunks[ixarray][idim])
+            if xarrays_shapes_chunks[ixarray][idim] != None:
+                chunks_memory_sizes[ixarray] *= xarrays_shapes_chunks[ixarray][idim]
+                chunks_memory_sizes_dim[ixarray].insert(0,xarrays_shapes_chunks[ixarray][idim])
 
     iteration_over_noapply_dims = list(reversed(list(enumerate(dims_all))[:len(dims_no_apply)]))
     current_memory_size  = sum(chunks_memory_sizes)
@@ -405,8 +482,8 @@ def apply_func(
             xarrays_sized_cumulative_base = 0
             xarrays_sized_cumulative_mul = 0
             for ixarray,xarray in enumerate(xarrays_all):
-                #xarrays_sizes_cumulative[ixarray] *= xarrays_shapes_in_chunks[ixarray][idim]
-                if xarrays_shapes_in_chunks[ixarray][idim] == None:
+                #xarrays_sizes_cumulative[ixarray] *= xarrays_in_shapes_chunks[ixarray][idim]
+                if xarrays_shapes_chunks[ixarray][idim] == None:
                     xarrays_sized_cumulative_base += chunks_memory_sizes[ixarray]
                 else:
                     xarrays_sized_cumulative_mul += chunks_memory_sizes[ixarray]
@@ -428,7 +505,7 @@ def apply_func(
             # if current_memory_size > maximum_memory_size:
             #     raise ValueError('something wrong with the chunk size calculation for limiting memory')
             for ixarray,xarray in enumerate(xarrays_all):
-                if xarrays_shapes_in_chunks[ixarray][idim] != None:
+                if xarrays_shapes_chunks[ixarray][idim] != None:
                     chunks_memory_sizes[ixarray] *= chunk_sizes_no_apply[dimname]
                     chunks_memory_sizes_dim[ixarray].insert(0,chunk_sizes_no_apply[dimname])
                 else:
@@ -464,7 +541,6 @@ def apply_func(
 
     #import pdb; pdb.set_trace()
 
-
     chunks_no_apply = list(product(*tuple([list(range(int(a))) for a in list(chunks_number_no_apply.values())])))
 
 
@@ -485,7 +561,7 @@ def apply_func(
     xarrays_output_filenames_real = []
     xarrays_output_coords_final = []
 
-    for index_no_apply in tqdm.tqdm(chunks_no_apply):
+    for index_no_apply in tqdm.tqdm(chunks_no_apply,position=-1):
         logging.debug('dimension selection for '+\
                       str(dims_no_apply.keys)+\
                       ' with shape '+\
@@ -531,40 +607,85 @@ def apply_func(
                 chunk_start.insert(0,None)
                 chunk_end.insert(0,None)
 
-        xarrays_selection_chunk = []
-        for ixarray, xarray in enumerate(xarrays_all):
-            xarrays_selection_chunk.append({})
-            for idim,dimname in enumerate(dims_all):
-                #dimname = list(dims_no_apply_lengths.keys())[idim]
-                if xarrays_shapes_in_chunks[ixarray][idim] is not None:
-                    if dimname != '__chunk__':
-                        if (dimname in dims_apply_names) and \
-                                (dimname in output_dimensions) and \
-                                ('chunksize' in output_dimensions[dimname]) and \
-                                identical_xarrays(xarray.coords[dimname], output_dimensions[dimname]['coords']):
-                            xarrays_selection_chunk[ixarray][dimname] = range(chunk_start[idim],chunk_end[idim])
-                        elif dimname in dims_no_apply.keys():
-                            xarrays_selection_chunk[ixarray][dimname] = range(chunk_start[idim],chunk_end[idim])
-                        else:
-                            xarrays_selection_chunk[ixarray][dimname] = range(0,xarrays_shapes_in_chunks[ixarray][idim])
+        logging.info('create selection xarrays input from chunk_start ('+\
+                     str(chunk_start)+') and chunk_end ('+str(chunk_end)+').')
 
-        xarrays_selection_chunk_in = xarrays_selection_chunk[:len(xarrays)]
-        xarrays_selection_chunk_out = xarrays_selection_chunk[len(xarrays):len(xarrays_all)]
-        logging.debug('xarrays selection in  : '+str(xarrays_selection_chunk_in))
-        logging.debug('xarrays selection out : '+str(xarrays_selection_chunk_out))
+        def get_xarrays_selection_chunk(
+                xarrays,
+                xarrays_shapes_chunks,
+                dims_all,
+                output_dimensions,
+                chunk_start,
+                chunk_end,
+        ):
+            xarrays_selection_chunk = []
+            for ixarray, xarray in enumerate(xarrays):
+                xarrays_selection_chunk.append({})
+                for idim, dimname in enumerate(dims_all):
+                    # dimname = list(dims_no_apply_lengths.keys())[idim]
+                    if xarrays_shapes_chunks[ixarray][idim] is not None:
+                        if dimname != '__chunk__':
+                            if (dimname in dims_apply_names) and \
+                                    (dimname in output_dimensions) and \
+                                    ('chunksize' in output_dimensions[dimname]) and \
+                                    identical_xarrays(xarray.coords[dimname], output_dimensions[dimname]['coords']):
+                                xarrays_selection_chunk[ixarray][dimname] = range(chunk_start[idim], chunk_end[idim])
+                            elif dimname in dims_no_apply.keys():
+                                xarrays_selection_chunk[ixarray][dimname] = range(chunk_start[idim], chunk_end[idim])
+                            else:
+                                xarrays_selection_chunk[ixarray][dimname] = range(0, xarrays_shapes_chunks[ixarray][
+                                    idim])
+            return xarrays_selection_chunk
+
+        xarrays_in_selection_chunk = get_xarrays_selection_chunk(
+            xarrays_in,
+            xarrays_in_shapes_chunks, #this also includes the apply_chunk dimension
+            dims_all, #dimensions in the order as seen by the function/operator
+            output_dimensions, #dimensions in the order for the output
+            chunk_start,
+            chunk_end,
+        )
+
+        # xarrays_selection_chunk = []
+        # for ixarray, xarray in enumerate(xarrays_all):
+        #     xarrays_selection_chunk.append({})
+        #     for idim,dimname in enumerate(dims_all):
+        #         #dimname = list(dims_no_apply_lengths.keys())[idim]
+        #         if xarrays_in_shapes_chunks[ixarray][idim] is not None:
+        #             if dimname != '__chunk__':
+        #                 if (dimname in dims_apply_names) and \
+        #                         (dimname in output_dimensions) and \
+        #                         ('chunksize' in output_dimensions[dimname]) and \
+        #                         identical_xarrays(xarray.coords[dimname], output_dimensions[dimname]['coords']):
+        #                     xarrays_selection_chunk[ixarray][dimname] = range(chunk_start[idim],chunk_end[idim])
+        #                 elif dimname in dims_no_apply.keys():
+        #                     xarrays_selection_chunk[ixarray][dimname] = range(chunk_start[idim],chunk_end[idim])
+        #                 else:
+        #                     xarrays_selection_chunk[ixarray][dimname] = range(0,xarrays_in_shapes_chunks[ixarray][idim])
+
+        # xarrays_in_selection_chunk = xarrays_in_selection_chunk[:len(xarrays)]
+        # xarrays_out_selection_chunk = xarrays_selection_chunk[len(xarrays):len(xarrays_all)]
+        # logging.debug('xarrays selection in  : '+str(xarrays_in_selection_chunk))
+        # logging.debug('xarrays selection out : '+str(xarrays_out_selection_chunk))
 
         chunks_in = []
         coordinates_in = []
-        for ixarray,xarray in enumerate(xarrays):
+        for ixarray,xarray in enumerate(xarrays_in):
 
-            chunks_in.append(xarray.isel(xarrays_selection_chunk_in[ixarray]).transpose(*tuple(xarrays_selection_chunk_in[ixarray].keys())))
+            chunks_in.append(xarray.isel(xarrays_in_selection_chunk[ixarray]).transpose(*tuple(xarrays_in_selection_chunk[ixarray].keys())))
+
+            if 'variable' in chunks_in[-1].attrs.keys():
+                logging.info('variable attribute detected. Replacing xarray variable name to this value.')
+                chunks_in[-1].name = str(chunks_in[-1].attrs['variable'])
+                del chunks_in[-1].attrs['variable']
+
 
         dims_not_found = {}
         for dim,coordinate_output in output_dimensions.items():
             if output_dimensions[dim]['coords'] is not None:
                 dimfound = False
-                for ixarray,xarray in enumerate(xarrays):
-                       if (dim in xarray.dims) and (coordinate_output['coords'] is not None) and (identical_xarrays(coordinate_output['coords'],xarray.coords[dim])):
+                for ixarray,xarray in enumerate(xarrays_in):
+                       if (dim in xarray.dims)  and (identical_xarrays(coordinate_output['coords'],xarray.coords[dim])):
                            dimfound = True
 
                 if dimfound == False:
@@ -573,17 +694,17 @@ def apply_func(
 
                     )
         #chunk_output_dimensions = output_dimensions[dim].isel(art})
-            if (len(dims_not_found) > 0):
-                if (pass_missing_output_coordinates == True):
-                    if (first_chunks == True):
-                        logging.info('Output coordinates that are missing in the input files are found for '+str(dims_not_found.keys())+'. So we pass them to the function.')
-                    pass_dims_not_found = dims_not_found
-                else:
-                    if (first_chunks == True):
-                        logging.warning('Output coordinates that are missing in the input files are found for '+str(dims_not_found.keys())+". So the function doesn't know about it!")
-                    pass_dims_not_found = {}
+        if (len(dims_not_found) > 0):
+            if (pass_missing_output_coordinates == True):
+                if (first_chunks == True):
+                    logging.info('Output coordinates that are missing in the input files are found for '+str(dims_not_found.keys())+'. So we pass them to the function.')
+                pass_dims_not_found = dims_not_found
             else:
+                if (first_chunks == True):
+                    logging.warning('Output coordinates that are missing in the input files are found for '+str(dims_not_found.keys())+". So the function doesn't know about it! . Use pass_missing_output_coordinates = True to pass them to the function.")
                 pass_dims_not_found = {}
+        else:
+            pass_dims_not_found = {}
 
 
         # meshgrid_fine = np.meshgrid(
@@ -605,6 +726,90 @@ def apply_func(
         # ))
 
         chunks_out = func(*chunks_in,**pass_dims_not_found)
+        if type(chunks_out) not in [list,tuple]:
+            chunks_out = [chunks_out]
+
+        if len(chunks_out) != len(xarrays_output_filenames):
+            raise ValueError('The number of outputs from function ('+str(len(chunks_out))+') is different from the number'+\
+                             ' of output filenames ('+str(len(xarrays_output_filenames))+')')
+
+        chunks_out_xarrays = []
+        for ixarray_out,chunk_out in enumerate(chunks_out):
+            if type(chunk_out) != xr.core.dataarray.DataArray:
+                chunk_out_coordinates = {}
+                for dimname in xarrays_out_selection_chunk[ixarray_out].keys():
+                    chunk_out_coordinates[dimname] = xarrays_output_coords_final[ixarray_out][dimname].isel({dimname:xarrays_out_selection_chunk[ixarray_out][dimname]})
+
+                chunks_out_xarrays.append(xr.DataArray(chunk_out,coords=chunk_out_coordinates))
+            else:
+                chunks_out_xarrays.append(chunk_out)
+
+        if first_chunks == True:
+            logging.info('recreate xarrays_output_coords definition according to actual function output')
+            xarrays_output_coords_final = []
+            for ichunk_out,chunk_out_xarray in enumerate(chunks_out_xarrays):
+                xarrays_output_coords_final.append({})
+                for dimname in output_coords.keys():
+                    if dimname in chunk_out.dims:
+                        # (output_dimensions[dimname] != None) and
+                        if (dimname in dims_apply_names):
+                            if (dimname in output_dimensions) and \
+                                    ('chunksize' in list(output_dimensions[dimname].keys())) and \
+                                identical_xarrays(
+                                    chunk_out_xarray.coords[dimname],
+                                    output_dimensions[dimname]['coords'][chunk_start[dims_all.index(dimname)]:chunk_end[dims_all.index(dimname)]]
+                                ):
+                                xarrays_output_coords_final[ichunk_out][dimname] = xarrays_output_coords[ichunk_out][dimname]
+                            else:
+                                xarrays_output_coords_final[ichunk_out][dimname] = chunk_out_xarray.coords[dimname]
+                        elif (dimname in dims_no_apply.keys()):
+                            logging.debug('assuming that chunks over dimension '+str(dimname)+' should be concatenated in the final xarrray output')
+                            xarrays_output_coords_final[ichunk_out][dimname] = xarrays_output_coords[ichunk_out][dimname]
+                        else:
+                            raise ValueError('Unexpected chunk dimensions')
+                            #xarrays_output_coords_final[ichunk_out][dimname] = chunk_out_xarray.coords[dimname]
+                            #dimname in dims_no_apply.keys():
+                    else:
+                        xarrays_output_coords_final[ichunk_out][dimname] = None
+                for dimname in chunk_out_xarray.dims:
+                    if dimname not in xarrays_output_coords_final[ichunk_out].keys():
+                        raise IOError ( 'unexpected dimension in function output: '+dimname+'.')
+                for dimname,coord in xarrays_output_coords[ichunk_out].items():
+                    if (xarrays_output_coords_final[ichunk_out][dimname] is None):
+                        if (coord is not None):
+                            logging.warning('dimension '+dimname+' is not detected in the function output, while this was expected. Memory usage '+\
+                                        ' may not have been optimal. For optimal usage, specify the output coordinates '+\
+                                        '(xarrays_)output_dimensions = {"' + dimname + '" : { "coords" : None }')
+
+                    elif not identical_xarrays(coord,xarrays_output_coords_final[ichunk_out][dimname]):
+
+                        logging.warning('xarrays_output_coords ----' )
+                        logging.warning(str(coord))
+                        logging.warning('end xarrays_output_coords ----' )
+                        logging.warning('xarrays_output_coords_final ----' )
+                        logging.warning(str(xarrays_output_coords_final[ichunk_out][dimname]))
+                        logging.warning('end xarrays_output_coords_final ---- dimension: '+dimname+' of xarray output number '+str(ichunk_out))
+                        logging.warning('dimension of function output (xarrays_output_coords_final) is different from ')
+                        logging.warning('what is expected (xarrays_output_coords). Memory usage '+\
+                                        'may not have been optimal. For optimal usage, specify the output coordinates '+\
+                                        '(xarrays_)output_dimensions = {"'+dimname+'" : {"coords": xarrays_output_coords_final[ichunk_out][dimname]}}')
+            xarrays_out_final = get_fake_xarrays_out(xarrays_output_coords_final)
+
+
+        xarrays_out_final_shapes,xarrays_out_final_shapes_chunks = get_xarrays_shapes(
+            xarrays_out_final,dims_apply_names,dims_no_apply,output_dimensions
+        )
+
+        xarrays_out_selection_chunk = get_xarrays_selection_chunk(
+            xarrays_out_final,
+            xarrays_out_final_shapes_chunks,
+            dims_all,
+            output_dimensions,
+            chunk_start,
+            chunk_end,
+        )
+
+
 
         # chunks_out = pcd.vectorized_functions.extend_crop_interpolate(
         #     chunks_in[0].values,
@@ -626,46 +831,57 @@ def apply_func(
             del chunks_in[ichunk_in]
 
         for ixarray_out,chunk_out in enumerate(chunks_out):
-            logging.debug('xarray selection of chunk output '+str(ixarray_out)+': ' + str(xarrays_selection_chunk_out[ixarray_out]))
 
-            xarrays_selection_chunk_out_ordered = sort_dict_by_keys(xarrays_selection_chunk_out[ixarray_out],list(xarrays_output_dimensions[ixarray_out].keys()))
+            # for idim, dimname in reversed(list(enumerate(dims_no_apply))):
+            #     for ixarray, xarray in enumerate(xarrays_all):
+            #         if dimname != '__chunk__':  # inner extra chunk dimension is already considered in previous loop
+            #             if dimname in xarray.dims:
+            #                 xarrays_in_shapes_chunks[ixarray].insert(0, len(xarray.coords[dimname]))
+            #                 xarrays_shapes[ixarray].insert(0, len(xarray.coords[dimname]))
+            #             else:
+            #                 xarrays_in_shapes_chunks[ixarray].insert(0, None)
+            #                 xarrays_shapes[ixarray].insert(0, None)
+
+            logging.debug('xarray selection of chunk output '+str(ixarray_out)+': ' + str(xarrays_out_selection_chunk[ixarray_out]))
+
+            xarrays_out_selection_chunk_ordered = sort_dict_by_keys(xarrays_out_selection_chunk[ixarray_out],list(xarrays_output_dimensions[ixarray_out].keys()))
             #if type(chunk_out) == type(np.array([])):
             if type(chunk_out) != xr.core.dataarray.DataArray:
                 chunk_out_coordinates = {}
-                for dimname in xarrays_selection_chunk_out[ixarray_out].keys():
-                    chunk_out_coordinates[dimname] = xarrays_output_dimensions[ixarray_out][dimname]['coords'].isel({dimname:xarrays_selection_chunk_out[ixarray_out][dimname]})
+                for dimname in xarrays_out_selection_chunk[ixarray_out].keys():
+                    chunk_out_coordinates[dimname] = xarrays_output_coords_final[ixarray_out][dimname].isel({dimname:xarrays_out_selection_chunk[ixarray_out][dimname]})
 
                 chunk_out_xarray = xr.DataArray(chunk_out,coords=chunk_out_coordinates)
             else:
                 chunk_out_xarray = chunk_out
 
-            logging.debug('xarray selection ordered for output array '+str(ixarray_out)+': ' + str(xarrays_selection_chunk_out_ordered))
+            logging.debug('xarray selection ordered for output array '+str(ixarray_out)+': ' + str(xarrays_out_selection_chunk_ordered))
 
 
-            chunk_out_xarray_ordered = chunk_out_xarray.transpose(*tuple(xarrays_selection_chunk_out_ordered.keys()))
+            chunk_out_xarray_ordered = chunk_out_xarray.transpose(*tuple(xarrays_out_selection_chunk_ordered.keys()))
             # chunk_profile =
 
             logging.debug('re-ordered output shape: '+str(chunk_out_xarray.shape) +' -> '+ str(chunk_out_xarray_ordered.shape))
-            indexing_for_output_array = tuple([dim_selection for dim_selection in xarrays_selection_chunk_out_ordered.values()])
+            indexing_for_output_array = tuple([dim_selection for dim_selection in xarrays_out_selection_chunk_ordered.values()])
             logging.debug('index of chunk in netcdf output '+str(ixarray_out)+': ' + str(indexing_for_output_array))
             #logging.debug('this should fit in netcdf total output shape '+str(ncouts[ixarray_out].variables['__xarray_data_variable__'].shape))
             logging.debug('this should fit in netcdf total output shape '+str(xarrays_out[ixarray_out].shape))
 
             overlap_weights = np.ones_like(chunk_out_xarray_ordered.values)
             idim = 0
-            for dim,selection_chunk_out in xarrays_selection_chunk_out_ordered.items():
-                # overlap_weights_dim = np.ones((len(xarrays_selection_chunk_out_ordered[dim],)))
+            for dim,selection_chunk_out in xarrays_out_selection_chunk_ordered.items():
+                # overlap_weights_dim = np.ones((len(xarrays_out_selection_chunk_ordered[dim],)))
                 #reshape(list(range(idim-1))+overlap_weights.shape[idim])
                 if 'overlap' in output_dimensions[dim]:
-                    if xarrays_selection_chunk_out_ordered[dim][0] == 0:
+                    if xarrays_out_selection_chunk_ordered[dim][0] == 0:
                         left = np.ones(output_dimensions[dim]['overlap'])
                     else:
                         left = np.arange(0,output_dimensions[dim]['overlap'],1)/output_dimensions[dim]['overlap']
-                    if xarrays_selection_chunk_out_ordered[dim][-1] == (len(output_dimensions[dim]['coords']) - 1):
+                    if xarrays_out_selection_chunk_ordered[dim][-1] == (len(output_dimensions[dim]['coords']) - 1):
                         right = np.ones(output_dimensions[dim]['overlap'])
                     else:
                         right = np.arange(output_dimensions[dim]['overlap'],0,-1)/output_dimensions[dim]['overlap']
-                    middle = np.ones(((len(xarrays_selection_chunk_out_ordered[dim]) - 2 * output_dimensions[dim]['overlap'],)))
+                    middle = np.ones(((len(xarrays_out_selection_chunk_ordered[dim]) - 2 * output_dimensions[dim]['overlap'],)))
                     overlap_weights_dim = np.concatenate([left,middle,right])
                     overlap_weights_dim = overlap_weights_dim.reshape([1]*idim+[overlap_weights.shape[idim]]+[1]*(len(overlap_weights.shape) - idim -1))
                     overlap_weights *= overlap_weights_dim
@@ -698,29 +914,31 @@ def apply_func(
                         attributes_out['space'] = coordinates_attributes['space']
 
 
-                xarrays_output_coords_final.append({})
-                dims = []
-                shape = []
-                for dim in chunk_out_xarray_ordered.dims:
-                    if (dim not in dims_apply_names) or \
-                            ((dim in output_dimensions.keys()) and ('chunksize' in output_dimensions[dim])):
-                        xarrays_output_coords_final[ixarray_out][dim] = output_coords[dim]
-                    else:
-                        xarrays_output_coords_final[ixarray_out][dim] = chunk_out_xarray_ordered.coords[dim]
-                    shape.append(len(xarrays_output_coords_final[ixarray_out][dim]))
-                    dims.append(dim)
+                # xarrays_output_coords_final.append({})
+                # dims = []
+                # shape = []
+                # for dim in chunk_out_xarray_ordered.dims:
+                #     if (dim not in dims_apply_names) or \
+                #             ((dim in output_dimensions.keys()) and ('chunksize' in output_dimensions[dim])):
+                #         xarrays_output_coords_final[ixarray_out][dim] = output_coords[dim]
+                #     else:
+                #         xarrays_output_coords_final[ixarray_out][dim] = chunk_out_xarray_ordered.coords[dim]
+                #     shape.append(len(xarrays_output_coords_final[ixarray_out][dim]))
+                #     dims.append(dim)
 
-                logging.info('final xarrays output coordinates derived from functino output:\n'+ str(xarrays_output_coords_final[ixarray_out]))
-                logging.info('checking consistency of expected output format between function output chunk and expected array output as given above.')
+                # # import pdb; pdb.set_trace()
 
-                if ixarray_out >= len(xarrays_out):
-                    raise IOError('Function output has at least '+str(ixarray_output+1)+' output xarrays, but only '+str(len(xarrays_output)+' is/are expected.'))
+                # logging.info('final xarrays output coordinates derived from functino output:\n'+ str(xarrays_output_coords_final[ixarray_out]))
+                # logging.info('checking consistency of expected output format between function output chunk and expected array output as given above.')
 
-                if dims != xarrays_out[ixarray_out].dims:
-                    logging.warning('Function output chunk has different dimensions ('+str(dims)+') than expected output dimensions ('+str(xarrays_out[ixarray_out].dims)+'). This may deteriorate optimal memory usage. Please specify the output dimensions with output_dimensions or xarrays_output_dimenions.')
+                # if ixarray_out >= len(xarrays_out):
+                #     raise IOError('Function output has at least '+str(ixarray_output+1)+' output xarrays, but only '+str(len(xarrays_output)+' is/are expected.'))
 
-                if shape != xarrays_out[ixarray_out].shape:
-                    logging.warning('Function output chunk has different shape ('+str(shape)+') than expected output shape ('+str(xarrays_out[ixarray_out].shape)+'). This may deteriorate optimal memory usage. Please specify the output dimensions with output_dimensions or xarrays_output_dimenions.')
+                # if dims != xarrays_out[ixarray_out].dims:
+                #     logging.warning('Function output chunk has different dimensions ('+str(dims)+') than expected output dimensions ('+str(xarrays_out[ixarray_out].dims)+'). This may deteriorate optimal memory usage. Please specify the output dimensions with output_dimensions or xarrays_output_dimenions.')
+
+                # if shape != xarrays_out[ixarray_out].shape:
+                #     logging.warning('Function output chunk has different shape ('+str(shape)+') than expected output shape ('+str(xarrays_out[ixarray_out].shape)+'). This may deteriorate optimal memory usage. Please specify the output dimensions with output_dimensions or xarrays_output_dimenions.')
 
                 logging.info('acquiring real output filename for xarray out number '+str(ixarray_out)+' and setting output (temporary filename)')
                 xarrays_output_filenames_real.append(
@@ -735,7 +953,7 @@ def apply_func(
                         )
                     else:
                        logging.warning(
-                           'Filename output ' + xarrays_output_filenames_real[ixarray_out] + '(' + \
+                           'Filename output ' + xarrays_output_filenames_real[ixarray_out] + ' (' + \
                            xarrays_output_filenames[ ixarray_out] + ') exists. Removing before writing.'
                        )
                        os.system('rm '+xarrays_output_filenames_real[ixarray_out])
@@ -753,10 +971,10 @@ def apply_func(
                         logging.info("Using temporary output in specified tempfile_dir: " + xarrays_output_filenames_work[-1])
 
                 xrtemp = xr.Dataset()
-                import pdb; pdb.set_trace()
                 #for ixarray_out in range(len(xarrays_output_dimensions)):
                 for dimname, coords in xarrays_output_coords_final[ixarray_out].items():
-                    xrtemp[dimname] = coords
+                    if coords is not None:
+                        xrtemp[dimname] = coords
                     # ncouts[iarray].createDimension(dim,shapes_out_transposed[iarray][idim])
                     # ncouts[iarray].createVariable(dim,'d',(dim,),)
                     # ncouts[iarray].variables[dim][:] = coords_out_transposed[iarray][idim]
@@ -769,11 +987,16 @@ def apply_func(
                 logging.info('creating netcdf file '+fnout)
                 ncouts.append(nc4.Dataset(fnout, 'a'))
 
-                try:
-                    ncouts[ixarray_out].createVariable(chunk_out_xarray_ordered.name, "f", tuple(xarrays_output_coords_final[ixarray_out].keys()),fill_value=0.)
-                #ncouts[ixarray_out].variables['__xarray_data_variable__'][:] = 0.
-                except:
-                    import pdb; pdb.set_trace()
+                # try:
+                ncout_dims = list()
+                for key,value in xarrays_output_coords_final[ixarray_out].items():
+                    if value is not None:
+                        ncout_dims.append(key)
+
+                ncouts[ixarray_out].createVariable(chunk_out_xarray_ordered.name, "f", tuple(ncout_dims),fill_value=0.)
+                # except:
+                #     import pdb; pdb.set_trace()
+                ###ncouts[ixarray_out].variables['__xarray_data_variable__'][:] = 0.
 
                 logging.info('setting netcdf variable attributes: '+str(attributes_out))
 
@@ -795,7 +1018,6 @@ def apply_func(
 
             logging.debug('acquiring previous values for consolidating chunk overlapping values')
             # try:
-            import pdb; pdb.set_trace()
             test = ncouts[ixarray_out].variables[chunk_out_xarray_ordered.name][indexing_for_output_array].filled(fill_value=0)
             #   except:
             #       import pdb; pdb.set_trace()
@@ -841,6 +1063,12 @@ def apply_func(
         # if (os.path.realpath(filename_out) in absolute_paths) and (not dataarrays_out_already_available[ifile]):
         #     raise ValueError(
         #         'filename ' + filename_out + ' already exists and not already managed/within the output archive. Consider revising the output file_pattern.')
+
+
+        if not os.path.isdir(os.path.dirname(xarrays_output_filenames_real[incout])):
+            CMD = 'mkdir -p '+os.path.dirname(xarrays_output_filenames_real[incout])
+            logging.info('Creating destination folder: ' + CMD)
+            os.system(CMD)
 
         CMD = 'mv '+xarrays_output_filenames_work[incout]+' '+xarrays_output_filenames_real[incout]
         logging.info('Moving temporary output to actual netcdf: '+CMD)
