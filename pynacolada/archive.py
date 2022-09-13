@@ -274,6 +274,7 @@ def apply_func_wrapper(
                 for key in row.keys():
                     attributes_dataarrays_out[ifile][key] = row[key]
 
+
                     # for key in self.lib_dataarrays.columns:
                     #     if key == 'provider':
                     #         import pdb; pdb.set_trace()
@@ -357,7 +358,6 @@ def apply_func_wrapper(
 
             if all_dataarrays_out_already_available and not force_recalculate:
                 logging.info('All output data is already available in the output archive and force_recalculate is switched False. Skipping group "'+str(idx)+'"')
-                import pdb; pdb.set_trace()
             else:
 
                 if force_recalculate and some_dataarrays_out_already_available:
@@ -387,7 +387,7 @@ def apply_func_wrapper(
                     logging.info('starting apply_func')
                     if mode == 'numpy_output_to_disk_in_chunks':
                         filenames_out = xarray_function_wrapper(func, dataarrays_wrapper(*tuple(dataarrays_group_in)),
-                                                xarrays_output_filenames=filenames_out, **kwargs)
+                                                xarrays_output_filenames=filenames_out, attributes=attributes_dataarrays_out,**kwargs)
                     elif mode == 'numpy_output_to_disk_no_chunks':
                         temp_dataarrays = xarray_function_wrapper(func, dataarrays_wrapper(*tuple(dataarrays_group_in)),
                                                                   **kwargs)
@@ -522,21 +522,22 @@ class archive (object):
         self.dataarrays = {}
         self.coordinates = {}
 
+
         if os.path.isfile(path_pickle):
+            self.lib_dataarrays = pd.read_pickle(path_pickle)
+            self.set_path_pickle(path_pickle)
+            self.set_path_pickle(path_pickle)
             if reset == True:
                 self.remove(reset_lib=True)
                 os.system('rm '+path_pickle)
 
-        if os.path.isfile(path_pickle):
-            self.lib_dataarrays = pd.read_pickle(path_pickle)
-        else:
+        if not os.path.isfile(path_pickle):
             self.lib_dataarrays = pd.DataFrame(
                 index=empty_multiindex(
                     ['variable', 'source', 'time', 'space']
                 ),
                 columns=['path', 'available']).iloc[1:]
-
-        self.set_path_pickle(path_pickle)
+            self.set_path_pickle(path_pickle)
         # if path is not None:
         #     self.load(path,*args,**kwargs)
     def set_path_pickle(self,path_pickle):
@@ -579,7 +580,6 @@ class archive (object):
                     self.lib_dataarrays = self.lib_dataarrays.drop(idx)
                 else:
                     self.lib_dataarrays.loc[idx]['available'] = False
-            import pdb; pdb.set_trace()
         if update_pickle:
             self.update(force_overwrite_pickle =True)
 
@@ -690,7 +690,7 @@ class archive (object):
             if ('ncvariable' not in kwargs.keys()) or ((type(kwargs['ncvariable']).__name__ == 'float') and np.isnan(kwargs['ncvariable'])):
 
 
-                logging.info('Opening file:',filepath_for_reading, '(original file: '+filepath+')')
+                logging.info('Opening file:'+filepath_for_reading+ '(original file: '+filepath+')')
                 if 'variable' in kwargs.keys():
                         # print('reading',filepath,ncvariable)
                     # try:
@@ -785,14 +785,19 @@ class archive (object):
             if key in space_coordinates:
                 space_coordinates.remove(key)
 
+
         if ('space' not in dict_index.keys()) or (dict_index['space'] is None) or reset_space:
+            space_coordinates_only = ['latitude','longitude']
             spacing = {}
             for coordinate in space_coordinates:
-                spacing_temp = (DataArray[coordinate].values[1] - DataArray[coordinate].values[0])
-                if not np.any(DataArray[coordinate][1:].values != (DataArray[coordinate].values[:-1] + spacing_temp)):
-                    spacing[coordinate] = str(DataArray[coordinate][0].values)+','+str(DataArray[coordinate][-1].values)+','+str(spacing_temp)
+                if coordinate in space_coordinates_only:
+                    spacing_temp = (DataArray[coordinate].values[1] - DataArray[coordinate].values[0])
+                    if not np.any(DataArray[coordinate][1:].values != (DataArray[coordinate].values[:-1] + spacing_temp)):
+                        spacing[coordinate] = str(DataArray[coordinate][0].values)+','+str(DataArray[coordinate][-1].values)+','+str(spacing_temp)
+                    else:
+                        spacing[coordinate] = 'irregular'
                 else:
-                    spacing[coordinate] = 'irregular'
+                    logging.warning('unknown dimension found that we will not be tracked in lib_dataarrays: ' + str(coordinate))
             dict_index_space = [key+':'+str(value) for key,value in spacing.items()]
             dict_index_space ='_'.join(dict_index_space)
             dict_index['space'] = dict_index_space
@@ -894,6 +899,8 @@ class archive (object):
 
         if update_lib == True:
             self.lib_dataarrays.to_pickle(self.path_pickle)
+
+        return self.lib_dataarrays.loc[index]
 
     def add_dataarray_old(
             self,
@@ -1046,17 +1053,21 @@ class archive (object):
             # filter coordinates that are listed in the library index (these are not treated under space but separately, eg., 'time').
             space_coordinates = list(DataArray.dims)
             for key in self.lib_dataarrays.index.names:
-                if key in space_coordinates:
+                if key in list(DataArray.dims):
                     space_coordinates.remove(key)
+            space_coordinates_only = ['latitude','longitude']
 
             if ('space' not in dict_index.keys()) or (dict_index['space'] is None) or reset_space:
                 spacing = {}
                 for coordinate in space_coordinates:
-                    spacing_temp = (DataArray[coordinate].values[1] - DataArray[coordinate].values[0])
-                    if not np.any(DataArray[coordinate][1:].values != (DataArray[coordinate].values[:-1] + spacing_temp)):
-                        spacing[coordinate] = str(DataArray[coordinate][0].values)+','+str(DataArray[coordinate][-1].values)+','+str(spacing_temp)
+                    if coordinate in space_coordinates_only:
+                        spacing_temp = (DataArray[coordinate].values[1] - DataArray[coordinate].values[0])
+                        if not np.any(DataArray[coordinate][1:].values != (DataArray[coordinate].values[:-1] + spacing_temp)):
+                            spacing[coordinate] = str(DataArray[coordinate][0].values)+','+str(DataArray[coordinate][-1].values)+','+str(spacing_temp)
+                        else:
+                            spacing[coordinate] = 'irregular'
                     else:
-                        spacing[coordinate] = 'irregular'
+                        logging.warning('unknown dimension found that we will not be tracked in lib_dataarrays: '+str(coordinate))
                 dict_index_space = [key+':'+str(value) for key,value in spacing.items()]
                 dict_index_space ='_'.join(dict_index_space)
                 dict_index['space'] = dict_index_space

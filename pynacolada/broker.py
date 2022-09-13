@@ -75,7 +75,7 @@ class broker (object):
 
             if 'process' in broker_requires:
                 parent_execute = [
-                    './bin/launch_python_conda.sh',
+                    './lib/pynacolada/pynacolada/launch_python_conda.sh',
                     self.conda_environment_export,
                     broker_requires['process']
                 ]
@@ -135,7 +135,7 @@ class broker (object):
                             if history_dict is None:
                                 history_dict = {}
                     except:
-                        logging.warning('reading history file failed.')
+                        logging.warning('reading history file failed: '+history_filename)
                         history_dict = {}
 
 
@@ -189,9 +189,9 @@ class broker (object):
                             if history_dict is None:
                                 history_dict = {}
                     except:
-                        logging.warning('reading history file failed.')
+                        logging.warning('reading history file failed: '+history_filename)
                         history_dict = {}
-                        history_ok = False
+                        #history_ok = False
 
                 if 'return_from_history' in self.requires[ibroker_requires].keys():
                     return_from_subprocess = \
@@ -247,26 +247,69 @@ class broker (object):
                 else:
                     raise IOError('subprocess return type not implemented')
 
-                self.flush_history_file(history_dict, history_filename,history_ok)
+                logging.info('content history: '+str(history_dict))
+                logging.info('writing to history file: '+history_filename)
+                self.flush_history_file(history_dict, history_filename,history_ok=True)
                 logging.info('workaround to avoid simultaneous history and lock file access. Waiting for 1 second')
                 sleep(1)
 
                 #broker['requires'][ibroker_requires]['archive'] = pcd.archive( args.root_requires + '/' + broker_requires['archive'])
         if (type(self.provides) == list):
-            for ibroker_provides, broker_provides in enumerate(self.provides):
-                if ('archive' in broker_provides.keys()) and (type(broker_provides['archive']) is type(lambda x:x)):
-                    values_input = []
-                    for item in self.requires:
-                        if ('disable' not in item.keys()):
-                            if ('archive' in item.keys()):
-                                values_input.append(item['archive'])
-                            else:
-                                values_input.append(None)
-                    if len(values_input) > 0:
-                        self.provides[ibroker_provides]['archive'] = broker_provides['archive'](values_input)
-                    else:
-                        self.provides[ibroker_provides]['archive'] = None  # broker_provides['archive'](values_input)
+            # for ibroker_provides, broker_provides in enumerate(self.provides):
+            #     if ('archive' in broker_provides.keys()) and (type(broker_provides['archive']) is type(lambda x:x)):
+            #         values_input = []
+            #         for item in self.requires:
+            #             if ('disable' not in item.keys()):
+            #                 if ('archive' in item.keys()):
+            #                     values_input.append(item['archive'])
+            #                 else:
+            #                     values_input.append(None)
+            #         if len(values_input) > 0:
+            #             self.provides[ibroker_provides]['archive'] = broker_provides['archive'](values_input)
+            #         else:
+            #             self.provides[ibroker_provides]['archive'] = None  # broker_provides['archive'](values_input)
+            if type(self.requires) == list:
+                logging.info('propagating keywords from "requires" to "provides"')
 
+                for ibroker_provides, broker_provides in enumerate(self.provides):
+                    for key in self.provides[ibroker_provides].keys():
+                        if type(self.provides[ibroker_provides][key]).__name__ == 'function':
+                            values_input = []
+                            for ibroker_requires, broker_requires in list(enumerate(self.requires)):
+                                if ('disable' not in self.requires[ibroker_requires].keys()):
+                                    if (key in self.requires[ibroker_requires].keys()):
+                                        values_input.append(self.requires[ibroker_requires][key])
+                                    else:
+                                        values_input.append(None)
+                            if len(values_input) > 0:
+                                self.provides[ibroker_provides][key] = self.provides[ibroker_provides][key](*tuple(values_input))
+                            else:
+                                logging.critical('no value for provides - function foun found.')
+                                self.provides[ibroker_provides][key] = None  # broker_provides['archive'](values_input)
+
+                icount = 0
+                for ibroker_requires,broker_requires in enumerate(self.requires):
+                    if ('disable' not in self.requires[ibroker_requires].keys()):
+                        for key in self.requires[ibroker_requires].keys():
+                            if key not in [
+                                'process',
+                                'root',
+                                'process_arguments',
+                                'stderr',
+                                'stdout',
+                                'executing_subprocess',
+                                'return_from_history',
+                                'disable']:
+
+                                if (len(self.provides) >= (icount+1)) and (key not in self.provides[icount].keys()):
+                                    self.provides[icount][key] = self.requires[ibroker_requires][key]
+
+                                for ibroker_provides, broker_provides in reversed(list(enumerate(self.provides))):
+                                    if (key not in self.provides[ibroker_provides].keys()):
+                                        #import pdb; pdb.set_trace()
+                                        self.provides[ibroker_provides][key] = self.requires[ibroker_requires][key]
+
+                        icount += 1
         else:
             broker_provides = self.provides
             if ('archive' in broker_provides) and (type(broker_provides['archive']) is type(lambda x: x)):
@@ -332,9 +375,96 @@ class broker (object):
             #     raise ValueError ('value '+variable+'not found in self.requires')
         self.requires = broker_requires_new
 
+    def get_return_request(self,return_exclude_keys = [],debug=False):
+
+        if debug==True:
+            import pdb; pdb.set_trace()
+        if type(self.provides) is list:
+
+            return_request = list()
+            for igroups_out in range(len(self.provides)):
+                return_request.append(dict())
+                for key in self.provides[igroups_out].keys():
+                    if (key not in ['root','chain']) and (key not in return_exclude_keys):
+                        if type(self.provides[igroups_out][key]) is not type(lambda x:x):
+                            return_request[igroups_out][key] = self.provides[igroups_out][key]
+                        else:
+                            values_input = []
+                            for item in self.requires:
+                                if 'disable' not in item.keys():
+                                    if key in item.keys():
+                                        values_input.append(item[key])
+                                    else:
+                                        values_input.append(None)
+                            return_request[igroups_out][key] = self.provides[igroups_out][key](*tuple(values_input))
+                        # if type(return_request[igroups_out][key]) is str:
+                        #     return_request[igroups_out][key].replace('"','')
+
+            if debug==True:
+                import pdb; pdb.set_trace()
+
+            common_keys = list(return_request[0].keys())
+
+            for item in return_request:
+                for key in common_keys:
+                    if key not in item.keys():
+                        common_keys.remove(key)
+
+            return_request_common_keys = []
+            for item in return_request:
+                return_request_common_keys_item = {}
+                for key in common_keys:
+                    return_request_common_keys_item[key] = item[key]
+                if return_request_common_keys_item not in return_request_common_keys:
+                    return_request_common_keys.append(return_request_common_keys_item)
+
+            for key in return_request[0].keys():
+                if key not in return_request_common_keys[0].keys():
+                    return_request_common_keys[0][key] = return_request[0][key]
+            return_request = return_request_common_keys
+            if debug==True:
+                import pdb; pdb.set_trace()
 
 
-    def apply_func(self,apply_groups_out_extra=None,query=None,sources=None,return_exclude_keys=[],debug=False,*args,**kwargs):
+
+        else:
+            return_request = dict()
+            for key in self.provides.keys():
+                if key not in ['root', 'chain']:
+                    if type(self.provides[key]) == list:
+                        return_request[key] = []
+                        if debug == True:
+                            import pdb; pdb.set_trace()
+                        for ireturn_request in range(len(self.provides[key])):
+                            if (type(self.provides[key][ireturn_request]) != type(lambda x:x)) and \
+                                    (key not in return_exclude_keys):
+                                return_request[key].append(self.provides[key][ireturn_request])
+                                # if type(return_request[key][-1]) == str:
+                                #     return_request[key][-1] = return_request[key][-1].replace('"','')
+
+                        if len(return_request[key]) == 0:
+                            del return_request[key]
+                    else:
+                        if debug == True:
+                            import pdb; pdb.set_trace()
+                        if (type(self.provides[key]) != type(lambda x: x)) and \
+                                (key not in return_exclude_keys):
+                            return_request[key] = self.provides[key]
+        if debug==True:
+            import pdb; pdb.set_trace()
+        return str(return_request).replace(' ','')
+
+
+    def apply_func(
+            self,
+            apply_groups_out_extra=None,
+            query=None,
+            sources=None,
+            return_exclude_keys=[],
+            debug=False,
+            *args,
+            **kwargs):
+
         if sources == None:
             sources = self.requires
         #for ibroker_provides, broker_provides in enumerate(self.provides):
@@ -413,66 +543,8 @@ class broker (object):
 
         logging.info('Dumping return_request as last line in stdout being used for processes depending on it')
 
-        if debug==True:
-            import pdb; pdb.set_trace()
-        if type(self.provides) is list:
+        return self.get_return_request(return_exclude_keys,debug=debug)
 
-            return_request = list()
-            for igroups_out in range(len(self.provides)):
-                return_request.append(dict())
-                for key in self.provides[igroups_out].keys():
-                    if (key not in ['root','chain']) and (key not in return_exclude_keys):
-                        if type(self.provides[igroups_out][key]) is not type(lambda x:x):
-                            return_request[igroups_out][key] = self.provides[igroups_out][key]
-                        # if type(return_request[igroups_out][key]) is str:
-                        #     return_request[igroups_out][key].replace('"','')
-            common_keys = list(return_request[0].keys())
-
-            for item in return_request:
-                for key in common_keys:
-                    if key not in item.keys():
-                       common_keys.remove(key)
-
-            return_request_common_keys = []
-            for item in return_request:
-                return_request_common_keys_item = {}
-                for key in common_keys:
-                    return_request_common_keys_item[key] = item[key]
-                if return_request_common_keys_item not in return_request_common_keys:
-                    return_request_common_keys.append(return_request_common_keys_item)
-
-            for key in return_request[0].keys():
-                if key not in return_request_common_keys[0].keys():
-                    return_request_common_keys[0][key] = return_request[0][key]
-            return_request = return_request_common_keys
-
-
-
-        else:
-            return_request = dict()
-            for key in self.provides.keys():
-                if key not in ['root', 'chain']:
-                    if type(self.provides[key]) == list:
-                        return_request[key] = []
-                        if debug == True:
-                            import pdb; pdb.set_trace()
-                        for ireturn_request in range(len(self.provides[key])):
-                            if (type(self.provides[key][ireturn_request]) != type(lambda x:x)) and \
-                                    (key not in return_exclude_keys):
-                                return_request[key].append(self.provides[key][ireturn_request])
-                                # if type(return_request[key][-1]) == str:
-                                #     return_request[key][-1] = return_request[key][-1].replace('"','')
-
-                        if len(return_request[key]) == 0:
-                            del return_request[key]
-                    else:
-                        if debug == True:
-                            import pdb; pdb.set_trace()
-                        if (type(self.provides[key]) != type(lambda x: x)) and \
-                               (key not in return_exclude_keys):
-                            return_request[key] = self.provides[key]
-        if debug==True:
-            import pdb; pdb.set_trace()
 
 
 
@@ -489,6 +561,5 @@ class broker (object):
         #        return_request[key] = list_values_unique
 
         #     return_request['archive'] = self.provides[0]['archive']
-        return str(return_request).replace(' ','')
 
 
