@@ -773,7 +773,6 @@ def apply_func(
         if not ignore_memory_limit:
             raise IOError('memory limit needs to be respected. Or turn on ignore_memory_linit')
 
-
     chunks_no_apply = list(product(*tuple([list(range(int(a))) for a in list(chunks_number_no_apply.values())])))
 
 
@@ -954,7 +953,7 @@ def apply_func(
                #logging.debug('this should fit in netcdf total output shape '+str(ncouts[ichunk_out].variables['__xarray_data_variable__'].shape))
                logging.debug('this should fit in netcdf total output shape '+str(xarrays_out[ichunk_out].shape))
 
-               overlap_weights = np.ones_like(chunk_out_xarray_ordered.values)
+               overlap_weights = np.ones_like(chunk_out_xarray_ordered.values,dtype=float)
                idim = 0
                for dim,selection_chunk_out in xarrays_out_selection_chunk_ordered.items():
                    # overlap_weights_dim = np.ones((len(xarrays_out_selection_chunk_ordered[dim],)))
@@ -965,7 +964,7 @@ def apply_func(
                            if xarrays_out_selection_chunk_ordered[dim][0] == 0:
                                left = np.ones(output_dimensions[dim]['overlap'])
                            else:
-                               left = np.arange(0,output_dimensions[dim]['overlap'],1)/output_dimensions[dim]['overlap']
+                               left = np.arange(0.,output_dimensions[dim]['overlap'],1.)/output_dimensions[dim]['overlap']
 
                            middle = np.ones((max(0,(len(xarrays_out_selection_chunk_ordered[dim]) - 2 * output_dimensions[dim]['overlap']),)))
 
@@ -999,7 +998,10 @@ def apply_func(
 
                        overlap_weights_dim = np.concatenate([left,middle,right])
                        overlap_weights_dim = overlap_weights_dim.reshape([1]*idim+[overlap_weights.shape[idim]]+[1]*(len(overlap_weights.shape) - idim -1))
-                       overlap_weights *= overlap_weights_dim
+                       try:
+                        overlap_weights *= overlap_weights_dim
+                       except:
+                           import pdb; pdb.set_trace()
                    idim += 1
 
                if first_chunks == True:
