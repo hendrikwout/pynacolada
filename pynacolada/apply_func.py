@@ -395,12 +395,16 @@ def apply_func(
     dims_no_apply  = {}
 
     for ixarray_in,xarray_in in enumerate(xarrays_in):
-        for dimname in xarray_in.dims:
-            if (dimname not in dims_no_apply) and (dimname not in dims_apply_names):
-                dims_no_apply[dimname] = xarray_in[dimname]
-            if (dimname in dims_no_apply) and (dimname in xarray_in.dims) and (not identical_xarrays(xarray_in[dimname],dims_no_apply[dimname])) and (len(xarray_in[dimname]) != 1):
-                import pdb; pdb.set_trace()
-                raise ValueError('dimension '+dimname+' of xarray_in number '+str(ixarray_in)+' is not the same as previously detected dimensions.')
+
+        if type(xarray_in) == xr.core.dataarray.DataArray:
+            for dimname in xarray_in.dims:
+                if (dimname not in dims_no_apply) and (dimname not in dims_apply_names):
+                    dims_no_apply[dimname] = xarray_in[dimname]
+                if (dimname in dims_no_apply) and (dimname in xarray_in.dims) and (not identical_xarrays(xarray_in[dimname],dims_no_apply[dimname])) and (len(xarray_in[dimname]) != 1):
+                    import pdb; pdb.set_trace()
+                    raise ValueError('dimension '+dimname+' of xarray_in number '+str(ixarray_in)+' is not the same as previously detected dimensions.')
+        elif type(xarray_in) == np.lib.npyio.NpzFile:
+            for dimname in xarray_in.files[1:]:
 
 
     # if output_dimensions is None:
