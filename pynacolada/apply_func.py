@@ -403,8 +403,8 @@ def apply_func(
                 if (dimname in dims_no_apply) and (dimname in xarray_in.dims) and (not identical_xarrays(xarray_in[dimname],dims_no_apply[dimname])) and (len(xarray_in[dimname]) != 1):
                     import pdb; pdb.set_trace()
                     raise ValueError('dimension '+dimname+' of xarray_in number '+str(ixarray_in)+' is not the same as previously detected dimensions.')
-        elif type(xarray_in) == np.lib.npyio.NpzFile:
-            for dimname in xarray_in.files[1:]:
+        else:
+            raise IOError('input array type not supported.')
 
 
     # if output_dimensions is None:
