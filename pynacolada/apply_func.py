@@ -720,7 +720,7 @@ def apply_func(
     if current_memory_size > maximum_memory_size_per_proc_bytes:
         logging.warning('expected memory usage exceeds predefined memory limit!')
         if not ignore_memory_limit:
-            raise IOError('memory limit needs to be respected. Or turn on ignore_memory_linit')
+            raise IOError('memory limit needs to be respected. Or turn on ignore_memory_limit')
 
     chunks_no_apply = list(product(*tuple([list(range(int(a))) for a in list(chunks_number_no_apply.values())])))
 
