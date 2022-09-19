@@ -365,7 +365,7 @@ def apply_func(
         dims_apply_names = [],
         xarrays_output_filenames = None,
         attributes = None,
-        maximum_memory_size_bytes = 2 * 10 ** 8 ,
+        maximum_memory_size_per_proc_bytes = 2 * 10 ** 8 ,
         output_dimensions=None,
         xarrays_output_dimensions = None,
         tempfile_dir=False,
@@ -697,7 +697,7 @@ def apply_func(
     logging.info('  ->  chunked xarrays in: '+str(xarrays_in_shapes_chunks))
     logging.info('  -> original xarrays out: '+str(xarrays_out_shapes))
     logging.info('  ->  chunked xarrays in: '+str(xarrays_out_shapes_chunks))
-    logging.info('determining input chunk format that fits our maximum memory size input of '+str(maximum_memory_size_bytes_per_proc))
+    logging.info('determining input chunk format that fits our maximum memory size input of '+str(maximum_memory_size_per_proc_bytes))
 
     xarrays_all = list(xarrays_in)+list(xarrays_out)
     xarrays_shapes_chunks_all = xarrays_in_shapes_chunks+xarrays_out_shapes_chunks
@@ -719,7 +719,7 @@ def apply_func(
 
     chunk_sizes_no_apply = {}
     for idim,dimname in iteration_over_noapply_dims:
-        if (current_memory_size < maximum_memory_size_bytes_per_proc):
+        if (current_memory_size < maximum_memory_size_per_proc_bytes):
             chunks_memory_sizes_total = sum(chunks_memory_sizes)
             xarrays_sized_cumulative_base = 0
             xarrays_sized_cumulative_mul = 0
@@ -735,7 +735,7 @@ def apply_func(
                 chunk_sizes_no_apply[dimname] = 1.0
             else:
                 if xarrays_sized_cumulative_mul  != 0:
-                    chunk_sizes_no_apply[dimname] = np.floor(np.min([(maximum_memory_size_bytes_per_proc - xarrays_sized_cumulative_base)/xarrays_sized_cumulative_mul, dims_no_apply_lengths[dimname]]))
+                    chunk_sizes_no_apply[dimname] = np.floor(np.min([(maximum_memory_size_per_proc_bytes - xarrays_sized_cumulative_base)/xarrays_sized_cumulative_mul, dims_no_apply_lengths[dimname]]))
                 else:
                     chunk_sizes_no_apply[dimname] = 0
 
@@ -769,14 +769,14 @@ def apply_func(
         chunks_number_no_apply[dimname] = np.ceil(dims_no_apply_lengths[dimname]/chunk_sizes_no_apply[dimname])
 
     logging.info('memory input size of chunks: '+ str(current_memory_size) +'/'+ \
-                 str(maximum_memory_size_bytes_per_proc) +' = '+str(current_memory_size/int(maximum_memory_size_bytes_per_proc)*100)+'% of maximum \n'+ \
+                 str(maximum_memory_size_per_proc_bytes) +' = '+str(current_memory_size/int(maximum_memory_size_per_proc_bytes)*100)+'% of maximum \n'+ \
                  ' - expected memory usage: ' + str(current_memory_size) + '\n' + \
                  ' - limit of memory usage: ' + str(current_memory_size) + '\n' + \
                  ' - chunks_memory_sizes: ' + str(chunks_memory_sizes) + '\n' + \
                  ' - chunks_memory_sizes_dim' + str(chunks_memory_sizes) + '\n' + \
                  'Please consider the usage of memory chunking along the apply_dimensions'
                  )
-    if current_memory_size > maximum_memory_size_bytes_per_proc:
+    if current_memory_size > maximum_memory_size_per_proc_bytes:
         logging.warning('expected memory usage exceeds predefined memory limit!')
         if not ignore_memory_limit:
             raise IOError('memory limit needs to be respected. Or turn on ignore_memory_linit')
@@ -1259,7 +1259,7 @@ def apply_func(
 #             '/home/woutersh/projects/KLIMPALA_SF/data/test_output/testing2.nc'],
 #         #attributes = None,
 #         output_dimensions=output_dimensions,
-#         maximum_memory_size_bytes_per_proc=2 * 10 ** 7,
+#         maximum_memory_size_per_proc_bytes=2 * 10 ** 7,
 #     #squeeze_apply_dims = False,
 #         tempfile_dir='/tmp/',
 #         overwrite_output_filenames=True,
