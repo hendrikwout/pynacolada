@@ -252,7 +252,7 @@ def chunk_task(func,
             #    chunk_end[0] += output_dimensions[dimname_apply]['overlap']
 
             chunk_end[0] = np.min([chunk_end[0], len(output_dimensions[dimname_apply]['coords'])])
-            chunk_start[0] = chunk_end[0] - output_dimensions[dimname_apply]['chunksize']
+            #chunk_start[0] = chunk_end[0] - output_dimensions[dimname_apply]['chunksize']
 
             idx_mod -= dim_apply_start * dim_fac
             dim_fac *= number_of_chunks_apply_dims[dimname_apply]
@@ -380,6 +380,10 @@ def apply_func(
     barposition = barposition+1
     maximum_memory_size_bytes_per_proc = int(maximum_memory_size_bytes/nprocs)
 
+    for xarray_in in xarrays_in:
+        for lendim in xarray_in.shape:
+            if lendim == 0:
+                raise ValueError('xarrays with dimension length 0 not yet supported.')
 
     #input_file = '/projects/C3S_EUBiodiversity/data/ancillary/GMTED2010/gmted2010_mean_30.nc'
 
@@ -779,7 +783,6 @@ def apply_func(
 
     chunks_no_apply = list(product(*tuple([list(range(int(a))) for a in list(chunks_number_no_apply.values())])))
 
-
     first_chunks = True
     # logging.info('closing xarrays_out, which we used above to easily calculate the dimension/memory shaping. Data is written out directly through disk for saving memory. ')
     # for ixarray_out, xarray_out in enumerate(xarrays_out):
@@ -986,21 +989,16 @@ def apply_func(
                                leftright = output_dimensions[dim]['overlap'] - leftleft
                                left = np.concatenate([np.zeros(leftleft),np.ones(leftright)])
 
-                           middle = np.ones((max(0,(len(xarrays_out_selection_chunk_ordered[dim]) - 2 * output_dimensions[dim]['overlap']),)))
+                           middle = np.ones(output_dimensions[dim]['chunksize'] - 2 * output_dimensions[dim]['overlap'])
 
-                           if xarrays_out_selection_chunk_ordered[dim][-1] == (len(output_dimensions[dim]['coords']) - 1):
-
-                               #at the right border of the dimension, we do just the remaning, hence -len(left)-len(middle)
-                               right = np.ones(min(output_dimensions[dim]['overlap'] , max(0,len(xarrays_out_selection_chunk_ordered[dim])-len(left)-len(middle))))
-                           else:
-                               # right = np.arange(min(output_dimensions[dim]['overlap'] , max(0,len(xarrays_out_selection_chunk_ordered[dim])-len(left)-len(middle))),0,-1)/output_dimensions[dim]['overlap']
-                               leftright = int(output_dimensions[dim]['overlap']/2)
-                               rightright = output_dimensions[dim]['overlap'] - leftright
-                               right = np.concatenate([np.ones(leftright),np.zeros(rightright)])
+                           # right = np.arange(min(output_dimensions[dim]['overlap'] , max(0,len(xarrays_out_selection_chunk_ordered[dim])-len(left)-len(middle))),0,-1)/output_dimensions[dim]['overlap']
+                           leftright = int(output_dimensions[dim]['overlap']/2)
+                           rightright = output_dimensions[dim]['overlap'] - leftright
+                           right = np.concatenate([np.ones(leftright),np.zeros(rightright)])
                        else:
                            raise ValueError ('Profile overlap '+ str(profile)+ 'not implemented')
 
-                       overlap_weights_dim = np.concatenate([left,middle,right])
+                       overlap_weights_dim = np.concatenate([left,middle,right])[:len(xarrays_out_selection_chunk_ordered[dim])]
                        overlap_weights_dim = overlap_weights_dim.reshape([1]*idim+[overlap_weights.shape[idim]]+[1]*(len(overlap_weights.shape) - idim -1))
                        try:
                         overlap_weights *= overlap_weights_dim
@@ -1174,7 +1172,7 @@ def apply_func(
            #     if type(chunks_out[ichunk_out]) == xr.core.dataarray.DataArray:
            #         chunks_out[ichunk_out].close()
            first_chunks = False
-       
+
        if nprocs > 1:
            pool.close()
 
