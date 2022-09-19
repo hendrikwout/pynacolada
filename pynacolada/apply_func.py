@@ -378,7 +378,7 @@ def apply_func(
 
     global barposition
     barposition = barposition+1
-    maximum_memory_size_bytes_per_proc = int(maximum_memory_size_bytes/nprocs)
+    #maximum_memory_size_bytes_per_proc = int(maximum_memory_size_bytes/nprocs)
 
     for xarray_in in xarrays_in:
         for lendim in xarray_in.shape:
@@ -632,65 +632,6 @@ def apply_func(
         xarrays_in, dims_apply_names, dims_no_apply, output_dimensions,number_of_chunks_apply_dims)
     xarrays_out_shapes, xarrays_out_shapes_chunks = get_xarrays_shapes(
         xarrays_out, dims_apply_names, dims_no_apply, output_dimensions,number_of_chunks_apply_dims)
-
-    # xarrays_shapes_out = [list() for i in range(len(xarrays_out))]
-    # xarrays_shapes_out = [list() for i in range(len(xarrays_out))]
-    #xarrays_in_shapes_chunks_cumulative = [1]*len(xarrays)
-    #xarrays_dims_transposed = [[]]*len(xarrays)
-
-
-    # xarrays_chunks_apply = [False]*len(xarrays_all)
-    # for ixarray,xarray in enumerate(xarrays_all):
-    #     for idim,dimname in reversed(list(enumerate(dims_apply_names))):
-    #         #print(dimname,ixarray,xarrays_in_shapes_chunks)
-    #         if dimname in xarray.dims:
-    #             if (
-
-    #                     (dimname in output_dimensions) and
-    #                     #(output_dimensions[dimname] != None) and
-    #                     ('chunksize' in list(output_dimensions[dimname].keys())) and
-    #                     identical_xarrays(xarray.coords[dimname],output_dimensions[dimname]['coords'])
-    #                ):
-    #                 xarrays_in_shapes_chunks[ixarray].insert(0,output_dimensions[dimname]['chunksize'])
-    #                 if 'overlap' in output_dimensions[dimname]:
-    #                     xarrays_in_shapes_chunks[ixarray][0] += output_dimensions[dimname]['overlap']
-
-    #                 xarrays_chunks_apply[ixarray] = True
-    #             else:
-    #                 # if dimname in xarray.dims: # this case already caught above
-    #                     xarrays_in_shapes_chunks[ixarray].insert(0,len(xarray.coords[dimname]))
-    #                     xarrays_shapes[ixarray].insert(0,xarray.shape[xarray.dims.index(dimname)])
-    #                 # else:
-    #                 #     xarrays_in_shapes_chunks[ixarray].insert(0, None)
-    #                 #     xarrays_shapes[ixarray].insert(0,None)#xarray.shape[xarray.dims.index(dimname)])
-    #         else:
-    #             xarrays_in_shapes_chunks[ixarray].insert(0,None)
-    #             xarrays_shapes[ixarray].insert(0,None)
-
-
-
-
-
-    # logging.info('adding size of __chunk__ dimensions')
-
-    # if number_of_chunks_apply > 1:
-    #     for ixarray,xarray in enumerate(xarrays_all):
-    #         if xarrays_chunks_apply[ixarray] == True:
-    #             xarrays_in_shapes_chunks[ixarray].insert(0,number_of_chunks_apply)
-    #         else:
-    #             xarrays_in_shapes_chunks[ixarray].insert(0,None)
-    #         xarrays_shapes[ixarray].insert(0,None)
-
-    # for idim,dimname in reversed(list(enumerate(dims_no_apply))):
-    #     for ixarray,xarray in enumerate(xarrays_all):
-    #         if dimname != '__chunk__': #inner extra chunk dimension is already considered in previous loop
-    #             if dimname in xarray.dims:
-    #                 xarrays_in_shapes_chunks[ixarray].insert(0,len(xarray.coords[dimname]))
-    #                 xarrays_shapes[ixarray].insert(0, len(xarray.coords[dimname]))
-    #             else:
-    #                 xarrays_in_shapes_chunks[ixarray].insert(0,None)
-    #                 xarrays_shapes[ixarray].insert(0, None)
-
 
     logging.info('xarrays shapes for '+str(dims_no_apply.keys()) +' + '+str(dims_apply_names)+' : ')
     logging.info('  -> original xarrays in: '+str(xarrays_in_shapes))
