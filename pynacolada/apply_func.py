@@ -346,7 +346,6 @@ def chunk_task(func,
         chunks_in[ichunk_in].close()
         del chunks_in[ichunk_in]
 
-
     chunks_out_xarrays = []
     for ixarray_out, chunk_out in enumerate(chunks_out):
         if type(chunk_out) != xr.core.dataarray.DataArray:
