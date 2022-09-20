@@ -219,7 +219,10 @@ def chunk_task(func,
                xarrays_in_shapes_chunks,
                dims_all,
                dims_no_apply,
-               index_no_apply):
+               args_func,
+               kwargs_func,
+               index_no_apply,
+               ):
 
     # logging.debug('dimension selection for ' + \
     #               str(dims_no_apply.keys) + \
@@ -335,7 +338,7 @@ def chunk_task(func,
     else:
         pass_dims_not_found = {}
 
-    chunks_out = func(*chunks_in, **pass_dims_not_found)
+    chunks_out = func(*chunks_in, *args_func,**pass_dims_not_found,**kwargs_func)
     if type(chunks_out) not in [list, tuple]:
         chunks_out = [chunks_out]
 
@@ -374,6 +377,8 @@ def apply_func(
         pass_missing_output_coordinates = False,
         profile_overlap = 'square',
         nprocs = 1,
+        args_func,
+        kwargs_func,
 ):
 
     global barposition
@@ -760,11 +765,11 @@ def apply_func(
            iterate_func = pool.map(partial(chunk_task, func,
                       chunks_number_no_apply, dims_apply_names, number_of_chunks_apply_dims, output_dimensions,
                           dims_no_apply_lengths, chunk_sizes_no_apply, xarrays_in, xarrays_in_shapes_chunks, dims_all,dims_no_apply,
-                                                                                 ), tuple(index_no_apply_group))
+                                                                                 args_func,kwargs_func), tuple(index_no_apply_group))
        else:
            iterate_func = [chunk_task(func,
                       chunks_number_no_apply, dims_apply_names, number_of_chunks_apply_dims, output_dimensions,
-                          dims_no_apply_lengths, chunk_sizes_no_apply, xarrays_in, xarrays_in_shapes_chunks, dims_all,dims_no_apply,index_no_apply_group[0])]
+                          dims_no_apply_lengths, chunk_sizes_no_apply, xarrays_in, xarrays_in_shapes_chunks, dims_all,dims_no_apply,args_func,kwargs_func,index_no_apply_group[0],)]
 
 
        for (chunks_out_xarrays, chunk_start, chunk_end)  in iterate_func:
