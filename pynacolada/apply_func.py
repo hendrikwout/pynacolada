@@ -219,9 +219,9 @@ def chunk_task(func,
                xarrays_in_shapes_chunks,
                dims_all,
                dims_no_apply,
-               args_func,
-               kwargs_func,
-               index_no_apply,
+               args_func=[],
+               kwargs_func={},
+               index_no_apply=None,
                ):
 
     # logging.debug('dimension selection for ' + \
@@ -377,8 +377,8 @@ def apply_func(
         pass_missing_output_coordinates = False,
         profile_overlap = 'square',
         nprocs = 1,
-        args_func,
-        kwargs_func,
+        args_func = [],
+        kwargs_func = {},
 ):
 
     global barposition
