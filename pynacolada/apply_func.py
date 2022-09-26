@@ -994,9 +994,8 @@ def apply_func(
                            if attrkey in attributes_out.keys():
                                logging.warning('Attribute '+attrkey+' (original value = '+str(attributes_out[attrkey])+' ) is already in the attributes output of ichunk_out ' + str(ichunk_out) +' (new value = '+ str(attr_value_out)+'). Overwriting...')
                            attributes_out[attrkey] = attr_value_out
-                           import pdb; pdb.set_trace()
                            logging.debug('ichunk_out ' + str(ichunk_out) + ' - ' + attrkey + ' - ' + attrvalue + ' - ' +
-                                         attributes_out[attrkey])
+                                         str(attributes_out[attrkey]))
 
                        logging.debug('...end assigning extra attributes')
 
