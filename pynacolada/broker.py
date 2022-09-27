@@ -332,6 +332,7 @@ class broker (object):
                     if 'archive' in broker_current.keys():
                         if type(broker_current['archive']) is str:
                             archive_out = archive(broker_current['root'] + '/' + broker_current['archive'])
+                            import pdb; pdb.set_trace()
                             archive_out.remove(reset_lib=True)
                             archive_out.close()
                         elif type(broker_current['archive']) is archive:
