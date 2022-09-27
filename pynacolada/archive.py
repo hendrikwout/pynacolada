@@ -386,8 +386,8 @@ def apply_func_wrapper(
                 elif mode in ['numpy_output_to_disk_in_chunks', 'numpy_output_to_disk_no_chunks']:
                     logging.info('starting apply_func')
                     if mode == 'numpy_output_to_disk_in_chunks':
-                        filenames_out = xarray_function_wrapper(func, dataarrays_wrapper(*tuple(dataarrays_group_in)),
-                                                xarrays_output_filenames=filenames_out, attributes=attributes_dataarrays_out,**kwargs)
+                        xarray_function_wrapper(func, dataarrays_wrapper(*tuple(dataarrays_group_in)),
+                                xarrays_output_filenames=filenames_out, attributes=attributes_dataarrays_out,return_xarrays=False,**kwargs)
                     elif mode == 'numpy_output_to_disk_no_chunks':
                         temp_dataarrays = xarray_function_wrapper(func, dataarrays_wrapper(*tuple(dataarrays_group_in)),
                                                                   **kwargs)
@@ -431,6 +431,7 @@ def apply_func_wrapper(
 
                     for ixr_out, filename_out in enumerate(filenames_out):
                         logging.info('add_dataarray start')
+
                         archive_out.add_dataarray(filename_out)
                         logging.info('add_dataarray end')
                 else:
@@ -526,7 +527,6 @@ class archive (object):
         if os.path.isfile(path_pickle):
             self.lib_dataarrays = pd.read_pickle(path_pickle)
             self.set_path_pickle(path_pickle)
-            self.set_path_pickle(path_pickle)
             if reset == True:
                 self.remove(reset_lib=True)
                 os.system('rm '+path_pickle)
@@ -569,7 +569,7 @@ class archive (object):
             read_lib_dataarrays = self.lib_dataarrays.copy()
         for idx,row in read_lib_dataarrays.iterrows():
             if dataarrays == True:
-                CMD ='rm '+os.path.dirname(os.path.realpath(self.path_pickle)) + '/' + row['path']
+                CMD ='rm '+os.path.dirname(os.path.realpath(row['path_pickle'])) + '/' + row['path']
                 os.system(CMD)
                 # if 'available' not in self.lib_dataarrays.columns:
                 #     self.lib_dataarrays['available'] = ""
@@ -688,8 +688,6 @@ class archive (object):
             # variable (= DataArray.name): variable as considered in the library
             ncvariable = None # netcdf variable as seen on disk, not necessarily in the library
             if ('ncvariable' not in kwargs.keys()) or ((type(kwargs['ncvariable']).__name__ == 'float') and np.isnan(kwargs['ncvariable'])):
-
-
                 logging.info('Opening file:'+filepath_for_reading+ '(original file: '+filepath+')')
                 if 'variable' in kwargs.keys():
                         # print('reading',filepath,ncvariable)
