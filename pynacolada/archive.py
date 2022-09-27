@@ -231,7 +231,7 @@ def apply_func_wrapper(
             # building attributes of output dataarrays
             ifile = 0
             attributes_dataarrays_out = []
-            filenames_out = []
+            filenames_out_pattern = []
             dataarrays_out_already_available = []
             for idx_group_out, row in enumerate(table_this_group_out.to_dict('records')):
                 attributes_dataarrays_out.append({})
@@ -347,8 +347,8 @@ def apply_func_wrapper(
                     #         [attributes_dataarrays_out[ifile][key] for key in archive_out.file_pattern.split('"')[1::2]] + [
                     #             '']))).ravel())
 
-                    filename_out = os.path.dirname(archive_out.path_pickle)+'/'+archive_out.file_pattern
-                    filenames_out.append(filename_out)
+                    filename_out_pattern = os.path.dirname(archive_out.path_pickle)+'/'+archive_out.file_pattern
+                    filenames_out_pattern.append(filename_out_pattern)
 
                 ifile += 1
                 logging.info('End determining output filenames')
@@ -386,8 +386,8 @@ def apply_func_wrapper(
                 elif mode in ['numpy_output_to_disk_in_chunks', 'numpy_output_to_disk_no_chunks']:
                     logging.info('starting apply_func')
                     if mode == 'numpy_output_to_disk_in_chunks':
-                        xarray_function_wrapper(func, dataarrays_wrapper(*tuple(dataarrays_group_in)),
-                                xarrays_output_filenames=filenames_out, attributes=attributes_dataarrays_out,return_xarrays=False,**kwargs)
+                        filenames_out = xarray_function_wrapper(func, dataarrays_wrapper(*tuple(dataarrays_group_in)),
+                                xarrays_output_filenames=filenames_out_pattern, attributes=attributes_dataarrays_out,return_type='path',**kwargs)
                         import pdb; pdb.set_trace()
                     elif mode == 'numpy_output_to_disk_no_chunks':
                         temp_dataarrays = xarray_function_wrapper(func, dataarrays_wrapper(*tuple(dataarrays_group_in)),
@@ -433,7 +433,6 @@ def apply_func_wrapper(
                     for ixr_out, filename_out in enumerate(filenames_out):
                         logging.info('add_dataarray start')
 
-                        import pdb; pdb.set_trace()
                         archive_out.add_dataarray(filename_out)
                         logging.info('add_dataarray end')
                 else:
