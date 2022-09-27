@@ -388,7 +388,6 @@ def apply_func_wrapper(
                     if mode == 'numpy_output_to_disk_in_chunks':
                         filenames_out = xarray_function_wrapper(func, dataarrays_wrapper(*tuple(dataarrays_group_in)),
                                 xarrays_output_filenames=filenames_out_pattern, attributes=attributes_dataarrays_out,return_type='paths',**kwargs)
-                        import pdb; pdb.set_trace()
                     elif mode == 'numpy_output_to_disk_no_chunks':
                         temp_dataarrays = xarray_function_wrapper(func, dataarrays_wrapper(*tuple(dataarrays_group_in)),
                                                                   **kwargs)
@@ -718,7 +717,6 @@ class archive (object):
                 ds.close()
                 del ds
 
-            import pdb; pdb.set_trace()
             dict_columns['path'] = os.path.relpath(filepath,os.path.dirname(os.path.realpath(self.path_pickle)))
             # kwargs['absolute_path'] = os.path.abspath(filepath)
             # kwargs['absolute_path_for_reading'] = os.path.abspath(filepath_for_reading)
@@ -730,7 +728,6 @@ class archive (object):
         else:
             raise IOError('Input type '+type(DataArray_or_filepath).__name__+' not supported')
 
-        import pdb; pdb.set_trace()
         logging.info('Acquiring xarray attributes')
         for key,value in DataArray.attrs.items():
             if key in self.lib_dataarrays.index.names:
