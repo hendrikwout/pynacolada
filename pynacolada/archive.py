@@ -387,7 +387,7 @@ def apply_func_wrapper(
                     logging.info('starting apply_func')
                     if mode == 'numpy_output_to_disk_in_chunks':
                         filenames_out = xarray_function_wrapper(func, dataarrays_wrapper(*tuple(dataarrays_group_in)),
-                                xarrays_output_filenames=filenames_out_pattern, attributes=attributes_dataarrays_out,return_type='path',**kwargs)
+                                xarrays_output_filenames=filenames_out_pattern, attributes=attributes_dataarrays_out,return_type='paths',**kwargs)
                         import pdb; pdb.set_trace()
                     elif mode == 'numpy_output_to_disk_no_chunks':
                         temp_dataarrays = xarray_function_wrapper(func, dataarrays_wrapper(*tuple(dataarrays_group_in)),

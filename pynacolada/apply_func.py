@@ -372,7 +372,7 @@ def apply_func(
         output_dimensions=None,
         xarrays_output_dimensions = None,
         tempfile_dir=False,
-        return_type='xarray',
+        return_type='xarrays',
         ignore_memory_limit = False,
         overwrite_output_filenames = True,
         pass_missing_output_coordinates = False,
@@ -1148,12 +1148,13 @@ def apply_func(
     if return_type == 'xarrays':
         return tuple(xrouts)
     else:
-
-    else:
         for xrout in xrouts:
             xrout.close()
             del xrout
-        return xarrays_output_filenames_real
+        if return_type == 'paths':
+            return xarrays_output_filenames_real
+        else:
+            raise ValueError('Return type '+return_type+' not supported.')
     #return xarrays_output_filenames_real
 
 
