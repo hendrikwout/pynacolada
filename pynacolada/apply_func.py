@@ -994,7 +994,7 @@ def apply_func(
                            if attrkey in attributes_out.keys():
                                logging.warning('Attribute '+attrkey+' (original value = '+str(attributes_out[attrkey])+' ) is already in the attributes output of ichunk_out ' + str(ichunk_out) +' (new value = '+ str(attr_value_out)+'). Overwriting...')
                            attributes_out[attrkey] = attr_value_out
-                           logging.debug('ichunk_out ' + str(ichunk_out) + ' - ' + attrkey + ' - ' + attrvalue + ' - ' +
+                           logging.debug('ichunk_out ' + str(ichunk_out) + ' - ' + attrkey + ' - ' + str(attrvalue) + ' - ' +
                                          str(attributes_out[attrkey]))
 
                        logging.debug('...end assigning extra attributes')
@@ -1073,7 +1073,7 @@ def apply_func(
                        ncouts[ichunk_out].createVariable(chunk_out_xarray_ordered.name, "f", tuple(ncout_dims),fill_value=0.)
                        ncouts_variable.append(chunk_out_xarray_ordered.name)
                        for attrkey,attrvalue in attributes_out.items():
-                           logging.info('wriging netcdf attribute '+attrkey+' = '+attrvalue)
+                           logging.info('wriging netcdf attribute '+attrkey+' = '+str(attrvalue))
                            ncouts[ichunk_out].variables[chunk_out_xarray_ordered.name].setncattr(attrkey,attrvalue)
                        ncouts[ichunk_out].close()
 
