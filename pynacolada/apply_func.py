@@ -21,18 +21,6 @@ import datetime as dt
 sys.path.insert(0, 'lib/pynacolada/')
 import pynacolada as pcd
 
-#ProgressBar().register()
-# if __name__ == '__main__':
-#input_file = r'Y:\Unit_RMA\_OneBackup\RMA_RDM\GIS_data\Vlaanderen\BBK_Verharding\2018_beta\BBK2018v01\BBK1_18\BBK1_18.tif'
-
-# input_file = '/projects/C3S_EUBiodiversity/data/ancillary/GMTED2010/gmted2010_mean_30.nc'
-# ds = xr.open_dataset(
-#     input_file,
-#     chunks={
-#         'lat':int(ds.shape[0] / 40),
-#         'lon':int(ds.shape[1] / 40)}
-# )['Band1']
-
 def name_from_pattern(pattern, attributes):
     return ''.join(
         np.array(
@@ -366,7 +354,7 @@ def apply_func(
         func,
         xarrays_in,
         dims_apply_names = [],
-        xarrays_output_filenames = None,
+        xarrays_output_filenames = False,
         attributes = None,
         maximum_memory_size_per_proc_bytes = 2 * 10 ** 8 ,
         output_dimensions=None,
@@ -517,13 +505,13 @@ def apply_func(
     #         logging.info('adding no apply dimensions to the default output_dimensions '+dimname+': '+coordinates)
     #         output_dimensions[dimname] = {'coords':coordinates}
 
-    # if xarrays_output_filenames == None:
-    #     xarrays_output_filenames = tempfile.mktemp(suffix='.nc', dir=[if tempfile_dir is False )
+    if xarrays_output_filenames == None:
+        xarrays_output_filenames = tempfile.mktemp(suffix='.nc', dir='/tmp/' )
 
 
 
     if xarrays_output_dimensions is None:
-        if (xarrays_output_filenames == None) or (type(xarrays_output_filenames) == str):
+        if (xarrays_output_filenames == None) or (xarrays_output_filenames == False) or (type(xarrays_output_filenames) == str):
             logging.info('by default, we assume only one xarray output.')
             xarrays_output_dimensions = [output_dimensions]
 
@@ -775,7 +763,7 @@ def apply_func(
 
        for (chunks_out_xarrays, chunk_start, chunk_end)  in iterate_func:
 
-           if (xarrays_output_filenames is not None) and (type(xarrays_output_filenames) != str) and (
+           if (xarrays_output_filenames is not None) and (xarrays_output_filenames != False) and (type(xarrays_output_filenames) != str) and (
                    len(chunks_out_xarrays) != len(xarrays_output_filenames)):
                raise ValueError('The number of outputs from function (' + str(
                    len(chunks_out_xarrays)) + ') is different from the number' + \
@@ -1025,7 +1013,7 @@ def apply_func(
                        return attributes_out
                    attributes_out = fix_dict_for_ncattributes(attributes_out)
 
-                   if xarrays_output_filenames is not None:
+                   if (xarrays_output_filenames is not None) and (xarrays_output_filenames != False):
                        logging.info('Acquiring real output filename for xarray out number '+str(ichunk_out)+' and setting output (temporary filename)')
                        if type(xarrays_output_filenames) == str:
                            xarrays_output_filenames_pattern = xarrays_output_filenames

@@ -432,7 +432,7 @@ def apply_func_wrapper(
                     for ixr_out, filename_out in enumerate(filenames_out):
                         logging.info('add_dataarray start')
 
-                        archive_out.add_dataarray(filename_out)
+                        archive_out.add_dataarray(filename_out,method='add')
                         logging.info('add_dataarray end')
                 else:
                     ValueError('mode ' + mode + ' not implemented')
@@ -518,7 +518,7 @@ class archive (object):
             self.__dict__['set_'+key] = lambda value: self.__setattr__(key,value)
         print('Loading default settings')
         self.file_pattern = file_pattern
-        self.not_dataarray_attributes = ['ncvariable', 'path']
+        self.not_dataarray_attributes = ['ncvariable', 'path','path_pickle','linked','available', ]
 
         self.dataarrays = {}
         self.coordinates = {}
@@ -569,8 +569,9 @@ class archive (object):
             read_lib_dataarrays = self.lib_dataarrays.copy()
         for idx,row in read_lib_dataarrays.iterrows():
             if dataarrays == True:
-                CMD ='rm '+os.path.dirname(os.path.realpath(row['path_pickle'])) + '/' + row['path']
-                os.system(CMD)
+                if ('linked' not in row) or (row['linked'] == False):
+                    CMD ='rm '+os.path.dirname(os.path.realpath(row['path_pickle'])) + '/' + row['path']
+                    os.system(CMD)
                 # if 'available' not in self.lib_dataarrays.columns:
                 #     self.lib_dataarrays['available'] = ""
                 #     self.lib_dataarrays['available'] = True
@@ -874,6 +875,8 @@ class archive (object):
                         import pdb; pdb.set_trace()
 
             ncfile.close()
+        elif method == 'link':
+            dict_columns['linked'] = True
 
         if 'path' in dict_columns.keys():
             DataArray.close()

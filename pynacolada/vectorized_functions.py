@@ -117,12 +117,16 @@ def extend_crop_interpolate(
     )[0]
     latitude_crop_input = grid_input[0][latitude_crop_input_index]
 
+    if debug == True:
+        import pdb; pdb.set_trace()
     if x is not None:
         if type(x) is xr.DataArray:
         # x_crop = x[...,latitude_crop_input_index,:][...,longitude_crop_input_index]
-            x_crop = x.isel(latitude=latitude_crop_input_index, longitude=longitude_crop_input_index).values
+            x_crop = x.isel(latitude=latitude_crop_input_index, longitude=longitude_crop_input_index)
         else:
             x_crop = x.take(latitude_crop_input_index,axis=-2).take(longitude_crop_input_index,axis=-1)
+    if debug == True:
+        import pdb; pdb.set_trace()
 
     if ascending_lat_lon == True:
         latitude_sort_index = np.argsort(latitude_crop_input)
@@ -131,10 +135,12 @@ def extend_crop_interpolate(
         longitude_crop_input = longitude_crop_input[longitude_sort_index]
         if x is not None:
             if type(x) is xr.DataArray:
-                x_crop = x_crop.isel(latitude=latitude_sort_index, longitude=longitude_sort_index).values
+                x_crop = x_crop.isel(latitude=latitude_sort_index, longitude=longitude_sort_index)
             else:
                 x_crop = x_crop.take(latitude_sort_index,axis=-2).take(longitude_sort_index,axis=-1)
 
+    if debug == True:
+        import pdb; pdb.set_trace()
     # ensure that output grid is inside the cropped input grid
     longitude_left_output = np.max([
         np.min(longitude_crop_input),
@@ -195,20 +201,43 @@ def extend_crop_interpolate(
         )
 
         if x is not None:
+            if type(x) is xr.DataArray:
+                x_crop_values = x_crop.values
+            else:
+                x_crop_values = x_crop
+
             workaround_2_dim = False
             if len(x_crop.shape) == 2:
                 workaround_2_dim = True
-                x_crop = x_crop[np.newaxis]
-            x_interpolated = interpolate_delaunay_linear(
-                x_crop,
+                x_crop_values = x_crop_values[np.newaxis]
+            if debug == True:
+                import pdb; pdb.set_trace()
+            x_interpolated_values = interpolate_delaunay_linear(
+                x_crop_values,
                 meshgrid_input_crop,
                 np.meshgrid(*grid_output_revised,indexing='ij'),
                 remove_duplicate_points=True,
                 dropnans=True,
                 add_newaxes=False
             )
+            import pdb; pdb.set_trace()
+
+            if debug == True:
+                import pdb; pdb.set_trace()
             if workaround_2_dim:
-                x_interpolated = x_interpolated[0]
+                x_interpolated_values = x_interpolated_values[0]
+
+            if type(x) is xr.DataArray:
+                x_interpolated = xr.DataArray(
+                    x_interpolated_values,
+                    dims=['latitude', 'longitude'],
+                    coords={
+                        'latitude': output_grid_revised[0],
+                        'longitude': output_grid_revised[1]
+                    }
+                )
+            else:
+                x_interpolated = x_interpolated_values
         if debug == True:
             import pdb; pdb.set_trace()
     # x_interpolated = pcd.vectorized_functions.interpolate_delaunay_linear(
@@ -221,7 +250,6 @@ def extend_crop_interpolate(
     return_value = []
     if x is not None:
         return_value.append(x_interpolated)
-
 
     if debug == True:
         import pdb; pdb.set_trace()
@@ -241,7 +269,8 @@ def extend_crop_interpolate(
         return_value =  return_value[0]
     else:
         return_value = tuple(return_value)
-#    import pdb; pdb.set_trace()
+    import pdb; pdb.set_trace()
+
     return return_value
 
 
