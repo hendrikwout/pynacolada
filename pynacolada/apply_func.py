@@ -34,6 +34,9 @@ def name_from_pattern(pattern, attributes):
     )
 
 
+def xarray_coordinate_from_array(array, name):
+    return xr.DataArray(array, dims=[name], name=name, coords={name: array})
+
 def get_coordinates_attributes(coords):
     coordinates_attributes = {}
     if 'time' in coords.keys():
