@@ -107,7 +107,7 @@ def get_coordinates_attributes(coords):
 
 
 def identical_xarrays(xarray1,xarray2):
-    return (xarray1.shape == xarray2.shape) and (not (np.any(xarray1 != xarray2)))
+    return (xarray1.shape == xarray2.shape) and (not (np.any(xarray1.values != xarray2.values)))
 
 def sort_dict_by_keys(dict_input, dict_input_sort_keys):
     """
@@ -211,6 +211,7 @@ def chunk_task(func,
                xarrays_in_shapes_chunks,
                dims_all,
                dims_no_apply,
+               pass_missing_output_coordinates,
                args_func=[],
                kwargs_func={},
                index_no_apply=None,
@@ -368,7 +369,7 @@ def apply_func(
         overwrite_output_filenames = True,
         pass_missing_output_coordinates = False,
         profile_overlap = 'square',
-        nprocs = 1,
+        nprocs = 4,
         args_func = [],
         kwargs_func = {},
 ):
@@ -756,12 +757,12 @@ def apply_func(
            pool = Pool()
            iterate_func = pool.map(partial(chunk_task, func,
                       chunks_number_no_apply, dims_apply_names, number_of_chunks_apply_dims, output_dimensions,
-                          dims_no_apply_lengths, chunk_sizes_no_apply, xarrays_in, xarrays_in_shapes_chunks, dims_all,dims_no_apply,
+                          dims_no_apply_lengths, chunk_sizes_no_apply, xarrays_in, xarrays_in_shapes_chunks, dims_all,dims_no_apply,pass_missing_output_coordinates,
                                                                                  args_func,kwargs_func), tuple(index_no_apply_group))
        else:
            iterate_func = [chunk_task(func,
                       chunks_number_no_apply, dims_apply_names, number_of_chunks_apply_dims, output_dimensions,
-                          dims_no_apply_lengths, chunk_sizes_no_apply, xarrays_in, xarrays_in_shapes_chunks, dims_all,dims_no_apply,args_func,kwargs_func,index_no_apply_group[0],)]
+                          dims_no_apply_lengths, chunk_sizes_no_apply, xarrays_in, xarrays_in_shapes_chunks, dims_all,dims_no_apply,pass_missing_output_coordinates,args_func,kwargs_func,index_no_apply_group[0],)]
 
 
        for (chunks_out_xarrays, chunk_start, chunk_end)  in iterate_func:

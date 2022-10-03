@@ -76,7 +76,8 @@ def extend_crop_interpolate(
         debug=False,
         border_pixels=5,
         ascending_lat_lon = False,
-        tolerance_for_grid_match = 1.e-9
+        tolerance_for_grid_match = 1.e-9,
+        crop_output_grid_into_input_grid = True,
     ):
     """
     purpose:
@@ -86,6 +87,8 @@ def extend_crop_interpolate(
     input arguments:
         border_pixels: include extra number of pixels at the borders of the domain to ensure consistent interpolation
     """
+    if type(grid_output[0]) == xr.core.dataarray.DataArray:
+        grid_output = [grid_output[0].values,grid_output[1].values]
 
     grid_input_latitude_spacing = np.abs(np.median(np.ravel(grid_input[0][1:] - grid_input[0][:-1])))
     grid_input_longitude_spacing = np.abs(np.median(np.ravel(grid_input[1][...,1:] - grid_input[1][...,:-1])))
@@ -161,12 +164,16 @@ def extend_crop_interpolate(
     ])
 
     grid_output_revised = []
-    grid_output_revised.append(
-        grid_output[0][(grid_output[0] >= (latitude_bottom_output - tolerance_for_grid_match)) & (grid_output[0] <= (latitude_top_output + tolerance_for_grid_match))]
-    )
-    grid_output_revised.append(
-        grid_output[1][(grid_output[1] >= (longitude_left_output - tolerance_for_grid_match)) & (grid_output[1] <= (longitude_right_output + tolerance_for_grid_match))]
-    )
+    if crop_output_grid_into_input_grid:
+        grid_output_revised.append(
+            grid_output[0][(grid_output[0] >= (latitude_bottom_output - tolerance_for_grid_match)) & (grid_output[0] <= (latitude_top_output + tolerance_for_grid_match))]
+        )
+        grid_output_revised.append(
+            grid_output[1][(grid_output[1] >= (longitude_left_output - tolerance_for_grid_match)) & (grid_output[1] <= (longitude_right_output + tolerance_for_grid_match))]
+        )
+    else:
+        grid_output_revised.append( grid_output[0])
+        grid_output_revised.append( grid_output[1])
 
     if debug == True:
         import pdb; pdb.set_trace()
@@ -220,7 +227,6 @@ def extend_crop_interpolate(
                 dropnans=True,
                 add_newaxes=False
             )
-            import pdb; pdb.set_trace()
 
             if debug == True:
                 import pdb; pdb.set_trace()
@@ -232,8 +238,8 @@ def extend_crop_interpolate(
                     x_interpolated_values,
                     dims=['latitude', 'longitude'],
                     coords={
-                        'latitude': output_grid_revised[0],
-                        'longitude': output_grid_revised[1]
+                        'latitude': grid_output_revised[0],
+                        'longitude': grid_output_revised[1]
                     }
                 )
             else:
@@ -260,6 +266,7 @@ def extend_crop_interpolate(
                 (np.max(np.abs(grid_output_revised[0] - grid_output[0])) >= tolerance_for_grid_match) or \
            (len(grid_output_revised[1]) != len(grid_output[1])) or \
                 (np.max(np.abs(grid_output_revised[1] - grid_output[1])) >= tolerance_for_grid_match):
+            import pdb; pdb.set_trace()
             raise ValueError('Predifined output grid is different from actual output grid, '
                              'so you may need that output. Please set return_output_grid to true.')
 
@@ -269,7 +276,6 @@ def extend_crop_interpolate(
         return_value =  return_value[0]
     else:
         return_value = tuple(return_value)
-    import pdb; pdb.set_trace()
 
     return return_value
 
