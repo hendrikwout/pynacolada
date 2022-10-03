@@ -49,6 +49,7 @@ def apply_func_wrapper(
     extra_attributes={},
     post_apply=None,
     force_recalculate=False,
+    engine=None,
     update_pickle=True,
     #lib_dataarrays = self.lib_dataarrays
 
@@ -217,8 +218,7 @@ def apply_func_wrapper(
                         xr.open_dataarray(
                             os.path.dirname(
                                 os.path.realpath(row_of_dataarray.path_pickle)
-                            )+'/'+row_of_dataarray.path
-                        )
+                            )+'/'+row_of_dataarray.path ,engine=engine)
                     )
 
             # ??????
@@ -641,7 +641,7 @@ class archive (object):
 
     def add_from_dataset(self,Dataset_or_filepath,variables=None,**kwargs):
         if type(Dataset_or_filepath).__name__ == 'str':
-            Dataset = xr.open_dataset(Dataset_or_filepath)
+            Dataset = xr.open_dataset(Dataset_or_filepath,engine=engine)
             kwargs['absolute_path'] = os.path.abspath(Dataset_or_filepath)
             kwargs['absolute_for_reading'] = kwargs['absolute_path']
         else:
@@ -668,6 +668,7 @@ class archive (object):
             reset_space=False,
             sort_lib = True,
             update_lib = True,
+            engine = None,
             **kwargs,
     ):
         #DataArray = None
@@ -703,17 +704,17 @@ class archive (object):
                     # except:
 
                     try:
-                        ds = xr.open_dataset(filepath_for_reading)
+                        ds = xr.open_dataset(filepath_for_reading,engine=engine)
                         DataArray = ds[kwargs['variable']]
                         ds.close()
                         del ds
                         #kwargs['ncvariable'] = ncvariable
                     except:
-                        DataArray = xr.open_dataarray(filepath_for_reading)
+                        DataArray = xr.open_dataarray(filepath_for_reading,engine=engine)
                 else:
-                    DataArray = xr.open_dataarray(filepath_for_reading)
+                    DataArray = xr.open_dataarray(filepath_for_reading,engine=engine)
             else:
-                ds = xr.open_dataset(filepath_for_reading)
+                ds = xr.open_dataset(filepath_for_reading,engine=engine)
                 DataArray = ds[kwargs['ncvariable']]
                 ds.close()
                 del ds
@@ -911,6 +912,7 @@ class archive (object):
             cache_to_tempdir=False,
             cache_to_ram=False,
             reset_space=False,
+            engine=None,
             **kwargs,
     ):
         #DataArray = None
@@ -956,18 +958,18 @@ class archive (object):
                     # except:
                     try:
 
-                        ds = xr.open_dataset(filepath_for_reading)
+                        ds = xr.open_dataset(filepath_for_reading,engine=engine)
                         DataArray = ds[ncvariable]
                         ds.close()
                         del ds
                         #kwargs['ncvariable'] = ncvariable
                     except:
-                        DataArray = xr.open_dataarray(filepath_for_reading)
+                        DataArray = xr.open_dataarray(filepath_for_reading,engine=engine)
                 else:
-                    DataArray = xr.open_dataarray(filepath_for_reading)
+                    DataArray = xr.open_dataarray(filepath_for_reading,engine=engine)
                 kwargs['ncvariable'] = DataArray.name
             else:
-                ds = xr.open_dataset(filepath_for_reading)
+                ds = xr.open_dataset(filepath_for_reading,engine=engine)
                 DataArray = ds[kwargs['ncvariable']]
                 ds.close()
                 del ds
