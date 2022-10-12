@@ -369,7 +369,7 @@ def apply_func(
         overwrite_output_filenames = True,
         pass_missing_output_coordinates = False,
         profile_overlap = 'square',
-        nprocs = 4,
+        nprocs = 1,
         args_func = [],
         kwargs_func = {},
 ):
@@ -1010,8 +1010,11 @@ def apply_func(
                    def fix_dict_for_ncattributes(attributes):
                        attributes_out = {}
                        for attrkey,attrvalue in attributes.items():
-                           if (type(attrvalue) == str) and ( attrvalue == ''):
+                           if ((type(attrvalue) == str) and ( attrvalue == '')) :
                                logging.warning('Excluding attribute "'+attrkey+'" that has empty value. Apparently, this gives problems when writing to the netcdf later on.')
+                           elif (type(attrvalue) is not str):
+                               logging.warning(
+                                   'Excluding attribute "' + attrkey + '" that is not a string.')
                            else:
                                attributes_out[attrkey] = attrvalue
                        return attributes_out
@@ -1066,7 +1069,7 @@ def apply_func(
                        ncouts[ichunk_out].createVariable(chunk_out_xarray_ordered.name, "f", tuple(ncout_dims),fill_value=0.)
                        ncouts_variable.append(chunk_out_xarray_ordered.name)
                        for attrkey,attrvalue in attributes_out.items():
-                           logging.info('wriging netcdf attribute '+attrkey+' = '+str(attrvalue))
+                           logging.info('writing netcdf attribute '+attrkey+' = '+str(attrvalue))
                            ncouts[ichunk_out].variables[chunk_out_xarray_ordered.name].setncattr(attrkey,attrvalue)
                        ncouts[ichunk_out].close()
 
@@ -1120,7 +1123,7 @@ def apply_func(
         if type(ncouts[incout]) == nc4.Dataset:
 
             logging.warning('workaround with _FillValue to enable overlapping values')
-            ncouts[ichunk_out] = nc4.Dataset(xarrays_output_filenames_work[ichunk_out],'a')
+            ncouts[incout] = nc4.Dataset(xarrays_output_filenames_work[incout],'a')
             ncouts[incout][ncouts_variable[incout]].delncattr('_FillValue')
             ncouts[incout].close()
             if not os.path.isdir(os.path.dirname(xarrays_output_filenames_real[incout])):
@@ -1133,7 +1136,7 @@ def apply_func(
             os.system(CMD)
             sleep(1)
             xrouts.append(xr.open_dataarray(xarrays_output_filenames_real[incout]))
-        elif type(ncouts[ichunk_out]) == xr.core.dataarray.DataArray:
+        elif type(ncouts[incout]) == xr.core.dataarray.DataArray:
             xrouts.append(ncouts[incout])
 
     del xarrays_output_dimensions

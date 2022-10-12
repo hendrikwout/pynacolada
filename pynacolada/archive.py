@@ -3,7 +3,6 @@ import os
 import pandas as pd
 import xarray as xr
 import numpy as np
-import numpy as np
 import datetime as dt
 import itertools
 import yaml
@@ -207,19 +206,17 @@ def apply_func_wrapper(
                                         **dict(zip(table_this_group_in.columns, row))}[key] for key in
                                        lib_dataarrays.index.names]
 
-                # index_dataarray = [{**dict(zip(table_this_group_in.index.names,idx_group_in)),**dict(zip(table_this_group_in.columns,row))}[key] for key in self.lib_dataarrays.index.names]
-
                 row_of_dataarray = lib_dataarrays.loc[tuple(index_dataarray)]
 
+                print(row_of_dataarray.path_pickle)
+                print(row_of_dataarray.path)
                 if tuple(index_dataarray) in dataarrays.keys():
                     dataarrays_group_in.append(dataarrays[tuple(index_dataarray)])
                 else:
-                    dataarrays_group_in.append(
-                        xr.open_dataarray(
-                            os.path.dirname(
-                                os.path.realpath(row_of_dataarray.path_pickle)
-                            )+'/'+row_of_dataarray.path ,engine=engine)
-                    )
+                        dataarrays_group_in.append(
+                            xr.open_dataarray(
+                                    os.path.dirname(row_of_dataarray.path_pickle) +'/'+row_of_dataarray.path ,engine=engine)
+                        )
 
             # ??????
             # for dataarray in dataarrays_group_in:
@@ -257,7 +254,7 @@ def apply_func_wrapper(
                         if (key not in attributes_dataarrays_out[ifile]) and \
                                 ((inherit_attributes == True) or (key in inherit_attributes)) and \
                                 (key not in ['absolute_path_as_cache', 'absolute_path_for_reading', 'absolute_path',
-                                             'path','available']):
+                                             'path','available','path_pickle']):
                             attributes_dataarrays_out[ifile][key] = value
 
                 # !!
@@ -414,7 +411,7 @@ def apply_func_wrapper(
                             for idataarray in range(len(temp_dataarrays)):
                                 for key, value in attributes_dataarrays_out[idataarray].items():
                                     if key not in ['variable', 'absolute_path_for_reading', 'absolute_path_as_cache',
-                                                   'absolute_path', 'path']:
+                                                   'absolute_path', 'path','path_pickle']:
                                         temp_dataarrays[idataarray].attrs[key] = value
                                     if key == 'variable':
                                         temp_dataarrays[idataarray].name = value
@@ -503,11 +500,23 @@ class collection (object):
 
 
 class archive (object):
+
+
+    def get_dataarray(self,index):
+        path = self.get_path(index)
+        xropen = xr.open_dataarray(path)
+        return xropen
+
+    def get_path(self,index):
+        path = os.path.dirname(self.lib_dataarrays.loc[index].path_pickle) + '/' + self.lib_dataarrays.loc[index].path
+        return path
+
     def __init__(
             self,
             path_pickle=None,
             file_pattern='"variable"_"source"_"time"_"space".nc',
             reset = False,
+            debug = False,
             *args,
             **kwargs):
 
@@ -527,9 +536,10 @@ class archive (object):
         if os.path.isfile(path_pickle):
             self.lib_dataarrays = pd.read_pickle(path_pickle)
             self.set_path_pickle(path_pickle)
-            if reset == True:
-                self.remove(reset_lib=True)
-                os.system('rm '+path_pickle)
+
+        if reset == True:
+            self.remove(reset_lib=True)
+            os.system('rm '+path_pickle)
 
         if not os.path.isfile(path_pickle):
             self.lib_dataarrays = pd.DataFrame(
@@ -538,6 +548,8 @@ class archive (object):
                 ),
                 columns=['path', 'available']).iloc[1:]
             self.set_path_pickle(path_pickle)
+        if debug == True:
+            import pdb; pdb.set_trace()
         # if path is not None:
         #     self.load(path,*args,**kwargs)
     def set_path_pickle(self,path_pickle):
@@ -719,7 +731,7 @@ class archive (object):
                 ds.close()
                 del ds
 
-            dict_columns['path'] = os.path.relpath(filepath,os.path.dirname(os.path.realpath(self.path_pickle)))
+            dict_columns['path'] = os.path.relpath(os.path.realpath(filepath),os.path.dirname(os.path.realpath(self.path_pickle)))
             # kwargs['absolute_path'] = os.path.abspath(filepath)
             # kwargs['absolute_path_for_reading'] = os.path.abspath(filepath_for_reading)
             # kwargs['absolute_path_as_cache'] = (None if filepath_as_cache is None else os.path.abspath(filepath_as_cache))
@@ -857,7 +869,9 @@ class archive (object):
                 logging.info('Executing: ' + CMD); os.system(CMD)
             else:
                 DataArray.to_netcdf(destination_file)
-            dict_columns['path'] = os.path.relpath(destination_file,os.path.dirname(os.path.realpath(self.path_pickle)))
+            dict_columns['path'] = os.path.relpath(os.path.realpath(destination_file),os.path.dirname(os.path.realpath(self.path_pickle)))
+
+            DataArray.close()
 
             logging.info('We are copying, so attributes are updated to the new netcdf file.')
             ncfile = nc4.Dataset(os.path.dirname(os.path.realpath(self.path_pickle))+'/'+dict_columns['path'],'a')
@@ -868,7 +882,7 @@ class archive (object):
 
             for key,value in {**dict_index, **dict_columns}.items():
 
-                if key not in ['ncvariable','path']:
+                if key not in ['ncvariable','path','path_pickle']:
                     try:
                         logging.info('setting attribute '+key+' to '+str(value))
                         ncvar.setncattr(key, value)
@@ -876,6 +890,10 @@ class archive (object):
                         import pdb; pdb.set_trace()
 
             ncfile.close()
+            if 'ncvariable' in dict_columns.keys():
+                DataArray =xr.open_dataset(os.path.dirname(os.path.realpath(self.path_pickle))+'/'+dict_columns['path'])[dict_columns['ncvariable']]
+            else:
+                DataArray = xr.open_dataarray(os.path.dirname(os.path.realpath(self.path_pickle)) + '/' + dict_columns['path'])
         elif method == 'link':
             dict_columns['linked'] = True
 
@@ -900,7 +918,13 @@ class archive (object):
             self.lib_dataarrays.sort_index(inplace=True)
 
         if update_lib == True:
-            self.lib_dataarrays.to_pickle(self.path_pickle)
+            # we don't write pickle location since this we enforce relative file structure. the column is only to work
+            # with collection of archives.
+            self.lib_dataarrays.drop(columns='path_pickle').to_pickle(self.path_pickle)
+
+
+        logging.info('writing  path_pickle on a row basis. This is required to be able to work with collections of archives')
+        self.lib_dataarrays.loc[index,'path_pickle'] = self.path_pickle
 
         return self.lib_dataarrays.loc[index]
 
@@ -1697,6 +1721,7 @@ class archive (object):
                 raise IOError('pickle file exists. Please use force_overwrite_pickle = True, or specify the full pickle name as the library_path.')
 
             # when the self.path_pickle exists, it is assumed that this file needs to be updated
+            import pdb; pdb.set_trace()
             self.path_pickle = lib_dirname+'/'+lib_basename
         # else:
         #     lib_dirname = os.path.dirname(self.path_pickle)
@@ -1811,7 +1836,7 @@ class archive (object):
                 if ((columns['absolute_path'] is not None) and (type(columns['absolute_path']) is str)):
                     if 'path' not in self.lib_dataarrays.columns:
                         self.lib_dataarrays['path'] = None
-                    self.lib_dataarrays['path'].loc[idx] =  os.path.relpath(columns['absolute_path'],os.path.dirname(self.path_pickle))
+                    self.lib_dataarrays['path'].loc[idx] =  os.path.relpath(os.path.realpath(columns['absolute_path']),os.path.dirname(os.path.realpath(self.path_pickle)))
                     logging.info("relative file path to "+os.path.dirname(self.path_pickle)+" is "+self.lib_dataarrays['path'].loc[idx])
                 #os.path.commonprefix([columns['absolute_path'],lib_dirname])
                 elif ((columns['path'] is not None) and (type(columns['path']) is str)):

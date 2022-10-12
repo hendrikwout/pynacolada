@@ -2,7 +2,8 @@ import yaml
 import logging
 from . import archive,collection
 import os
-from time import sleep
+import datetime as dt
+from time import sleep, ctime
 import numpy as np
 import tempfile
 from ast import literal_eval
@@ -46,10 +47,12 @@ class broker (object):
             'reset_lock':0,
             'reset_history':0,
             'force_recalculate':0,
+            'delay':1,
+            'datetime_start_chain': str(dt.datetime.now()).replace(' ','_')
         }
 
         for setting in self.global_settings_defaults.keys():
-            if setting in kwargs.keys():
+            if (setting in kwargs.keys()) and (kwargs[setting] is not None):
                 self.__dict__[setting] = kwargs[setting]
             else:
                 self.__dict__[setting] = self.global_settings_defaults[setting]
@@ -64,6 +67,7 @@ class broker (object):
 
     def retrieve_input(self,debug=False):
         logging.info('--- BEGIN Collecting or generating coarse input data -- ')
+        delay = 0
         for ibroker_requires, broker_requires in enumerate(self.requires):
 
             request_parent = self.requires[ibroker_requires].copy()
@@ -108,6 +112,11 @@ class broker (object):
                 for key in arguments_propagate_reduce_to_parent:
                     parent_execute.append('--' + key)
                     parent_execute.append(str(max(self.__dict__[key]-1, 0)))
+                parent_execute.append('--delay')
+                delay = delay + 1 + float(self.__dict__['delay'])
+                parent_execute.append(str(delay))
+                parent_execute.append('--datetime_start_chain')
+                parent_execute.append(str(self.datetime_start_chain))
 
                 # p = Popen(parent_arguments , stdout=PIPE, stderr=PIPE)
                 for iarg, arg in enumerate(parent_arguments):
@@ -139,8 +148,8 @@ class broker (object):
                         history_dict = {}
 
 
-                if debug == True:
-                    import pdb; pdb.set_trace()
+                # if debug == True:
+                #     import pdb; pdb.set_trace()
 
                 if (((self.reset_history - 1) > 0)):
                     if (self.requires[ibroker_requires]['process_arguments'] in history_dict.keys()):
@@ -173,6 +182,7 @@ class broker (object):
                             stderr=self.requires[ibroker_requires]['stderr'],
                             )
                     logging.info('workaround to avoid simultaneous history and lock file access. Waiting for 1 seconds')
+                    #make process-specific file. if that one exists. then we can assume that lock file is also created. then we continue
                     sleep(1)
 
         for ibroker_requires,broker_requires in list(enumerate(self.requires)):
@@ -233,8 +243,8 @@ class broker (object):
                 elif type(return_from_subprocess_eval) == list:
                     for ireturn_requires,return_requires in enumerate(return_from_subprocess_eval):
                         self.requires.append(return_requires)
-                        if debug ==True:
-                            import pdb; pdb.set_trace()
+                        # if debug ==True:
+                        #     import pdb; pdb.set_trace()
                         for key in ['root','process', 'executing_subprocess', 'stderr', 'stdout','process_arguments']:
                             if key in broker_requires.keys():
                                 self.requires[-1][key] = broker_requires[key]
@@ -277,14 +287,14 @@ class broker (object):
                             values_input = []
                             for ibroker_requires, broker_requires in list(enumerate(self.requires)):
                                 if ('disable' not in self.requires[ibroker_requires].keys()):
-                                    if (key in self.requires[ibroker_requires].keys()):
+                                    if (key in self.requires[ibroker_requires].keys()) and (self.requires[ibroker_requires][key] is not None):
                                         values_input.append(self.requires[ibroker_requires][key])
-                                    else:
-                                        values_input.append(None)
+                                    # else:
+                                    #     values_input.append(None)
                             if len(values_input) > 0:
-                                self.provides[ibroker_provides][key] = self.provides[ibroker_provides][key](*tuple(values_input))
+                                    self.provides[ibroker_provides][key] = self.provides[ibroker_provides][key](*tuple(values_input))
                             else:
-                                logging.critical('no value for provides - function foun found.')
+                                logging.critical('no value for provides - function found.')
                                 self.provides[ibroker_provides][key] = None  # broker_provides['archive'](values_input)
 
                 icount = 0
@@ -348,8 +358,8 @@ class broker (object):
                         self.provides['archive'].remove(records=True)
                         self.provides['archive'].close()
 
-        if debug == True:
-            import pdb; pdb.set_trace()
+        # if debug == True:
+        #     import pdb; pdb.set_trace()
 
         archive_collection_paths = []
         for broker_requires in self.requires:
@@ -358,7 +368,7 @@ class broker (object):
                 if (full_path not in archive_collection_paths):
                     archive_collection_paths.append(full_path)
 
-        self.parent_collection = collection([archive(full_path) for full_path in archive_collection_paths])
+        self.parent_collection = collection([archive(full_path,debug=debug) for full_path in archive_collection_paths])
 
         logging.info('--- END Collecting or generating coarse input data --- ')
 
@@ -395,9 +405,10 @@ class broker (object):
                                 if 'disable' not in item.keys():
                                     if key in item.keys():
                                         values_input.append(item[key])
-                                    else:
-                                        values_input.append(None)
-                            return_request[igroups_out][key] = self.provides[igroups_out][key](*tuple(values_input))
+                                    # else:
+                                    #     values_input.append(None)
+                            if len(values_input) > 0:
+                                return_request[igroups_out][key] = self.provides[igroups_out][key](*tuple(values_input))
                         # if type(return_request[igroups_out][key]) is str:
                         #     return_request[igroups_out][key].replace('"','')
 
@@ -477,8 +488,13 @@ class broker (object):
             archive_out_filename = self.provides['root'] + '/' + self.provides['archive']
         lockfile = archive_out_filename + '_lock'
 
-        if self.reset_lock > 0:
+        logging.warning('delaying process: '+str(self.delay)+' seconds')
+        sleep(float(self.delay))
+        if (self.reset_lock > 0) and \
+                os.path.isfile(lockfile) and \
+                (str(dt.datetime.strptime(ctime(os.path.getctime(lockfile)), "%c")).replace(' ','_') < self.datetime_start_chain):
             os.system('rm ' + lockfile)
+
         while os.path.isfile(lockfile):
             logging.warning('archive locked with "' + lockfile + '" . Waiting for another process to release it.')
             sleep(1)
@@ -529,14 +545,18 @@ class broker (object):
 
         logging.info('start apply_func on parent_collection')
         if self.dummy != 'True':
-            os.system('touch '+lockfile)
+
+            CMD = 'mkdir -p '+os.path.dirname(lockfile)
+            print('executing: '+CMD); os.system(CMD)
+            CMD = 'touch '+lockfile
+            print('executing: '+CMD); os.system(CMD)
             self.parent_collection.apply_func(
                 self.operator,
                 query=query,
                 apply_groups_in = requests_parents,
                 apply_groups_out=apply_groups_out,
                 archive_out = archive_out_filename,
-                add_archive_out_to_collection = True, # TODO: should be False (default) but need to check why that gives problems.
+                add_archive_out_to_collection = False, # TODO: should be False (default) but need to check why that gives problems.
                 **self.operator_properties,
                 **kwargs)
             os.system('rm '+lockfile)

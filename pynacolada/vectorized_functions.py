@@ -89,6 +89,8 @@ def extend_crop_interpolate(
     """
     if type(grid_output[0]) == xr.core.dataarray.DataArray:
         grid_output = [grid_output[0].values,grid_output[1].values]
+    if type(grid_input[0]) == xr.core.dataarray.DataArray:
+        grid_input = [grid_input[0].values,grid_input[1].values]
 
     grid_input_latitude_spacing = np.abs(np.median(np.ravel(grid_input[0][1:] - grid_input[0][:-1])))
     grid_input_longitude_spacing = np.abs(np.median(np.ravel(grid_input[1][...,1:] - grid_input[1][...,:-1])))
@@ -234,13 +236,19 @@ def extend_crop_interpolate(
                 x_interpolated_values = x_interpolated_values[0]
 
             if type(x) is xr.DataArray:
+                coords_out = {}
+                for dim in x.dims:
+                    if dim == 'latitude':
+                        coords_out[dim] = grid_output_revised[0]
+                    elif dim == 'longitude':
+                        coords_out[dim] = grid_output_revised[1]
+                    else:
+                        coords_out[dim] = x[dim]
+
                 x_interpolated = xr.DataArray(
                     x_interpolated_values,
-                    dims=['latitude', 'longitude'],
-                    coords={
-                        'latitude': grid_output_revised[0],
-                        'longitude': grid_output_revised[1]
-                    }
+                    dims=coords_out.keys(),
+                    coords=coords_out
                 )
             else:
                 x_interpolated = x_interpolated_values
