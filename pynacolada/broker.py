@@ -1,4 +1,10 @@
 import yaml
+try:
+    from yaml import CLoader as Loader, CDumper as Dumper
+except ImportError:
+    from yaml import Loader, Dumper
+
+
 import logging
 from . import archive,collection
 import os
@@ -62,7 +68,7 @@ class broker (object):
             if not os.path.isdir(os.path.dirname(history_filename)):
                 os.mkdir(os.path.dirname(history_filename))
             with open(history_filename, 'w') as history_file:
-                dump = yaml.dump(history_dict)
+                dump = yaml.dump(history_dict,Dumper=yaml_Dumper)
                 history_file.write(dump)
 
     def retrieve_input(self,debug=False):
@@ -134,18 +140,18 @@ class broker (object):
                 self.requires[ibroker_requires]['process_arguments'] = str(request_parent)
 
 
-                history_filename = self.requires[ibroker_requires]['root'] + '/requests/' + os.path.basename(self.requires[ibroker_requires][ 'process'] + '_history.yaml')
+                history_filename = self.requires[ibroker_requires]['root'] + '/requests/' + os.path.basename(self.requires[ibroker_requires][ 'process'] + '_history.yaml',Loader=)
                 if (not os.path.isfile(history_filename)):
                     history_dict = {} #reset_history
                 else:
-                    try:
+                    # try:
                         with open(history_filename, 'r') as history_file:
-                            history_dict = yaml.load(history_file)
+                            history_dict = yaml.load(history_file,Loader=yaml_Loader)
                             if history_dict is None:
                                 history_dict = {}
-                    except:
-                        logging.warning('reading history file failed: '+history_filename)
-                        history_dict = {}
+                    # except:
+                    #     logging.warning('reading history file failed: '+history_filename)
+                    #     history_dict = {}
 
 
                 # if debug == True:
@@ -195,7 +201,7 @@ class broker (object):
                 else:
                     try:
                         with open(history_filename, 'r') as history_file:
-                            history_dict = yaml.load(history_file)
+                            history_dict = yaml.load(history_file,Loader=yaml_Loader)
                             if history_dict is None:
                                 history_dict = {}
                     except:
