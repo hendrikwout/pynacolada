@@ -1,8 +1,8 @@
 import yaml
 try:
-    from yaml import CLoader as Loader, CDumper as Dumper
+    from yaml import CLoader as yaml_Loader, CDumper as yaml_Dumper
 except ImportError:
-    from yaml import Loader, Dumper
+    from yaml import Loader as yaml_Loader, yaml_Dumper
 
 
 import logging
@@ -59,7 +59,7 @@ class broker (object):
 
         for setting in self.global_settings_defaults.keys():
             if (setting in kwargs.keys()) and (kwargs[setting] is not None):
-                self.__dict__[setting] = kwargs[setting]
+                self.__dict__[setting] = type(self.global_settings_defaults[setting])(kwargs[setting])
             else:
                 self.__dict__[setting] = self.global_settings_defaults[setting]
 
@@ -117,7 +117,7 @@ class broker (object):
                 ]
                 for key in arguments_propagate_reduce_to_parent:
                     parent_execute.append('--' + key)
-                    parent_execute.append(str(max(self.__dict__[key]-1, 0)))
+                    parent_execute.append(str(max(int(self.__dict__[key])-1, 0)))
                 parent_execute.append('--delay')
                 delay = delay + 1 + float(self.__dict__['delay'])
                 parent_execute.append(str(delay))
@@ -140,7 +140,7 @@ class broker (object):
                 self.requires[ibroker_requires]['process_arguments'] = str(request_parent)
 
 
-                history_filename = self.requires[ibroker_requires]['root'] + '/requests/' + os.path.basename(self.requires[ibroker_requires][ 'process'] + '_history.yaml',Loader=)
+                history_filename = self.requires[ibroker_requires]['root'] + '/requests/' + os.path.basename(self.requires[ibroker_requires][ 'process'] + '_history.yaml')
                 if (not os.path.isfile(history_filename)):
                     history_dict = {} #reset_history
                 else:
