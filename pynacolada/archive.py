@@ -185,16 +185,16 @@ def apply_func_wrapper(
             apply_groups_out_df_this_group = apply_groups_out_df.copy()
 
             logging.info('converting label functions where necessary')
+            table_this_group_out = apply_groups_out_df_this_group.copy()
             for idx_group_out, row in enumerate(apply_groups_out_df.to_dict('records')):
                 for key, value in row.items():
                     if type(apply_groups_out_df_this_group.loc[idx_group_out, key]).__name__ == 'function':
-                        apply_groups_out_df_this_group.loc[idx_group_out, key] = apply_groups_out_df.loc[
+                        table_this_group_out.loc[idx_group_out, key] = apply_groups_out_df_this_group.loc[
                             idx_group_out, key](*tuple(table_this_group_in.reset_index()[[key]].values[:, 0]))
-                    # elif apply_groups_out_df_this_group.loc[idx_group_out,key] is None:
+                    # elif table_this_group_out.loc[idx_group_out,key] is None:
                     #     raise ValueError('Not supported yet')
                     else:
-                        apply_groups_out_df_this_group.loc[idx_group_out, key] = apply_groups_out_df.loc[idx_group_out, key]
-            table_this_group_out = apply_groups_out_df_this_group
+                        table_this_group_out.loc[idx_group_out, key] = apply_groups_out_df.loc[idx_group_out, key]
 
             dataarrays_group_in = []
             for idx_group_in, row in table_this_group_in.iterrows():
@@ -213,10 +213,11 @@ def apply_func_wrapper(
                 if tuple(index_dataarray) in dataarrays.keys():
                     dataarrays_group_in.append(dataarrays[tuple(index_dataarray)])
                 else:
-                        dataarrays_group_in.append(
-                            xr.open_dataarray(
-                                    os.path.dirname(row_of_dataarray.path_pickle) +'/'+row_of_dataarray.path ,engine=engine)
-                        )
+                    filename = os.path.dirname(row_of_dataarray.path_pickle) + '/' + row_of_dataarray.path
+                    try:
+                        dataarrays_group_in.append( xr.open_dataarray(filename, engine=engine))
+                    except:
+                        dataarrays_group_in.append(xr.open_dataset(filename, engine=engine)[row_of_dataarray.ncvariable])
 
             # ??????
             # for dataarray in dataarrays_group_in:
@@ -257,6 +258,11 @@ def apply_func_wrapper(
                                              'path','available','path_pickle']):
                             attributes_dataarrays_out[ifile][key] = value
 
+                for key in row.keys():
+                    attributes_dataarrays_out[ifile][key] = row[key]
+
+
+
                 # !!
                 for key in lib_dataarrays.index.names:
                     if key in table_this_group_out.columns:
@@ -268,9 +274,6 @@ def apply_func_wrapper(
                     else:
                         attributes_dataarrays_out[ifile][key] = \
                             table_this_group_in.iloc[min(ifile, len(dataarrays_group_in) - 1)][key]
-                for key in row.keys():
-                    attributes_dataarrays_out[ifile][key] = row[key]
-
 
                     # for key in self.lib_dataarrays.columns:
                     #     if key == 'provider':
@@ -1721,7 +1724,6 @@ class archive (object):
                 raise IOError('pickle file exists. Please use force_overwrite_pickle = True, or specify the full pickle name as the library_path.')
 
             # when the self.path_pickle exists, it is assumed that this file needs to be updated
-            import pdb; pdb.set_trace()
             self.path_pickle = lib_dirname+'/'+lib_basename
         # else:
         #     lib_dirname = os.path.dirname(self.path_pickle)

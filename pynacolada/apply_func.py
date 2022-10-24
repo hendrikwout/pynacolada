@@ -85,11 +85,11 @@ def get_coordinates_attributes(coords):
     # for key in self.lib_dataarrays.index.names:
     #     if key in space_coordinates:
     #         space_coordinates.remove(key)
-    space_coordinates = ['latitude','longitude']
+    # space_coordinates = ['latitude','longitude']
 
     spacing = {}
     for dim,coord in coords.items():
-        if dim in space_coordinates:
+        if dim != 'time':# space_coordinates:
             spacing_temp = (coords[dim].values[1] - coord[dim].values[0])
             if not np.any(
                     coords[dim][1:].values != (coords[dim].values[:-1] + spacing_temp)):
@@ -97,11 +97,16 @@ def get_coordinates_attributes(coords):
                     coords[dim][-1].values) + ',' + str(spacing_temp)
             else:
                 spacing[dim] = 'irregular'
-        else:
-            logging.warning('unknown dimension found that we will not be tracked in lib_dataarrays: ' + str(dim))
+            # else:
+            #     logging.warning('unknown dimension found that we will not be tracked in lib_dataarrays: ' + str(dim))
     dict_index_space = [key + ':' + str(value) for key, value in spacing.items()]
-    dict_index_space = '_'.join(dict_index_space)
-    coordinates_attributes['space'] = dict_index_space
+    if len(dict_index_space) != 0:
+        space_label = '_'.join(dict_index_space)
+    else:
+        space_label = None
+        #space_label = '_no_space_'
+
+    coordinates_attributes['space'] = space_label
 
     return coordinates_attributes
 
@@ -947,6 +952,7 @@ def apply_func(
 
                if first_chunks == True:
                    attributes_out = {}
+
                    logging.info('propagate attributes from xarray chunk function output')
                    for attrkey,attrvalue in chunk_out_xarray.attrs.items():
                        attributes_out[attrkey] = attrvalue
@@ -954,43 +960,27 @@ def apply_func(
                    logging.info('update attributes derived from possible new coordinate system')
                    # xarray_out = xr.open_dataarray(xarrays_output_filenames_work)
                    # coordinates_attributes = get_coordinates_attributes(xarrays_output_coords[incout])
-                   coordinates_attributes = get_coordinates_attributes(xarrays_output_coords[ichunk_out])
+                   coordinates_attributes = get_coordinates_attributes(xarrays_output_coords_final[ichunk_out])
                    for dim in dims_apply_names:
                        # if coordinates_attributes[dim] is None:
                        #     import pdb; pdb.set_trace()
                        #     if dim not in attributes_out.keys():
                        #         coordinates_attributes[dim] = 'None'
-                           if ((dim in xarrays_out[ichunk_out].dims) and not identical_xarrays(xarrays_out[ichunk_out].coords[dim],xarrays_output_coords[ichunk_out][dim])) and \
+                           if ((dim in xarrays_out[ichunk_out].dims) and not identical_xarrays(xarrays_out[ichunk_out].coords[dim],xarrays_output_coords_final[ichunk_out][dim])) and \
                                    (dim in coordinates_attributes.keys()):
                                attributes_out[dim] = coordinates_attributes[dim]
 
+
                    if ('latitude' in dims_apply_names) or ('longitude' in dims_apply_names):
-                       if (( 'latitude' in xarrays_in[0].dims) and (not identical_xarrays(xarrays_output_coords[ichunk_out]['latitude'],xarrays_in[0][dim]))) and \
-                          (( 'longitude' in xarrays_in[0].dims) and ( not identical_xarrays(xarrays_output_coords[ichunk_out]['longitude'], xarrays_in[0][dim]))) and \
+                       if (( 'latitude' in xarrays_in[0].dims) and (not identical_xarrays(xarrays_output_coords_final[ichunk_out]['latitude'],xarrays_in[0][dim]))) and \
+                          (( 'longitude' in xarrays_in[0].dims) and ( not identical_xarrays(xarrays_output_coords_final[ichunk_out]['longitude'], xarrays_in[0][dim]))) and \
                           ('space' in coordinates_attributes.keys()):
                            attributes_out['space'] = coordinates_attributes['space']
 
-                   logging.info('adding attributes through apply_func input argument "attributes"')
-                   if attributes != None:
-                       logging.debug('assigning extra attributes...')
-                       for attrkey, attrvalue in attributes[ichunk_out].items():
-                           if type(attrvalue) == type(lambda x: x):
-                               values_input = []
-                               for xarray_in in xarrays_in:
-                                   if key in xarray_in.attrs.keys():
-                                       values_input.append(xarray_in.attrs[key])
-                                   else:
-                                       values_input.append(None)
-                               attr_value_out = attrvalue(values_input)
-                           else:
-                               attr_value_out= attrvalue
-                           if attrkey in attributes_out.keys():
-                               logging.warning('Attribute '+attrkey+' (original value = '+str(attributes_out[attrkey])+' ) is already in the attributes output of ichunk_out ' + str(ichunk_out) +' (new value = '+ str(attr_value_out)+'). Overwriting...')
-                           attributes_out[attrkey] = attr_value_out
-                           logging.debug('ichunk_out ' + str(ichunk_out) + ' - ' + attrkey + ' - ' + str(attrvalue) + ' - ' +
-                                         str(attributes_out[attrkey]))
-
-                       logging.debug('...end assigning extra attributes')
+                   
+                   for key in coordinates_attributes.keys():
+                       if ((key not in attributes_out) or (attributes_out[key] == None)):
+                               attributes_out[key] = coordinates_attributes[key]
 
                    logging.info('building output for chunk number '+str(ichunk_out) )
                    xrtemp = xr.Dataset()
@@ -1018,7 +1008,33 @@ def apply_func(
                            else:
                                attributes_out[attrkey] = attrvalue
                        return attributes_out
+
+                   logging.info('adding attributes through apply_func input argument "attributes"')
+                   if attributes != None:
+                       logging.debug('assigning extra attributes...')
+                       for attrkey, attrvalue in attributes[ichunk_out].items():
+                           if type(attrvalue) == type(lambda x: x):
+                               values_input = []
+                               for xarray_in in xarrays_in:
+                                   if key in xarray_in.attrs.keys():
+                                       values_input.append(xarray_in.attrs[key])
+                                   else:
+                                       values_input.append(None)
+                               attr_value_out = attrvalue(values_input)
+                           else:
+                               attr_value_out= attrvalue
+                           if attrkey in attributes_out.keys():
+                               logging.warning('Attribute '+attrkey+' (value = '+str(attributes_out[attrkey])+' ) is already assigned manually in the attributes output of ichunk_out ' + str(ichunk_out) +'. Ignoring (value = "'+ str(attr_value_out)+'"). If you intend to have the latter, you need to remove the attribute manually from the output xarrays of your operator.')
+                           else:
+                            attributes_out[attrkey] = attr_value_out
+                            logging.debug('ichunk_out ' + str(ichunk_out) + ' - ' + attrkey + ' - ' + str(attrvalue) + ' - ' +
+                                         str(attributes_out[attrkey]))
+
+                       logging.debug('...end assigning extra attributes')
+
+
                    attributes_out = fix_dict_for_ncattributes(attributes_out)
+
 
                    if (xarrays_output_filenames is not None) and (xarrays_output_filenames != False):
                        logging.info('Acquiring real output filename for xarray out number '+str(ichunk_out)+' and setting output (temporary filename)')
@@ -1027,10 +1043,12 @@ def apply_func(
                        elif type(xarrays_output_filenames) in (list,tuple):
                            xarrays_output_filenames_pattern = xarrays_output_filenames[ichunk_out]
 
+                       logging.debug('parsing from pattern: '+xarrays_output_filenames_pattern)
                        xarrays_output_filenames_real.append(
                            name_from_pattern(
                                xarrays_output_filenames_pattern,
                                {**attributes_out,**{'variable':chunk_out_xarray_ordered.name}} ) )
+                       logging.debug('filename output: '+xarrays_output_filenames_real[-1])
 
                        if os.path.isfile(xarrays_output_filenames_real[ichunk_out]):
                            if overwrite_output_filenames == False:

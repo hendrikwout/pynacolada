@@ -289,19 +289,20 @@ class broker (object):
 
                 for ibroker_provides, broker_provides in enumerate(self.provides):
                     for key in self.provides[ibroker_provides].keys():
-                        if type(self.provides[ibroker_provides][key]).__name__ == 'function':
-                            values_input = []
-                            for ibroker_requires, broker_requires in list(enumerate(self.requires)):
-                                if ('disable' not in self.requires[ibroker_requires].keys()):
-                                    if (key in self.requires[ibroker_requires].keys()) and (self.requires[ibroker_requires][key] is not None):
-                                        values_input.append(self.requires[ibroker_requires][key])
-                                    # else:
-                                    #     values_input.append(None)
-                            if len(values_input) > 0:
-                                    self.provides[ibroker_provides][key] = self.provides[ibroker_provides][key](*tuple(values_input))
-                            else:
-                                logging.critical('no value for provides - function found.')
-                                self.provides[ibroker_provides][key] = None  # broker_provides['archive'](values_input)
+                        if key in ['archive',]: #those who are not handled by archive.apply_func 
+                            if type(self.provides[ibroker_provides][key]).__name__ == 'function':
+                                values_input = []
+                                for ibroker_requires, broker_requires in list(enumerate(self.requires)):
+                                    if ('disable' not in self.requires[ibroker_requires].keys()):
+                                        if (key in self.requires[ibroker_requires].keys()) and (self.requires[ibroker_requires][key] is not None):
+                                            values_input.append(self.requires[ibroker_requires][key])
+                                        # else:
+                                        #     values_input.append(None)
+                                if len(values_input) > 0:
+                                        self.provides[ibroker_provides][key] = self.provides[ibroker_provides][key](*tuple(values_input))
+                                else:
+                                    logging.critical('no value for provides - function found.')
+                                    self.provides[ibroker_provides][key] = None  # broker_provides['archive'](values_input)
 
                 icount = 0
                 for ibroker_requires,broker_requires in enumerate(self.requires):
@@ -498,7 +499,7 @@ class broker (object):
         sleep(float(self.delay))
         if (self.reset_lock > 0) and \
                 os.path.isfile(lockfile) and \
-                (str(dt.datetime.strptime(ctime(os.path.getctime(lockfile)), "%c")).replace(' ','_') < self.datetime_start_chain):
+                (str(dt.datetime.strptime(ctime(os.path.getctime(lockfile)), "%a %b %d %H:%M:%S %Y")).replace(' ','_') < self.datetime_start_chain):
             os.system('rm ' + lockfile)
 
         while os.path.isfile(lockfile):
