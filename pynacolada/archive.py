@@ -208,8 +208,7 @@ def apply_func_wrapper(
 
                 row_of_dataarray = lib_dataarrays.loc[tuple(index_dataarray)]
 
-                print(row_of_dataarray.path_pickle)
-                print(row_of_dataarray.path)
+                logging.debug('opening dataarray for: ',row_of_dataarray)
                 if tuple(index_dataarray) in dataarrays.keys():
                     dataarrays_group_in.append(dataarrays[tuple(index_dataarray)])
                 else:
@@ -218,6 +217,13 @@ def apply_func_wrapper(
                         dataarrays_group_in.append( xr.open_dataarray(filename, engine=engine))
                     except:
                         dataarrays_group_in.append(xr.open_dataset(filename, engine=engine)[row_of_dataarray.ncvariable])
+
+                if row_of_dataarray.linked == True:
+                    logging.debug('linked dataarray detected. Overriding xarray attributes with the those supplemented in the pandas table')
+                    for key in row_of_dataarray.keys():
+                        if key not in ['path','available','linked','ncvariable','path_pickle']:
+                            dataarrays_group_in[-1].attrs[key] = row_of_dataarray[key]
+
 
             # ??????
             # for dataarray in dataarrays_group_in:

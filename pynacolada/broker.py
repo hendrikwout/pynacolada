@@ -15,6 +15,16 @@ import tempfile
 from ast import literal_eval
 from subprocess import Popen, PIPE
 
+broker_global_settings_defaults = {
+    'conda_environment_export': '/tmp/anaconda/bin',
+    'dummy': 'False',
+    'reset_archive': 0,
+    'reset_lock':0,
+    'reset_history':0,
+    'force_recalculate':0,
+    'delay':1,
+    'datetime_start_chain': str(dt.datetime.now()).replace(' ','_')
+}
 
 class broker (object):
     def __init__(self,**kwargs):
@@ -46,22 +56,12 @@ class broker (object):
         logging.info('END --- propagate arguments to parent processes --- ')
 
     def global_settings(self,**kwargs):
-        self.global_settings_defaults = {
-            'conda_environment_export': '/tmp/anaconda/bin',
-            'dummy': 'False',
-            'reset_archive': 0,
-            'reset_lock':0,
-            'reset_history':0,
-            'force_recalculate':0,
-            'delay':1,
-            'datetime_start_chain': str(dt.datetime.now()).replace(' ','_')
-        }
 
-        for setting in self.global_settings_defaults.keys():
+        for setting in broker_global_settings_defaults.keys():
             if (setting in kwargs.keys()) and (kwargs[setting] is not None):
-                self.__dict__[setting] = type(self.global_settings_defaults[setting])(kwargs[setting])
+                self.__dict__[setting] = type(broker_global_settings_defaults[setting])(kwargs[setting])
             else:
-                self.__dict__[setting] = self.global_settings_defaults[setting]
+                self.__dict__[setting] = broker_global_settings_defaults[setting]
 
     def flush_history_file(self,history_dict, history_filename,history_ok=True):
         if (self.dummy != 'True') and (history_ok == True):

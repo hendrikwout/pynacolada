@@ -37,7 +37,7 @@ def name_from_pattern(pattern, attributes):
 def xarray_coordinate_from_array(array, name):
     return xr.DataArray(array, dims=[name], name=name, coords={name: array})
 
-def get_coordinates_attributes(coords):
+def get_coordinates_attributes(coords,scenario=None):#,prepend={},append={}):
     coordinates_attributes = {}
     if 'time' in coords.keys():
         # if ('time' not in dict_index.keys()) or (dict_index['time'] is None) or (
@@ -62,16 +62,24 @@ def get_coordinates_attributes(coords):
                 'monthly_' + str(coords['time'][0].values)[:7] + '_' + str(coords['time'][-1].values)[:7]
         elif not np.any((coords['time'][2:-1].values - coords['time'][1:-2].values) != np.array(86400000000000,
                                                                                                 dtype='timedelta64[ns]')):
-            # daily
-            coordinates_attributes['time'] = 'daily_' + np.datetime_as_string(coords['time'][0].values,
+            # 
+            coordinates_attributes['time'] = '_' + np.datetime_as_string(coords['time'][0].values,
                                                                               unit='D') + '_' + np.datetime_as_string(
                 coords['time'][-1].values, unit='D')
         elif not np.any((coords['time'][2:-1].values - coords['time'][1:-2].values) != dt.timedelta(days=1)):
             coordinates_attributes['time'] = \
-                'daily_' + str(coords['time'][0].values)[:10] + '_' + str(coords['time'][-1].values)[:10]
+                '_' + str(coords['time'][0].values)[:10] + '_' + str(coords['time'][-1].values)[:10]
         else:
             coordinates_attributes['time'] = 'irregular'
             logging.info('warning. No time dimension found')
+        if scenario != None:
+            coordinates_attributes['time'] = scenario + coordinates_attributes['time']
+
+
+        # if 'time' in prepend.keys():
+        #     coordinates_attributes['time'] = prepend['time']+coordinates_attributes['time']
+        # if 'time' in append.keys():
+        #     coordinates_attributes['time'] = coordinates_attributes['time']+append['time']
 
         # DataArray.attrs['time'] = dict_index['time']
 
@@ -106,7 +114,11 @@ def get_coordinates_attributes(coords):
         space_label = None
         #space_label = '_no_space_'
 
-    coordinates_attributes['space'] = space_label
+    #coordinates_attributes['space'] = space_label
+    #if 'space' in prepend.keys():
+    #    coordinates_attributes['space'] = prepend['space']+coordinates_attributes['space']
+    #if 'space' in append.keys():
+    #    coordinates_attributes['space'] = coordinates_attributes['space']+append['space']
 
     return coordinates_attributes
 
@@ -960,23 +972,27 @@ def apply_func(
                    logging.info('update attributes derived from possible new coordinate system')
                    # xarray_out = xr.open_dataarray(xarrays_output_filenames_work)
                    # coordinates_attributes = get_coordinates_attributes(xarrays_output_coords[incout])
-                   coordinates_attributes = get_coordinates_attributes(xarrays_output_coords_final[ichunk_out])
-                   for dim in dims_apply_names:
-                       # if coordinates_attributes[dim] is None:
-                       #     import pdb; pdb.set_trace()
-                       #     if dim not in attributes_out.keys():
-                       #         coordinates_attributes[dim] = 'None'
-                           if ((dim in xarrays_out[ichunk_out].dims) and not identical_xarrays(xarrays_out[ichunk_out].coords[dim],xarrays_output_coords_final[ichunk_out][dim])) and \
-                                   (dim in coordinates_attributes.keys()):
-                               attributes_out[dim] = coordinates_attributes[dim]
+                   coordinates_attributes = get_coordinates_attributes(xarrays_output_coords_final[ichunk_out],scenario = (attributes_out['scenario'] if 'scenario' in attributes_out.keys() else None))
+
+                   #  ???????????
+                   # for dim in dims_apply_names:
+                   #     # if coordinates_attributes[dim] is None:
+                   #     #     import pdb; pdb.set_trace()
+                   #     #     if dim not in attributes_out.keys():
+                   #     #         coordinates_attributes[dim] = 'None'
+
+                   #     #??????
+                   #         if ((dim in xarrays_out[ichunk_out].dims) and not identical_xarrays(xarrays_out[ichunk_out].coords[dim],xarrays_output_coords_final[ichunk_out][dim])) and \
+                   #                 (dim in coordinates_attributes.keys()):
+                   #             attributes_out[dim] = coordinates_attributes[dim]
 
 
-                   if ('latitude' in dims_apply_names) or ('longitude' in dims_apply_names):
-                       if (( 'latitude' in xarrays_in[0].dims) and (not identical_xarrays(xarrays_output_coords_final[ichunk_out]['latitude'],xarrays_in[0][dim]))) and \
-                          (( 'longitude' in xarrays_in[0].dims) and ( not identical_xarrays(xarrays_output_coords_final[ichunk_out]['longitude'], xarrays_in[0][dim]))) and \
-                          ('space' in coordinates_attributes.keys()):
-                           attributes_out['space'] = coordinates_attributes['space']
-
+                   # if ('latitude' in dims_apply_names) or ('longitude' in dims_apply_names):
+                   #     if (( 'latitude' in xarrays_in[0].dims) and (not identical_xarrays(xarrays_output_coords_final[ichunk_out]['latitude'],xarrays_in[0][dim]))) and \
+                   #        (( 'longitude' in xarrays_in[0].dims) and ( not identical_xarrays(xarrays_output_coords_final[ichunk_out]['longitude'], xarrays_in[0][dim]))) and \
+                   #        ('space' in coordinates_attributes.keys()):
+                   #         attributes_out['space'] = coordinates_attributes['space']
+                   #  ???????????
                    
                    for key in coordinates_attributes.keys():
                        if ((key not in attributes_out) or (attributes_out[key] == None)):
@@ -1179,8 +1195,8 @@ def apply_func(
 #         longitude = ( (ds.longitude > -10) & (ds.longitude < 5))
 #     )
 #
-#     #input_file = '/projects/C3S_EUBiodiversity/data/case_klimpala/aggregation-30-years/indicators-annual/cropped_to_africa/bias_corrected/cmip5_daily/temperature-daily-mean_annual_mean_IPSL-CM5A-MR_rcp85_r1i1p1_bias-corrected_to_era5_id0daily_1950-01-01_2100-12-31_id0_aggregation-30-year-median_grid_of_IPSL-CM5A-MR_latitude:irregular_longitude:-42.5,65.0,2.5.nc'
-#     input_file = '/home/woutersh/projects/KLIMPALA_SF/data/test/temperature-daily-mean_annual_mean_IPSL-CM5A-MR_rcp85_r1i1p1_bias-corrected_to_era5_id0daily_1950-01-01_2100-12-31_id0_aggregation-30-year-median_grid_of_IPSL-CM5A-MR_latitude:irregular_longitude:-42.5,65.0,2.5.nc'
+#     #input_file = '/projects/C3S_EUBiodiversity/data/case_klimpala/aggregation-30-years/indicators-annual/cropped_to_africa/bias_corrected/cmip5_/temperature-daily-mean_annual_mean_IPSL-CM5A-MR_rcp85_r1i1p1_bias-corrected_to_era5_id0daily_1950-01-01_2100-12-31_id0_aggregation-30-year-median_grid_of_IPSL-CM5A-MR_latitude:irregular_longitude:-42.5,65.0,2.5.nc'
+#     input_file = '/home/woutersh/projects/KLIMPALA_SF/data/test/temperature--mean_annual_mean_IPSL-CM5A-MR_rcp85_r1i1p1_bias-corrected_to_era5_id0daily_1950-01-01_2100-12-31_id0_aggregation-30-year-median_grid_of_IPSL-CM5A-MR_latitude:irregular_longitude:-42.5,65.0,2.5.nc'
 #     ds2 = xr.open_dataarray(input_file)
 #
 #     # this also sets the order of (inner) output dimensions as expected by the function
