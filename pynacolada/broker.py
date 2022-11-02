@@ -22,8 +22,8 @@ broker_global_settings_defaults = {
     'reset_lock':0,
     'reset_history':0,
     'force_recalculate':0,
-    'delay':1,
-    'datetime_start_chain': str(dt.datetime.now()).replace(' ','_')
+    'delay':1.0,
+    'datetime_start_chain': '__undefinied__'
 }
 
 class broker (object):
@@ -62,6 +62,11 @@ class broker (object):
                 self.__dict__[setting] = type(broker_global_settings_defaults[setting])(kwargs[setting])
             else:
                 self.__dict__[setting] = broker_global_settings_defaults[setting]
+
+        setting = 'datetime_start_chain'
+        if self.__dict__[setting] == '__undefinied__':
+            self.__dict__[setting] = str(dt.datetime.now()).replace(' ','_')
+
 
     def flush_history_file(self,history_dict, history_filename,history_ok=True):
         if (self.dummy != 'True') and (history_ok == True):
@@ -497,6 +502,7 @@ class broker (object):
 
         logging.warning('delaying process: '+str(self.delay)+' seconds')
         sleep(float(self.delay))
+
         if (self.reset_lock > 0) and \
                 os.path.isfile(lockfile) and \
                 (str(dt.datetime.strptime(ctime(os.path.getctime(lockfile)), "%a %b %d %H:%M:%S %Y")).replace(' ','_') < self.datetime_start_chain):

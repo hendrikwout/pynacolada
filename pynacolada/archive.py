@@ -218,10 +218,10 @@ def apply_func_wrapper(
                     except:
                         dataarrays_group_in.append(xr.open_dataset(filename, engine=engine)[row_of_dataarray.ncvariable])
 
-                if row_of_dataarray.linked == True:
+                if ('linked' in row_of_dataarray.keys()) and (row_of_dataarray.linked == True):
                     logging.debug('linked dataarray detected. Overriding xarray attributes with the those supplemented in the pandas table')
                     for key in row_of_dataarray.keys():
-                        if key not in ['path','available','linked','ncvariable','path_pickle']:
+                        if key not in ['path','available','linked','ncvariable','path_pickle','linked']:
                             dataarrays_group_in[-1].attrs[key] = row_of_dataarray[key]
 
 
@@ -511,9 +511,20 @@ class collection (object):
 class archive (object):
 
 
-    def get_dataarray(self,index):
+    def get_dataarray(self,index,engine=None):
         path = self.get_path(index)
-        xropen = xr.open_dataarray(path)
+        try:
+            xropen = xr.open_dataarray(path)
+            dataarrays_group_in.append( xr.open_dataarray(filename, engine=engine))
+        except:
+            xropen = xr.open_dataset(path)[self.lib_dataarrays.loc[index].ncvariable]
+        if ('linked' in self.lib_dataarrays.columns) and (self.lib_dataarrays.loc[index].linked == True):
+            logging.debug('linked dataarray detected. Overriding xarray attributes with the those supplemented in the pandas table')
+            for key in self.lib_dataarrays.loc[index].keys():
+                if key not in ['path','available','linked','ncvariable','path_pickle','linked']:
+                    xropen.attrs[key] = self.lib_dataarrays.loc[index][key]
+
+
         return xropen
 
     def get_path(self,index):
@@ -536,7 +547,7 @@ class archive (object):
             self.__dict__['set_'+key] = lambda value: self.__setattr__(key,value)
         print('Loading default settings')
         self.file_pattern = file_pattern
-        self.not_dataarray_attributes = ['ncvariable', 'path','path_pickle','linked','available', ]
+        self.not_dataarray_attributes = ['ncvariable', 'path','path_pickle','linked','available','linked' ]
 
         self.dataarrays = {}
         self.coordinates = {}
@@ -769,7 +780,7 @@ class archive (object):
 
         if 'variable' not in dict_index.keys():
             dict_index['variable'] = dict_columns['ncvariable']
-
+        #TODO !!! merge this procedure with get_coordinates_attributes in apply_func.py
         logging.info('Creating attributes from dimension data.')
         if ('time' not in dict_index.keys()) or (dict_index['time'] is None) or (type(dict_index['time']).__name__ == 'float') and (  np.isnan(dict_index['time']).any()):
             print('Guessing time coordinate from DataArray')
@@ -903,8 +914,13 @@ class archive (object):
                 DataArray =xr.open_dataset(os.path.dirname(os.path.realpath(self.path_pickle))+'/'+dict_columns['path'])[dict_columns['ncvariable']]
             else:
                 DataArray = xr.open_dataarray(os.path.dirname(os.path.realpath(self.path_pickle)) + '/' + dict_columns['path'])
+            dict_columns['linked'] = False
+        elif method == 'add':
+            dict_columns['linked'] = False
         elif method == 'link':
             dict_columns['linked'] = True
+        else:
+            raise ValueError('Add_dataarray method "{method}" not implemented.')
 
         if 'path' in dict_columns.keys():
             DataArray.close()
