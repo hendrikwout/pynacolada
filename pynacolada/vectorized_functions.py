@@ -360,6 +360,8 @@ def biascorrect_quantiles(series_biased,series_reference,**kwargs):
 def interpolate_delaunay_linear(values,xylist,uvlist,remove_duplicate_points=False ,dropnans=True,fill_value=np.nan,add_newaxes=True):
     d = len(xylist)
 
+    values_shape_orig = tuple(values.shape)
+    values.shape = (np.prod(values.shape[:-2]),*tuple(values.shape[-2:]))
     uvshape = uvlist[0].shape
     xystack = np.stack([xy.ravel() for xy in xylist],axis=-1) 
     valuesstack = values.copy()
@@ -409,6 +411,8 @@ def interpolate_delaunay_linear(values,xylist,uvlist,remove_duplicate_points=Fal
     valout = np.einsum('pnj,nj->pn', np.take(valuesstack, vtx,axis=-1), wts)
     valout[:,np.any(wts < 0, axis=1)] = fill_value
     valout.shape = [element for element in values.shape[:-len(xylist[0].shape)]]+[element for element in uvshape ]
+
+    valout.shape = tuple(list(values_shape_orig[:-2])+list(valout.shape[-2:]))
 
     #new axis are added to conform the output to 4 dimenions
     if add_newaxes:

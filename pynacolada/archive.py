@@ -158,6 +158,7 @@ def apply_func_wrapper(
         #
         # all_input_available_in_this_group = not (group_indexed_for_apply_groups_in.index != apply_groups_in_index).any()
         #
+
         if all_input_available_in_this_group:
 
             if len(apply_this_group_in_df) == 0:
@@ -196,34 +197,6 @@ def apply_func_wrapper(
                     else:
                         table_this_group_out.loc[idx_group_out, key] = apply_groups_out_df.loc[idx_group_out, key]
 
-            dataarrays_group_in = []
-            for idx_group_in, row in table_this_group_in.iterrows():
-                if table_this_group_in.index.names[0] is None:  # trivial case where no group_in selection is made
-                    index_dataarray = [dict(zip(table_this_group_in.columns, row))[key] for key in
-                                       lib_dataarrays.index.names]
-                else:
-                    index_dataarray = [{**dict(zip(table_this_group_in.index.names, idx_group_in)),
-                                        **dict(zip(table_this_group_in.columns, row))}[key] for key in
-                                       lib_dataarrays.index.names]
-
-                row_of_dataarray = lib_dataarrays.loc[tuple(index_dataarray)]
-
-                logging.debug('opening dataarray for: ',row_of_dataarray)
-                if tuple(index_dataarray) in dataarrays.keys():
-                    dataarrays_group_in.append(dataarrays[tuple(index_dataarray)])
-                else:
-                    filename = os.path.dirname(row_of_dataarray.path_pickle) + '/' + row_of_dataarray.path
-                    try:
-                        dataarrays_group_in.append( xr.open_dataarray(filename, engine=engine))
-                    except:
-                        dataarrays_group_in.append(xr.open_dataset(filename, engine=engine)[row_of_dataarray.ncvariable])
-
-                if ('linked' in row_of_dataarray.keys()) and (row_of_dataarray.linked == True):
-                    logging.debug('linked dataarray detected. Overriding xarray attributes with the those supplemented in the pandas table')
-                    for key in row_of_dataarray.keys():
-                        if key not in ['path','available','linked','ncvariable','path_pickle','linked']:
-                            dataarrays_group_in[-1].attrs[key] = row_of_dataarray[key]
-
 
             # ??????
             # for dataarray in dataarrays_group_in:
@@ -246,15 +219,15 @@ def apply_func_wrapper(
                     if table_this_group_in.index.names[0] is None:  # trivial case where no group_in selection is made
                         attributes_in = \
                             dict(zip(table_this_group_in.columns,
-                                     table_this_group_in.iloc[min(ifile, len(dataarrays_group_in) - 1)]))
+                                     table_this_group_in.iloc[min(ifile, len(table_this_group_in) - 1)]))
 
                     else:
                         attributes_in = \
                             {
                                 **dict(zip(table_this_group_in.index.names,
-                                           table_this_group_in.iloc[min(ifile, len(dataarrays_group_in) - 1)].name)),
+                                           table_this_group_in.iloc[min(ifile, len(table_this_group_in) - 1)].name)),
                                 **dict(zip(table_this_group_in.columns,
-                                           table_this_group_in.iloc[min(ifile, len(dataarrays_group_in) - 1)]))
+                                           table_this_group_in.iloc[min(ifile, len(table_this_group_in) - 1)]))
                             }
 
                     for key, value in attributes_in.items():
@@ -275,11 +248,11 @@ def apply_func_wrapper(
                         attributes_dataarrays_out[ifile][key] = row[key]
                     elif key in table_this_group_in.index.names:
                         attributes_dataarrays_out[ifile][key] = \
-                            table_this_group_in.iloc[min(ifile, len(dataarrays_group_in) - 1)].name[
+                            table_this_group_in.iloc[min(ifile, len(table_this_group_in) - 1)].name[
                                 table_this_group_in.index.names.index(key)]
                     else:
                         attributes_dataarrays_out[ifile][key] = \
-                            table_this_group_in.iloc[min(ifile, len(dataarrays_group_in) - 1)][key]
+                            table_this_group_in.iloc[min(ifile, len(table_this_group_in) - 1)][key]
 
                     # for key in self.lib_dataarrays.columns:
                     #     if key == 'provider':
@@ -365,6 +338,43 @@ def apply_func_wrapper(
             if all_dataarrays_out_already_available and not force_recalculate:
                 logging.info('All output data is already available in the output archive and force_recalculate is switched False. Skipping group "'+str(idx)+'"')
             else:
+
+                dataarrays_group_in = []
+                for idx_group_in, row in table_this_group_in.iterrows():
+                    if table_this_group_in.index.names[0] is None:  # trivial case where no group_in selection is made
+                        index_dataarray = [dict(zip(table_this_group_in.columns, row))[key] for key in
+                                           lib_dataarrays.index.names]
+                    else:
+                        index_dataarray = [{**dict(zip(table_this_group_in.index.names, idx_group_in)),
+                                            **dict(zip(table_this_group_in.columns, row))}[key] for key in
+                                           lib_dataarrays.index.names]
+
+                    row_of_dataarray = lib_dataarrays.loc[tuple(index_dataarray)]
+
+                    logging.debug('opening dataarray for: ',row_of_dataarray)
+                    if tuple(index_dataarray) in dataarrays.keys():
+                        dataarrays_group_in.append(dataarrays[tuple(index_dataarray)])
+                    else:
+                        filename = os.path.dirname(row_of_dataarray.path_pickle) + '/' + row_of_dataarray.path
+                        try:
+                            dataarrays_group_in.append( xr.open_dataarray(filename, engine=engine))
+                        except:
+                            try:
+                                dataarrays_group_in.append( xr.open_dataarray(filename))
+                            except:
+                                try:
+                                    dataarrays_group_in.append(xr.open_dataset(filename, engine=engine)[row_of_dataarray.ncvariable])
+                                except:
+                                    dataarrays_group_in.append(xr.open_dataset(filename)[row_of_dataarray.ncvariable])
+
+                    if ('linked' in row_of_dataarray.keys()) and (row_of_dataarray.linked == True):
+                        logging.debug('linked dataarray detected. Overriding xarray attributes with the those supplemented in the pandas table')
+                        for key in row_of_dataarray.keys():
+                            if key not in ['path','available','linked','ncvariable','path_pickle','linked']:
+                                dataarrays_group_in[-1].attrs[key] = row_of_dataarray[key]
+
+
+
 
                 if force_recalculate and some_dataarrays_out_already_available:
                     logging.info('some output dataarrays were available but force_recalulate is set True, so I force recaculation'
@@ -478,17 +488,20 @@ class collection (object):
             archive_out = None,
             add_archive_out_to_collection=False,
             update_pickle=True,
+            file_pattern=None,
             **kwargs
     ):
 
         if type(archive_out) is str:
-            archive_out = archive(archive_out)
+            if file_pattern != None:
+                archive_out = archive(archive_out,file_pattern=file_pattern)
+            else:
+                archive_out = archive(archive_out)
             write_mode = 'create_new_archive'
         elif archive_out is not None: # type is considered an archive object
             write_mode = 'add_to_external_archive'
         else:
             write_mode = 'add_to_current_archive'
-
 
         lib_dataarrays = self.get_lib_dataarrays()
         dataarrays = self.get_dataarrays()
@@ -514,10 +527,10 @@ class archive (object):
     def get_dataarray(self,index,engine=None):
         path = self.get_path(index)
         try:
-            xropen = xr.open_dataarray(path)
+            xropen = xr.open_dataarray(path,engine=engine)
             dataarrays_group_in.append( xr.open_dataarray(filename, engine=engine))
         except:
-            xropen = xr.open_dataset(path)[self.lib_dataarrays.loc[index].ncvariable]
+            xropen = xr.open_dataset(path,engine=engine)[self.lib_dataarrays.loc[index].ncvariable]
         if ('linked' in self.lib_dataarrays.columns) and (self.lib_dataarrays.loc[index].linked == True):
             logging.debug('linked dataarray detected. Overriding xarray attributes with the those supplemented in the pandas table')
             for key in self.lib_dataarrays.loc[index].keys():

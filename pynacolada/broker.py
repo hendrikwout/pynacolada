@@ -85,7 +85,7 @@ class broker (object):
             for key, item in list(request_parent.items()):
                 if type(item) is type(lambda x: x):
                     del request_parent[key]
-                if key in ['archive', 'process','root']:
+                if key in ['archive', 'process']:
                     del request_parent[key]
 
             if 'process' in broker_requires:
