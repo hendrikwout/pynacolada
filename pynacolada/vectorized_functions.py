@@ -11,7 +11,7 @@ import xarray as xr
 
 
 
-def extend_grid_longitude(longitude,x=None,return_index=False):
+def extend_grid_longitude(longitude,x=None,return_index=False,debug=False):
     """
     purpose: extend longitude to have a full -180 to 360 domain. This makes selection of locations and domains more easy.
 
@@ -50,7 +50,6 @@ def extend_grid_longitude(longitude,x=None,return_index=False):
     longitude_index_list.append(select_longitude_right_index)
 
     longitude_extended = np.concatenate( longitude_list, axis=-1)
-    longitude_index_extended = np.concatenate( longitude_list, axis=-1)
     output = [longitude_extended,]
 
     if x is not None:

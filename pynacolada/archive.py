@@ -314,7 +314,10 @@ def apply_func_wrapper(
                 logging.info('end determining attributes of output files')
 
                 logging.info('check current intended array is already available in the output')
-                dataarrays_out_already_available.append(tuple(index_out) in archive_out.lib_dataarrays.index)
+                dataarrays_out_already_available.append(
+                        (len(archive_out.lib_dataarrays) > 0) and
+                        (tuple(index_out) in archive_out.lib_dataarrays.index)
+                )
 
                 logging.info('Start determining output filenames')
                 if mode in ['numpy_output_to_disk_in_chunks', 'numpy_output_to_disk_no_chunks']:
@@ -351,7 +354,7 @@ def apply_func_wrapper(
 
                     row_of_dataarray = lib_dataarrays.loc[tuple(index_dataarray)]
 
-                    logging.debug('opening dataarray for: ',row_of_dataarray)
+                    logging.debug('opening dataarray for: '+str(row_of_dataarray))
                     if tuple(index_dataarray) in dataarrays.keys():
                         dataarrays_group_in.append(dataarrays[tuple(index_dataarray)])
                     else:
@@ -372,9 +375,6 @@ def apply_func_wrapper(
                         for key in row_of_dataarray.keys():
                             if key not in ['path','available','linked','ncvariable','path_pickle','linked']:
                                 dataarrays_group_in[-1].attrs[key] = row_of_dataarray[key]
-
-
-
 
                 if force_recalculate and some_dataarrays_out_already_available:
                     logging.info('some output dataarrays were available but force_recalulate is set True, so I force recaculation'
@@ -530,18 +530,18 @@ class archive (object):
             xropen = xr.open_dataarray(path,engine=engine)
             dataarrays_group_in.append( xr.open_dataarray(filename, engine=engine))
         except:
-            xropen = xr.open_dataset(path,engine=engine)[self.lib_dataarrays.loc[index].ncvariable]
-        if ('linked' in self.lib_dataarrays.columns) and (self.lib_dataarrays.loc[index].linked == True):
+            xropen = xr.open_dataset(path,engine=engine)[self.lib_dataarrays.loc[tuple(index)].ncvariable]
+        if ('linked' in self.lib_dataarrays.columns) and (self.lib_dataarrays.loc[tuple(index)].linked == True):
             logging.debug('linked dataarray detected. Overriding xarray attributes with the those supplemented in the pandas table')
-            for key in self.lib_dataarrays.loc[index].keys():
+            for key in self.lib_dataarrays.loc[tuple(index)].keys():
                 if key not in ['path','available','linked','ncvariable','path_pickle','linked']:
-                    xropen.attrs[key] = self.lib_dataarrays.loc[index][key]
+                    xropen.attrs[key] = self.lib_dataarrays.loc[tuple(index)][key]
 
 
         return xropen
 
     def get_path(self,index):
-        path = os.path.dirname(self.lib_dataarrays.loc[index].path_pickle) + '/' + self.lib_dataarrays.loc[index].path
+        path = os.path.dirname(self.lib_dataarrays.loc[tuple(index)].path_pickle) + '/' + self.lib_dataarrays.loc[tuple(index)].path
         return path
 
     def __init__(
@@ -656,17 +656,17 @@ class archive (object):
             self.update(force_overwrite_pickle =True)
 
     def remove_by_index(self,index,delete_on_disk=False,update_pickle=True):
-        self.dataarrays[index].close()
-        del self.dataarrays[index]
+        #self.dataarrays[index].close()
+        #del self.dataarrays[index]
         if delete_on_disk:
             os.system('rm '+os.path.dirname(self.lib_dataarrays.loc[index].path_pickle)+'/'+self.lib_dataarrays.loc[index].path)
-        print(self.lib_dataarrays.loc[index].absolute_path_as_cache)
-        if (self.lib_dataarrays.loc[index].absolute_path_as_cache is not None):
+        if ('absolute_path' in self.lib_dataarrays.columns) and (self.lib_dataarrays.loc[index].absolute_path_as_cache is not None):
+            print(self.lib_dataarrays.loc[index].absolute_path_as_cache)
             print(np.isnan(self.lib_dataarrays.loc[index].absolute_path_as_cache))
             print(np.isnan(self.lib_dataarrays.loc[index].absolute_path_as_cache) == True)
-        if (self.lib_dataarrays.loc[index].absolute_path_as_cache is not None) and (np.isnan(self.lib_dataarrays.loc[index].absolute_path_as_cache == False)) :
-            CMD = 'rm '+self.lib_dataarrays.loc[index].absolute_path_as_cache
-            print('removing cached file:',CMD)
+            if (np.isnan(self.lib_dataarrays.loc[index].absolute_path_as_cache == False)) :
+                CMD = 'rm '+self.lib_dataarrays.loc[index].absolute_path_as_cache
+                print('removing cached file:',CMD)
 
         self.lib_dataarrays.drop(index=index,inplace=True)
 
@@ -1870,17 +1870,13 @@ class archive (object):
                     self.lib_dataarrays['path'] = None
 
             if 'path_pickle' in self.__dict__.keys():
-                if ((columns['absolute_path'] is not None) and (type(columns['absolute_path']) is str)):
-                    if 'path' not in self.lib_dataarrays.columns:
-                        self.lib_dataarrays['path'] = None
-                    self.lib_dataarrays['path'].loc[idx] =  os.path.relpath(os.path.realpath(columns['absolute_path']),os.path.dirname(os.path.realpath(self.path_pickle)))
-                    logging.info("relative file path to "+os.path.dirname(self.path_pickle)+" is "+self.lib_dataarrays['path'].loc[idx])
-                #os.path.commonprefix([columns['absolute_path'],lib_dirname])
-                elif ((columns['path'] is not None) and (type(columns['path']) is str)):
-                    if 'absolute_path' not in self.lib_dataarrays.columns:
-                        self.lib_dataarrays['absolute_path'] = None
-                    self.lib_dataarrays['absolute_path'].loc[idx] =  os.path.dirname(self.path_pickle)+'/'+columns['path']
-
+                # if (('absolute_path' in columns) and (columns['absolute_path'] is not None) and (type(columns['absolute_path']) is str)):
+                #     if 'path' not in self.lib_dataarrays.columns:
+                #         self.lib_dataarrays['path'] = None
+                #     self.lib_dataarrays['path'].loc[idx] =  os.path.relpath(os.path.realpath(columns['absolute_path']),os.path.dirname(os.path.realpath(self.path_pickle)))
+                #     logging.info("relative file path to "+os.path.dirname(self.path_pickle)+" is "+self.lib_dataarrays['path'].loc[idx])
+                # #os.path.commonprefix([columns['absolute_path'],lib_dirname])
+                if ((columns['path'] is not None) and (type(columns['path']) is str)) and ('absolute_path_for_reading' in columns):
                     if ((columns['absolute_path_for_reading'] is None) or (type(columns['absolute_path_for_reading']) is not str)):
                         if 'absolute_path_for_reading' not in self.lib_dataarrays.columns:
                             self.lib_dataarrays['absolute_path_for_reading'] = None

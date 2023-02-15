@@ -13,12 +13,13 @@ def get_argparse_from_function(function):
     import argparse
     import inspect
 
+    # problem! if you have reset_archive_after then the reset_archive argument disappears
     arguments = {}
     help_dict = {}
     logging.debug('acquiring help information of arguments')
     for help_line in function.__doc__.split('\n'):
         key = help_line.split(':')[0].strip(' ')
-        if key is not '':
+        if key != '':
             if ':' in help_line:
                 value = ':'.join(help_line.split(':')[1:])
             else:

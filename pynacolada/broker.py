@@ -14,6 +14,8 @@ import numpy as np
 import tempfile
 from ast import literal_eval
 from subprocess import Popen, PIPE
+import random
+
 
 broker_global_settings_defaults = {
     'conda_environment_export': '/tmp/anaconda/bin',
@@ -22,7 +24,7 @@ broker_global_settings_defaults = {
     'reset_lock':0,
     'reset_history':0,
     'force_recalculate':0,
-    'delay':1.0,
+    'delay':5,
     'datetime_start_chain': '__undefinied__'
 }
 
@@ -78,7 +80,6 @@ class broker (object):
 
     def retrieve_input(self,debug=False):
         logging.info('--- BEGIN Collecting or generating coarse input data -- ')
-        delay = 0
         for ibroker_requires, broker_requires in enumerate(self.requires):
 
             request_parent = self.requires[ibroker_requires].copy()
@@ -124,8 +125,7 @@ class broker (object):
                     parent_execute.append('--' + key)
                     parent_execute.append(str(max(int(self.__dict__[key])-1, 0)))
                 parent_execute.append('--delay')
-                delay = delay + 1 + float(self.__dict__['delay'])
-                parent_execute.append(str(delay))
+                parent_execute.append(str(self.delay))
                 parent_execute.append('--datetime_start_chain')
                 parent_execute.append(str(self.datetime_start_chain))
 
@@ -184,6 +184,7 @@ class broker (object):
                     self.requires[ibroker_requires]['stdout'] = open(tempbasename + '_o.log', 'w')
                     logging.info('- stdout: ' + self.requires[ibroker_requires]['stdout'].name)
                     logging.info('- stderr: ' + self.requires[ibroker_requires]['stderr'].name)
+
                     self.requires[ibroker_requires]['executing_subprocess'] = \
                         Popen(
                             parent_execute + parent_arguments,
@@ -192,9 +193,10 @@ class broker (object):
                             stdout=self.requires[ibroker_requires]['stdout'],
                             stderr=self.requires[ibroker_requires]['stderr'],
                             )
-                    logging.info('workaround to avoid simultaneous history and lock file access. Waiting for 1 seconds')
-                    #make process-specific file. if that one exists. then we can assume that lock file is also created. then we continue
-                    sleep(1)
+            #make process-specific file. if that one exists. then we can assume that lock file is also created. then we continue
+            delay_random = self.delay * (1+random.random())
+            logging.info('delaying after start subprocess for '+str(delay_random)+' seconds')
+            sleep(delay_random)
 
         for ibroker_requires,broker_requires in list(enumerate(self.requires)):
             if  ('executing_subprocess' in broker_requires.keys()) or ('return_from_history' in broker_requires.keys()):
@@ -271,10 +273,11 @@ class broker (object):
                 logging.info('content history: '+str(history_dict))
                 logging.info('writing to history file: '+history_filename)
                 self.flush_history_file(history_dict, history_filename,history_ok=True)
-                logging.info('workaround to avoid simultaneous history and lock file access. Waiting for 1 second')
-                sleep(1)
-
                 #broker['requires'][ibroker_requires]['archive'] = pcd.archive( args.root_requires + '/' + broker_requires['archive'])
+            #make process-specific file. if that one exists. then we can assume that lock file is also created. then we continue
+            delay_random = self.delay * (1+random.random())
+            logging.info('delaying retrieval for '+str(delay_random)+' seconds')
+            sleep(delay_random)
         if (type(self.provides) == list):
             # for ibroker_provides, broker_provides in enumerate(self.provides):
             #     if ('archive' in broker_provides.keys()) and (type(broker_provides['archive']) is type(lambda x:x)):
@@ -347,7 +350,24 @@ class broker (object):
                 else:
                     self.provides['archive'] = None #broker_provides['archive'](values_input)
 
-        if self.reset_archive > 0 :
+        if type(self.provides ) == list:
+            if self.provides[0]['archive'] is not None:
+                archive_out_filename =self.provides[0]['root'] + '/' + self.provides[0]['archive']
+            else:
+                archive_out_filename = None
+        else:
+            if self.provides['archive'] is not None:
+                archive_out_filename = self.provides['root'] + '/' + self.provides['archive']
+            else:
+                archive_out_filename = None
+
+        if (self.reset_archive > 0) \
+                and \
+                (archive_out_filename is not None) and \
+                os.path.isfile(archive_out_filename) and \
+                (str(dt.datetime.strptime(ctime(os.path.getctime(archive_out_filename)), "%a %b %d %H:%M:%S %Y")).replace(' ','_') < self.datetime_start_chain)\
+                :
+
             logging.info('Resetting archive of current broker')
             if type(self.provides) is list:
                 for broker_current in self.provides:
@@ -398,7 +418,7 @@ class broker (object):
             #     raise ValueError ('value '+variable+'not found in self.requires')
         self.requires = broker_requires_new
 
-    def get_return_request(self,return_exclude_keys = [],debug=False):
+    def get_return_request(self,return_exclude_keys,return_also_non_index_keys, debug=False):
 
         if debug==True:
             import pdb; pdb.set_trace()
@@ -408,7 +428,7 @@ class broker (object):
             for igroups_out in range(len(self.provides)):
                 return_request.append(dict())
                 for key in self.provides[igroups_out].keys():
-                    if (key not in ['root','chain']) and (key not in return_exclude_keys):
+                    if (key not in ['root','chain']) and (key not in return_exclude_keys) and ((key in ['archive','variable','time','space','source']) or return_also_non_index_keys) :
                         if type(self.provides[igroups_out][key]) is not type(lambda x:x):
                             return_request[igroups_out][key] = self.provides[igroups_out][key]
                         else:
@@ -461,7 +481,9 @@ class broker (object):
                             import pdb; pdb.set_trace()
                         for ireturn_request in range(len(self.provides[key])):
                             if (type(self.provides[key][ireturn_request]) != type(lambda x:x)) and \
-                                    (key not in return_exclude_keys):
+                                    (key not in return_exclude_keys) and \
+                                    ((key in ['archive','variable','time','space','source']) or return_also_non_index_keys) \
+                                    :
                                 return_request[key].append(self.provides[key][ireturn_request])
                                 # if type(return_request[key][-1]) == str:
                                 #     return_request[key][-1] = return_request[key][-1].replace('"','')
@@ -485,7 +507,9 @@ class broker (object):
             query=None,
             sources=None,
             return_exclude_keys=[],
+            return_also_non_index_keys = True,
             debug=False,
+            reset_archive_after = False,
             *args,
             **kwargs):
 
@@ -500,8 +524,10 @@ class broker (object):
             archive_out_filename = self.provides['root'] + '/' + self.provides['archive']
         lockfile = archive_out_filename + '_lock'
 
-        logging.warning('delaying process: '+str(self.delay)+' seconds')
-        sleep(float(self.delay))
+        if return_also_non_index_keys == True:
+            logging.warning('apply_func is set to return also non index keys to parent function (return_also_non_index_keys == True). In the future, this will not be the ddefault behaviour anymore (default will be return_also_non_index_keys == False)')
+
+
 
         if (self.reset_lock > 0) and \
                 os.path.isfile(lockfile) and \
@@ -510,7 +536,7 @@ class broker (object):
 
         while os.path.isfile(lockfile):
             logging.warning('archive locked with "' + lockfile + '" . Waiting for another process to release it.')
-            sleep(1)
+            sleep(5+ random.random()*10.)
 
         requests_parents = [broker_requires.copy() for broker_requires in sources]
 
@@ -573,12 +599,32 @@ class broker (object):
                 **self.operator_properties,
                 **kwargs)
             os.system('rm '+lockfile)
+
+        logging.info('output pkl file: '+  archive_out_filename)
+        logging.info('output directory: '+  os.path.dirname(archive_out_filename))
+        if reset_archive_after == True:
+            reset_archive_after()
+
+
+
         logging.info('end apply_func on parent_collection')
+
+
 
         logging.info('Dumping return_request as last line in stdout being used for processes depending on it')
 
-        return self.get_return_request(return_exclude_keys,debug=debug)
+        return self.get_return_request(return_exclude_keys,return_also_non_index_keys,debug=debug)
 
+    def reset_archive_after(self):
+
+            for irequires,requires in enumerate(self.requires):
+               history_filename = self.requires[iself_requires]['root'] + '/requests/' + os.path.basename(self.requires[iself_requires][ 'process'] + '_history.yaml')
+               history_dict = {}
+               self.flush_history_file(history_dict,history_filename)
+
+            logging.info('removing parent files')
+            for archive in self.parent_collection.archives:
+                archive.remove(query=("variable_key == '" + variable_key + "'"), reset_lib=True)
 
 
 
