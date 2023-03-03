@@ -151,8 +151,12 @@ class broker (object):
                 else:
                     # try:
                         with open(history_filename, 'r') as history_file:
-                            history_dict = yaml.load(history_file,Loader=yaml_Loader)
-                            if history_dict is None:
+                            try:
+                                history_dict = yaml.load(history_file,Loader=yaml_Loader)
+                                if history_dict is None:
+                                    history_dict = {}
+                            except:
+                                logging.warning('read history file failed. starting from scratch')
                                 history_dict = {}
                     # except:
                     #     logging.warning('reading history file failed: '+history_filename)
@@ -162,14 +166,14 @@ class broker (object):
                 # if debug == True:
                 #     import pdb; pdb.set_trace()
 
-                if (((self.reset_history - 1) > 0)):
+                if (((self.reset_history - 1) > 0)) or ((self.reset_archive - 1) > 0):
                     if (self.requires[ibroker_requires]['process_arguments'] in history_dict.keys()):
                         del history_dict[self.requires[ibroker_requires]['process_arguments']]
                     self.flush_history_file(history_dict,history_filename)
 
-                if ((self.reset_archive - 1) > 0):
-                    history_dict = {}
-                    self.flush_history_file(history_dict,history_filename)
+                # if ((self.reset_archive - 1) > 0):
+                #     history_dict = {}
+                #     self.flush_history_file(history_dict,history_filename)
 
                 if (self.requires[ibroker_requires]['process_arguments'] in history_dict.keys()):
                     self.requires[ibroker_requires]['return_from_history'] = history_dict[self.requires[ibroker_requires]['process_arguments']]['return_from_subprocess']
@@ -401,6 +405,9 @@ class broker (object):
                     archive_collection_paths.append(full_path)
 
         self.parent_collection = collection([archive(full_path,debug=debug) for full_path in archive_collection_paths])
+        delay_random = self.delay * (1+random.random())
+        logging.info('delaying after input retrieve for '+str(delay_random)+' seconds')
+        sleep(delay_random)
 
         logging.info('--- END Collecting or generating coarse input data --- ')
 
@@ -418,7 +425,7 @@ class broker (object):
             #     raise ValueError ('value '+variable+'not found in self.requires')
         self.requires = broker_requires_new
 
-    def get_return_request(self,return_exclude_keys,return_also_non_index_keys, debug=False):
+    def get_return_request( self, return_exclude_keys=[], return_also_non_index_keys = True, debug=False):
 
         if debug==True:
             import pdb; pdb.set_trace()
@@ -613,7 +620,7 @@ class broker (object):
 
         logging.info('Dumping return_request as last line in stdout being used for processes depending on it')
 
-        return self.get_return_request(return_exclude_keys,return_also_non_index_keys,debug=debug)
+        return self.get_return_request(return_exclude_keys = return_exclude_keys,return_also_non_index_keys = return_also_non_index_keys,debug=debug)
 
     def reset_archive_after(self):
 

@@ -72,7 +72,7 @@ def get_dimensions_attributes(coords,time_id=None,space_id=None):#,prepend={},ap
                 'daily_' + str(coords['time'][0].values)[:10] + '_' + str(coords['time'][-1].values)[:10]
         else:
             dimensions_attributes['time'] = 'irregular'
-            logging.waning('No time dimension found')
+            logging.warning('No time dimension found')
         if time_id != None:
             dimensions_attributes['time'] = time_id + '_'+ dimensions_attributes['time']
 
@@ -1300,7 +1300,7 @@ def apply_func(
             CMD = 'mv '+xarrays_output_filenames_work[incout]+' '+xarrays_output_filenames_real[incout]
             logging.info('Moving temporary output to actual netcdf: '+CMD)
             os.system(CMD)
-            sleep(1)
+            sleep(5)
             xrouts.append(xr.open_dataarray(xarrays_output_filenames_real[incout]))
         elif type(ncouts[incout]) == xr.DataArray:
             xrouts.append(ncouts[incout])
