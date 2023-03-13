@@ -1300,7 +1300,7 @@ def apply_func(
             CMD = 'mv '+xarrays_output_filenames_work[incout]+' '+xarrays_output_filenames_real[incout]
             logging.info('Moving temporary output to actual netcdf: '+CMD)
             os.system(CMD)
-            sleep(5)
+            sleep(10)
             xrouts.append(xr.open_dataarray(xarrays_output_filenames_real[incout]))
         elif type(ncouts[incout]) == xr.DataArray:
             xrouts.append(ncouts[incout])
