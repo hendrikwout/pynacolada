@@ -27,7 +27,7 @@ is provided instead.
 
 The library is currently used for different projects climate services developed
 by the Climate team of the Flemish Institute for Technological Research (VITO)
-in Belgium, amongst others, climtag.vito.be. For examples and usage, please
+in Belgium, amongst others, http://climtag.vito.be. For examples and usage, please
 contact hendrik.wouters@vito.be.
 
 
