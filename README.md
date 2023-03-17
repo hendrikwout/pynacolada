@@ -1,10 +1,12 @@
 # pynacolada
-Library for easily IO-processing with big netCDF xarrays
+Library for easily processing big netCDF files and xarrays, and manage them in
+hierarchical processing flows.
 
-# purpose Ever want to manipulate databases of huge xarrays in an easy,
+# Description
+Ever want to manipulate databases of huge xarrays in an easy,
 efficient, memory-friendly, and tracable way? You may have noticed memory
-limitations and loss of overview of all the sorts of the datasets.  This library 
-aims to tackle these challenges.
+limitations and loss of overview of all the sorts of the datasets.  This
+library aims to tackle these challenges.
 
 On the one hand, this package implements an apply_func routine that circumvents
 the memory issue by automatically dividing the xarray into chunks that fit your
