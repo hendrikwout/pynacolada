@@ -4,7 +4,7 @@ hierarchical processing flows.
 
 # Description
 Ever want to manipulate databases of huge xarrays in an easy,
-efficient, memory-friendly, and tracable way? You may have noticed memory
+efficient, memory-friendly, and traceable way? You may have noticed memory
 limitations and loss of overview of all the sorts of the datasets.  This
 library aims to tackle these challenges.
 
