@@ -603,6 +603,7 @@ class broker (object):
                 apply_groups_out=apply_groups_out,
                 archive_out = archive_out_filename,
                 add_archive_out_to_collection = False, # TODO: should be False (default) but need to check why that gives problems.
+                delay = self.delay,
                 **self.operator_properties,
                 **kwargs)
             os.system('rm '+lockfile)

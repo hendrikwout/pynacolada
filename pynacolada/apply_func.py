@@ -20,6 +20,7 @@ import sys
 import datetime as dt
 sys.path.insert(0, 'lib/pynacolada/')
 import pynacolada as pcd
+import random
 
 def name_from_pattern(pattern, attributes):
     return ''.join(
@@ -428,6 +429,7 @@ def apply_func(
         pass_missing_output_coordinates = False,
         profile_overlap = 'square',
         nprocs = 1,
+        delay = 10,
         args_func = [],
         kwargs_func = {},
 ):
@@ -1300,7 +1302,9 @@ def apply_func(
             CMD = 'mv '+xarrays_output_filenames_work[incout]+' '+xarrays_output_filenames_real[incout]
             logging.info('Moving temporary output to actual netcdf: '+CMD)
             os.system(CMD)
-            sleep(10)
+            delay_random = delay * (1+random.random())
+            logging.info('delaying after file write for '+str(delay_random)+' seconds')
+            sleep(delay_random)
             xrouts.append(xr.open_dataarray(xarrays_output_filenames_real[incout]))
         elif type(ncouts[incout]) == xr.DataArray:
             xrouts.append(ncouts[incout])
