@@ -467,12 +467,17 @@ class collection (object):
     def __init__(self,archives,*args,**kwargs):
         self.archives =  archives
 
-    def get_lib_dataarrays(self):
+    def get_lib_dataarrays(self,with_full_paths = False):
         logging.info('Build common library from collection of archives')
         if len(self.archives) > 0:
             lib_dataarrays = pd.concat([archive.lib_dataarrays for archive in self.archives]).sort_index()
         else:
             lib_dataarrays = pd.DataFrame()
+
+
+        if with_full_paths == True:
+            lib_dataarrays['path_full'] = lib_dataarrays.apply(lambda row: ('/'.join(row['path_pickle'].split('/')[:-1])+'/'+row['path']),axis=1).values
+
         return lib_dataarrays
 
     def get_dataarrays(self):
@@ -482,6 +487,9 @@ class collection (object):
             dataarrays = {**dataarrays, **archive.dataarrays}
         logging.info('end build common dataarray pool from collection of archives')
         return dataarrays
+
+
+    
 
     def apply_func(
             self,
