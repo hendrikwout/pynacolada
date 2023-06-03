@@ -253,6 +253,8 @@ class broker (object):
                     logging.info('return statement from subprocess: '+return_from_subprocess)
 
 
+                if debug == True:
+                    import pdb; pdb.set_trace()
                 return_from_subprocess_eval = literal_eval(return_from_subprocess)
 
                 if (return_from_subprocess_eval) == None:
@@ -382,8 +384,9 @@ class broker (object):
                             archive_out.remove(reset_lib=True)
                             archive_out.close()
                         elif type(broker_current['archive']) is archive:
-                            broker_current['archive'].remove(records=True)
+                            broker_current['archive'].remove(reset_lib=True)
                             broker_current['archive'].close()
+                        sleep(0.1)
             else:
                 if 'archive' in self.provides.keys():
                     if type(self.provides['archive']) is str:
@@ -425,7 +428,7 @@ class broker (object):
             #     raise ValueError ('value '+variable+'not found in self.requires')
         self.requires = broker_requires_new
 
-    def get_return_request( self, return_exclude_keys=[], return_also_non_index_keys = True, debug=False):
+    def get_return_request( self, sources=None,return_exclude_keys=[], return_also_non_index_keys = True, debug=False):
 
         if debug==True:
             import pdb; pdb.set_trace()
@@ -440,7 +443,7 @@ class broker (object):
                             return_request[igroups_out][key] = self.provides[igroups_out][key]
                         else:
                             values_input = []
-                            for item in self.requires:
+                            for item in sources:
                                 if 'disable' not in item.keys():
                                     if key in item.keys():
                                         values_input.append(item[key])
@@ -593,9 +596,9 @@ class broker (object):
         if self.dummy != 'True':
 
             CMD = 'mkdir -p '+os.path.dirname(lockfile)
-            print('executing: '+CMD); os.system(CMD)
+            logging.debug('executing: '+CMD); os.system(CMD)
             CMD = 'touch '+lockfile
-            print('executing: '+CMD); os.system(CMD)
+            logging.debug('executing: '+CMD); os.system(CMD)
             self.parent_collection.apply_func(
                 self.operator,
                 query=query,
@@ -606,7 +609,9 @@ class broker (object):
                 delay = self.delay,
                 **self.operator_properties,
                 **kwargs)
-            os.system('rm '+lockfile)
+ 
+        CMD = 'rm '+lockfile
+        logging.debug('removing lockfile by "'+CMD+'"'); os.system(CMD)
 
         logging.info('output pkl file: '+  archive_out_filename)
         logging.info('output directory: '+  os.path.dirname(archive_out_filename))
@@ -621,7 +626,7 @@ class broker (object):
 
         logging.info('Dumping return_request as last line in stdout being used for processes depending on it')
 
-        return self.get_return_request(return_exclude_keys = return_exclude_keys,return_also_non_index_keys = return_also_non_index_keys,debug=debug)
+        return self.get_return_request(sources=sources ,return_exclude_keys = return_exclude_keys,return_also_non_index_keys = return_also_non_index_keys,debug=debug)
 
     def reset_archive_after(self):
 

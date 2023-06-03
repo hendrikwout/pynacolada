@@ -7,13 +7,13 @@ import os
 import netCDF4 as nc4
 from itertools import product
 import numpy as np
+from time import sleep
 #import rasterio
 import xarray as xr
 #from dask.diagnostics import ProgressBar
 #from rasterio.windows import Window
 import pandas as pd
 import numpy as np
-from time import sleep
 import tqdm
 import logging
 import sys
@@ -463,7 +463,7 @@ def apply_func(
                 if (dimname not in dims_no_apply) and (dimname not in dims_apply_names):
                     dims_no_apply[dimname] = xarray_in[dimname]
                 if (dimname in dims_no_apply) and (dimname in xarray_in.dims) and (not identical_xarrays(xarray_in[dimname],dims_no_apply[dimname])) and (len(xarray_in[dimname]) != 1):
-                    import pdb; pdb.set_trace()
+                    #import pdb; pdb.set_trace()
                     raise ValueError('dimension '+dimname+' of xarray_in number '+str(ixarray_in)+' is not the same as previously detected dimensions.')
         else:
             raise IOError('input array type not supported.')
@@ -1282,6 +1282,7 @@ def apply_func(
            #     if type(chunks_out[ichunk_out]) == xr.core.dataarray.DataArray:
            #         chunks_out[ichunk_out].close()
            first_chunks = False
+           #sleep(1.1)
 
        if nprocs > 1:
            pool.close()

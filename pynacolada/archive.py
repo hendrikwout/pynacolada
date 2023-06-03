@@ -531,8 +531,6 @@ class collection (object):
 
 
 class archive (object):
-
-
     def get_dataarray(self,index,engine=None):
         path = self.get_path(index)
         try:
