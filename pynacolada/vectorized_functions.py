@@ -411,7 +411,7 @@ def interpolate_delaunay_linear(values,xylist,uvlist,remove_duplicate_points=Fal
     valout[:,np.any(wts < 0, axis=1)] = fill_value
     valout.shape = [element for element in values.shape[:-len(xylist[0].shape)]]+[element for element in uvshape ]
 
-    valout.shape = tuple(list(values_shape_orig[:-2])+list(valout.shape[-2:]))
+    valout.shape = tuple(list(values_shape_orig[:-len(xylist[0].shape)])+list(valout.shape[-len(uvlist[0].shape):]))
 
     #new axis are added to conform the output to 4 dimenions
     if add_newaxes:

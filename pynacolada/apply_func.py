@@ -21,6 +21,93 @@ import datetime as dt
 sys.path.insert(0, 'lib/pynacolada/')
 import pynacolada as pcd
 import random
+import re
+
+def nc_reduce_fn(fn_input,fn_output,ncvariable=None,overwrite=False,nc_reduce=True,nc_compress=False):
+
+   from nc_reduce import reduce, restore
+
+   if ncvariable is not None:
+       xr_work = xr.open_dataset(fn_input)[ncvariable]
+   else:
+       xr_work = xr.open_dataarray(fn_input)
+   xr_name = xr_work.name
+   xr_attrs = dict(xr_work.attrs)
+   xr_work.close()
+
+   if nc_reduce == False:
+       scale_configuration = {xr_name:{'scale':False}, None: {'scale':False}}
+   else:
+       scale_configuration = {xr_name:{}, None: {'scale':False}}
+   
+       if ( 'physical_range' in xr_attrs):
+           scale_configuration[xr_name].update({
+               'min':xr_attrs['physical_range'][0],
+               'max':xr_attrs['physical_range'][1]
+               }
+               )
+       elif xr_name in ['hfls','hfss']:
+               scale_configuration[xr_name].update({'output_dtype_bits': 16,'min':-750,'max':1500})
+       elif (('units' in xr_attrs) and (xr_attrs['units'] in ['K','Kelvin'])):
+           #Guess physical range from units
+           if xr_name in ['tos','sst']:
+               scale_configuration[xr_name].update({'output_dtype_bits': 16,'min':240,'max':350})
+           else: 
+               scale_configuration[xr_name].update({'output_dtype_bits': 16,'min':(273.15-100.),'max':(273.15+100.)})
+       elif (('units' in xr_attrs) and (xr_attrs['units'] in ['degC',])):
+           scale_configuration[xr_name].update({'output_dtype_bits': 16,'min':(-100.),'max':(100.)})
+       elif (('units' in xr_attrs) and (xr_attrs['units'] == 'W m-2')):
+           scale_configuration[xr_name].update({'output_dtype_bits': 16,'min':0,'max':3000.})
+       elif (('units' in xr_attrs) and (xr_attrs['units'] in ["kg m-2"])):
+           if xr_name == 'mrsos':
+              scale_configuration[xr_name].update({'output_dtype_bits': 16,'min':0,'max':125})
+       elif (('units' in xr_attrs) and (xr_attrs['units'] in ["%"])):
+           if xr_name == 'hurs':
+              scale_configuration[xr_name].update({'output_dtype_bits': 16,'min':0,'max':150})
+
+       elif (('units' in xr_attrs) and (xr_attrs['units'] in ["W m-2"])):
+           if xr_name == 'rsds':
+              scale_configuration[xr_name].update({'output_dtype_bits': 16,'min':-1,'max':750})
+       elif (('units' in xr_attrs) and (xr_attrs['units'] in ["kg m-2 s-1"])):
+           if xr_name == 'pr':
+              scale_configuration[xr_name].update({'output_dtype_bits': 16,'min':0,'max':0.0025})
+       elif (('units' in xr_attrs) and (xr_attrs['units'] in ['m s**-1','m s-1'])):
+           if xr_name == 'sfcWind':
+              scale_configuration[xr_name].update({'output_dtype_bits': 16,'min':0,'max':100})
+           elif xr_name in ['pr','tprate']:
+              scale_configuration[xr_name].update({'output_dtype_bits': 16,'min':0,'max':1.0/10**4})
+       elif (('units' in xr_attrs) and (xr_attrs['units'] == 'kg m**-2 s**-1')):
+           scale_configuration[xr_name].update({'output_dtype_bits': 16,'min':0,'max':1./10**1})
+       elif (('units' in xr_attrs) and (xr_attrs['units'] == 'kg m-2 s-1')):
+           scale_configuration[xr_name].update({'output_dtype_bits': 16,'min':0,'max':1./10**1})
+       elif (('units' in xr_attrs) and (xr_attrs['units'] == 'mm s**-1')):
+           scale_configuration[xr_name].update({'output_dtype_bits': 16,'min':0,'max':1./10**1})
+       elif (('units' in xr_attrs) and (xr_attrs['units'] == 'mm day**-1')):
+           scale_configuration[xr_name].update({'output_dtype_bits': 16,'min':0,'max':1000})
+       elif ('units' in xr_attrs) and (bool(re.match(r"mm \(.?.? days*\*\.*",xr_attrs['units']))):
+           scale_configuration[xr_name].update({'output_dtype_bits': 16,'min':0,'max':1000*int(xr_attrs['units'][5:6])})
+       elif xr_name.startswith('number') and (('units' in xr_attrs) and (bool(re.match(r"\(.?.? days*\*\.*",xr_attrs['units'])))):
+           scale_configuration[xr_name].update({'output_dtype_bits': 8,'min':0,'max':int(xr_attrs['units'][1:2])*1.2})
+       elif (xr_name.startswith('precipitation-intensity')):
+           scale_configuration[xr_name].update({'output_dtype_bits': 16,'min':0,'max':1000})
+       elif (xr_name.startswith('precipitation')):
+           scale_configuration[xr_name].update({'output_dtype_bits': 16,'min':0,'max':100000})
+
+       if ('min' not in scale_configuration[xr_name]) or ('max' not in scale_configuration[xr_name]):
+           import pdb; pdb.set_trace()
+           raise ValueError("Sorry, I don't know how I can byte-reduce this type of variable")
+
+   if (overwrite == True) and (os.path.isfile(fn_output)):
+        logging.info('remove overwriting '+fn_output)
+        os.system('rm '+fn_output)
+
+   reduce(
+       fn_input,
+       fn_output,
+       compress=nc_compress,
+       scale_configuration=scale_configuration
+   )
+
 
 def name_from_pattern(pattern, attributes):
     return ''.join(
@@ -234,6 +321,7 @@ def chunk_task(func,
                dims_all,
                dims_no_apply,
                pass_missing_output_coordinates,
+               transpose_inner,
                args_func=[],
                kwargs_func={},
                index_no_apply=None,
@@ -315,8 +403,13 @@ def chunk_task(func,
     chunks_in = []
     for ixarray, xarray in enumerate(xarrays_in):
 
-        chunks_in.append(xarray.isel(xarrays_in_selection_chunk[ixarray]).transpose(
-            *tuple(xarrays_in_selection_chunk[ixarray].keys())))
+        if transpose_inner == True:
+            logging.debug('selecting and transposing chunk '+str(ixarray))
+            chunks_in.append(xarray.isel(xarrays_in_selection_chunk[ixarray]).transpose(
+                *tuple(xarrays_in_selection_chunk[ixarray].keys())))
+        else:
+            logging.debug('selecting chunk '+str(ixarray))
+            chunks_in.append(xarray.isel(xarrays_in_selection_chunk[ixarray]))
 
         if 'variable' in chunks_in[-1].attrs.keys():
     #        logging.info('variable attribute detected. Replacing xarray variable name to this value.')
@@ -353,12 +446,19 @@ def chunk_task(func,
     else:
         pass_dims_not_found = {}
 
+    logging.debug('applying function to chunks')
     chunks_out = func(*chunks_in, *args_func,**pass_dims_not_found,**kwargs_func)
+    logging.debug('done applying')
     if type(chunks_out) not in [list, tuple]:
         chunks_out = [chunks_out]
 
     chunks_out_xarrays = []
 
+
+    dims_all_no_chunk = []
+    for dim in dims_all:
+        if dim != '__chunk__':
+            dims_all_no_chunk.append(dim)
     for ixarray_out, chunk_out in enumerate(chunks_out):
         if type(chunk_out) != xr.DataArray:
             logging.info('Numpy output detected. Converting to xarray and guess/assign coordinate attributes according to input. ')
@@ -369,14 +469,14 @@ def chunk_task(func,
                 #     chunk_out_coordinates[dims_all[idim]] = np.array[0]
                 # else:
                 
-                chunk_out_coordinates.insert(0,[dims_all[idim], None])
+                chunk_out_coordinates.insert(0,[dims_all_no_chunk[idim], None])
                 for ichunk_in,chunk_in in reversed(list(enumerate(chunks_in))): 
-                    if (dims_all[idim] in chunk_in.dims):
-                        if (len(chunk_in[dims_all[idim]]) == dimlength):
-                            chunk_out_coordinates[0] = [dims_all[idim] , chunk_in[dims_all[idim]]]
+                    if (dims_all_no_chunk[idim] in chunk_in.dims):
+                        if (len(chunk_in[dims_all_no_chunk[idim]]) == dimlength):
+                            chunk_out_coordinates[0] = [dims_all_no_chunk[idim] , chunk_in[dims_all_no_chunk[idim]]]
                         elif dimlength == 1:
-                            middleco = int(len(chunk_in[dims_all[idim]])/2)
-                            chunk_out_coordinates[0] = [dims_all[idim], chunk_in[dims_all[idim]][middleco:middleco+1]]
+                            middleco = int(len(chunk_in[dims_all_no_chunk[idim]])/2)
+                            chunk_out_coordinates[0] = [dims_all_no_chunk[idim], chunk_in[dims_all_no_chunk[idim]][middleco:middleco+1]]
 
 
                 if chunk_out_coordinates[0] is None: 
@@ -386,16 +486,20 @@ def chunk_task(func,
 
             logging.debug('for dimensions over which function is applied, we select coordinates of the chunk')
             # perhaps we should do the same for dims_no_apply, instead of the code just above!
-            for idim,dim in enumerate(dims_apply_names):
+            for dim in dims_apply_names:
+                idim = dims_all.index(dim)
                 chunk_out_coordinates_dim = output_dimensions[dim]['coords']
-                if chunk_end[-1-idim] is not None:
-                    chunk_out_coordinates_dim = chunk_out_coordinates_dim[:chunk_end[-1-idim]]
-                if chunk_start[-1-idim] is not None:
-                    chunk_out_coordinates_dim = chunk_out_coordinates_dim[chunk_start[-1-idim]:]
+                if chunk_end[idim] is not None:
+                    chunk_out_coordinates_dim = chunk_out_coordinates_dim[:chunk_end[idim]]
+                if chunk_start[idim] is not None:
+                    chunk_out_coordinates_dim = chunk_out_coordinates_dim[chunk_start[idim]:]
 
                 chunk_out_coordinates[dim] = chunk_out_coordinates_dim
 
-            chunk_out_xarray = xr.DataArray(chunk_out, dims=chunk_out_coordinates.keys(),coords=chunk_out_coordinates)
+            try:
+                chunk_out_xarray = xr.DataArray(chunk_out, dims=chunk_out_coordinates.keys(),coords=chunk_out_coordinates)
+            except: 
+                import pdb; pdb.set_trace()
 
             #chunk_out_xarray.name = chunks_in[0].name
             
@@ -430,6 +534,9 @@ def apply_func(
         profile_overlap = 'square',
         nprocs = 1,
         delay = 10,
+        nc_reduce = False,
+        nc_compress = None,
+        transpose_inner = True,
         args_func = [],
         kwargs_func = {},
 ):
@@ -549,10 +656,12 @@ def apply_func(
 
     number_of_chunks_apply = 1
     number_of_chunks_apply_dims = {}
+    any_overlap = False
     for dimname,dimattr in output_dimensions.items():
 
         if (output_dimensions[dimname] != None) and ('chunksize' in output_dimensions[dimname]):
             if 'overlap' in output_dimensions[dimname]:
+                any_overlap = True
                 number_of_chunks_apply_dims_dimname = int(
                     np.ceil(len(output_dimensions[dimname]['coords']) / (
                             output_dimensions[dimname]['chunksize'] - output_dimensions[dimname]['overlap'])))
@@ -722,9 +831,9 @@ def apply_func(
         if type(xarray) == Namespace:
             nbytes = xarray.nbytes
         elif xarray.dtype == 'float32':
-            nbytes = 4
+            nbytes = 4*max(xarray.size,1)
         elif xarray.dtype == 'float64':
-            nbytes = 8
+            nbytes = 8*max(xarray.size,1)
         else:
             logging.warning('dtype cannot be tracked from xarray. retrieving xarray.nbytes could lead to (possibly only when using dataarray_wrappers)')
             nbytes = xarray.nbytes
@@ -842,12 +951,15 @@ def apply_func(
            pool = Pool()
            iterate_func = pool.map(partial(chunk_task, func,
                       chunks_number_no_apply, dims_apply_names, number_of_chunks_apply_dims, output_dimensions,
-                          dims_no_apply_lengths, chunk_sizes_no_apply, xarrays_in, xarrays_in_shapes_chunks, dims_all,dims_no_apply,pass_missing_output_coordinates,
-                                                                                 args_func,kwargs_func), tuple(index_no_apply_group))
+                      dims_no_apply_lengths, chunk_sizes_no_apply, xarrays_in, xarrays_in_shapes_chunks, 
+                      dims_all,dims_no_apply,pass_missing_output_coordinates,transpose_inner,
+                      args_func,kwargs_func), tuple(index_no_apply_group))
        else:
            iterate_func = [chunk_task(func,
                       chunks_number_no_apply, dims_apply_names, number_of_chunks_apply_dims, output_dimensions,
-                          dims_no_apply_lengths, chunk_sizes_no_apply, xarrays_in, xarrays_in_shapes_chunks, dims_all,dims_no_apply,pass_missing_output_coordinates,args_func,kwargs_func,index_no_apply_group[0],)]
+                      dims_no_apply_lengths, chunk_sizes_no_apply, xarrays_in, xarrays_in_shapes_chunks, 
+                      dims_all,dims_no_apply,pass_missing_output_coordinates,transpose_inner,
+                      args_func,kwargs_func,index_no_apply_group[0],)]
 
 
        for (chunks_out_xarrays, chunk_start, chunk_end)  in iterate_func:
@@ -985,6 +1097,7 @@ def apply_func(
 
 
            for ichunk_out,chunk_out_xarray in enumerate(chunks_out_xarrays):
+               logging.debug('tranposing chunk '+str(ichunk_out))
                chunk_out_xarray_ordered = chunk_out_xarray.transpose(*tuple(xarrays_out_selection_chunk_ordered.keys()))
                # chunk_profile =
 
@@ -1217,7 +1330,8 @@ def apply_func(
                        for attrkey,attrvalue in attributes_out.items():
                            logging.info('writing netcdf attribute '+attrkey+' = '+str(attrvalue))
                            ncouts[ichunk_out].variables[ncouts_variable[-1]].setncattr(attrkey,attrvalue)
-                       ncouts[ichunk_out].close()
+                       if any_overlap == True:
+                           ncouts[ichunk_out].close()
 
                        #xarrays_out.append(xr.open_dataarray(fnout))
                        logging.info('finished initializing netcdf file '+str(ichunk_out))
@@ -1233,15 +1347,22 @@ def apply_func(
                # try:
 
                if type(ncouts[ichunk_out]) == nc4.Dataset:
-                   logging.debug('acquiring previous values for consolidating chunk overlapping values')
-                   ncouts[ichunk_out] = nc4.Dataset(xarrays_output_filenames_work[ichunk_out],'a')
-                   recap = ncouts[ichunk_out].variables[ncouts_variable[ichunk_out]][indexing_for_output_array].filled(fill_value=0)
+                   if any_overlap == True:
+                       logging.debug('acquiring previous values for consolidating chunk overlapping values')
+                       ncouts[ichunk_out] = nc4.Dataset(xarrays_output_filenames_work[ichunk_out],'a')
+                       recap = ncouts[ichunk_out].variables[ncouts_variable[ichunk_out]][indexing_for_output_array].filled(fill_value=0)
+                       logging.debug('done acquiring')
 
                    logging.debug('writing chunk ('+str(indexing_for_output_array)+') to netcdf file '+str(ichunk_out))
                    if first_chunks:
                        logging.info('writing first chunk ('+str(indexing_for_output_array)+') to netcdf file '+str(ichunk_out)+'. This takes a much longer than the next chunks because of some hidden initializations of the netcdf file.')
-                   ncouts[ichunk_out].variables[ncouts_variable[ichunk_out]][indexing_for_output_array] = \
-                       recap + np.array( chunk_out_xarray_ordered.values, dtype='float32') * overlap_weights
+                   if any_overlap == True:
+                       ncouts[ichunk_out].variables[ncouts_variable[ichunk_out]][indexing_for_output_array] = \
+                           recap + np.array( chunk_out_xarray_ordered.values, dtype='float32') * overlap_weights
+                   else:
+                       logging.debug('writing data to netcdf file for chunk '+str(ichunk_out))
+                       ncouts[ichunk_out].variables[ncouts_variable[ichunk_out]][indexing_for_output_array] = np.array( chunk_out_xarray_ordered.values, dtype='float32')
+                       logging.debug('done writing data' )
 
                    for coordname,coord in chunk_out_xarray_ordered.coords.items():
                        if coordname not in  chunk_out_xarray_ordered.dims:
@@ -1252,7 +1373,8 @@ def apply_func(
 
                    if first_chunks:
                        logging.info('finished writing first chunk')
-                   ncouts[ichunk_out].close()
+                   if any_overlap == True:
+                       ncouts[ichunk_out].close()
                elif type(ncouts[ichunk_out]) is xr.DataArray:
                    recap = ncouts[ichunk_out][indexing_for_output_array]
                    ncouts[ichunk_out][indexing_for_output_array] = recap + np.array( chunk_out_xarray_ordered.values, dtype='float32') * overlap_weights
@@ -1272,7 +1394,8 @@ def apply_func(
                   raise IOError('type of output chunk '+str(ichunk_out)+'('+type(ncouts[ichunk_out]).__name__+') not inplemented.')
                #   except:
                #       import pdb; pdb.set_trace()
-               del recap
+               if any_overlap == True:
+                del recap
 
                #del chunk_out_xarray
                del chunk_out_xarray_ordered
@@ -1292,17 +1415,50 @@ def apply_func(
         if type(ncouts[incout]) == nc4.Dataset:
 
             logging.warning('workaround with _FillValue to enable overlapping values')
-            ncouts[incout] = nc4.Dataset(xarrays_output_filenames_work[incout],'a')
+            if any_overlap == True:
+                ncouts[incout] = nc4.Dataset(xarrays_output_filenames_work[incout],'a')
             ncouts[incout][ncouts_variable[incout]].delncattr('_FillValue')
             ncouts[incout].close()
+
+
             if not os.path.isdir(os.path.dirname(xarrays_output_filenames_real[incout])):
                 CMD = 'mkdir -p '+os.path.dirname(xarrays_output_filenames_real[incout])
                 logging.info('Creating destination folder: ' + CMD)
                 os.system(CMD)
 
+            nc_reduced = "False"
+            nc_compressed = "False"
+
+            if nc_reduce == True:
+
+                CMD = 'mv '+xarrays_output_filenames_work[incout]+' '+xarrays_output_filenames_work[incout]+'_todeflate.nc'
+                logging.info('Moving temporary output to actual netcdf: '+CMD)
+                os.system(CMD)
+                compress = (nc_compress if nc_compress is not None else True)
+                #try:
+                nc_reduce_fn(xarrays_output_filenames_work[incout]+'_todeflate.nc',xarrays_output_filenames_work[incout],nc_compress=compress)
+                #except:
+                #    logging.critical('nc_reduce failed. removing temporary file. So we just keep the original file without reducing.')
+                CMD = 'rm '+xarrays_output_filenames_work[incout]+'_todeflate.nc'
+                logging.info('executing: '+CMD); os.system(CMD)
+                
+
+                nc_reduced = "True"
+                nc_compressed = str(compress)
+            
+
             CMD = 'mv '+xarrays_output_filenames_work[incout]+' '+xarrays_output_filenames_real[incout]
             logging.info('Moving temporary output to actual netcdf: '+CMD)
             os.system(CMD)
+            if nc_reduced != "True":
+                nc_compressed = "False"
+
+
+            ncout_temp = nc4.Dataset(xarrays_output_filenames_real[incout],'a')
+            ncout_temp[ncouts_variable[incout]].setncattr('nc_reduced',str(nc_reduced))
+            ncout_temp[ncouts_variable[incout]].setncattr('nc_compressed',str(nc_compressed))
+            ncout_temp.close()
+
             delay_random = delay * (1+random.random())
             logging.info('delaying after file write for '+str(delay_random)+' seconds')
             sleep(delay_random)

@@ -73,7 +73,7 @@ class broker (object):
     def flush_history_file(self,history_dict, history_filename,history_ok=True):
         if (self.dummy != 'True') and (history_ok == True):
             if not os.path.isdir(os.path.dirname(history_filename)):
-                os.mkdir(os.path.dirname(history_filename))
+                os.makedirs(os.path.dirname(history_filename))
             with open(history_filename, 'w') as history_file:
                 dump = yaml.dump(history_dict,Dumper=yaml_Dumper)
                 history_file.write(dump)
@@ -180,7 +180,7 @@ class broker (object):
                 else:
                     tempdir=self.requires[ibroker_requires]['root'] + '/log/'
                     if not os.path.isdir(tempdir):
-                        os.mkdir(tempdir)
+                        os.makedirs(tempdir)
                     tempbasename = tempfile.mktemp(
                         prefix=broker_requires['process'].split('/')[-1] + '_',
                         dir=tempdir)
@@ -548,6 +548,11 @@ class broker (object):
             logging.warning('archive locked with "' + lockfile + '" . Waiting for another process to release it.')
             sleep(5+ random.random()*10.)
 
+            #another nested check to be really safe
+            while os.path.isfile(lockfile):
+                logging.warning('archive locked with "' + lockfile + '" . Waiting for another process to release it.')
+                sleep(5+ random.random()*10.)
+
         requests_parents = [broker_requires.copy() for broker_requires in sources]
 
         for irequest_parent,request_parent in list(reversed(list(enumerate(requests_parents)))):
@@ -599,6 +604,7 @@ class broker (object):
             logging.debug('executing: '+CMD); os.system(CMD)
             CMD = 'touch '+lockfile
             logging.debug('executing: '+CMD); os.system(CMD)
+
             self.parent_collection.apply_func(
                 self.operator,
                 query=query,

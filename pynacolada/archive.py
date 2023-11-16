@@ -10,7 +10,7 @@ import logging
 import sys
 from tqdm import tqdm
 import tempfile
-from . import apply_func
+from . import apply_func, nc_reduce_fn
 import netCDF4 as nc4
 
 def parse_to_dataframe(list_or_dict_or_dataframe):
@@ -51,6 +51,9 @@ def apply_func_wrapper(
     engine=None,
     update_pickle=True,
     delay = 10,
+    nc_reduce=False,
+    input_cache_to_ram=True,
+    drop_duplicates_in_group = True,
     #lib_dataarrays = self.lib_dataarrays
 
     **kwargs,
@@ -65,7 +68,13 @@ def apply_func_wrapper(
 
     output:
     """
-    apply_groups_in_df = parse_to_dataframe(apply_groups_in)
+    apply_groups_in_df_temp = parse_to_dataframe(apply_groups_in)
+    if drop_duplicates_in_group:
+        apply_groups_in_df = apply_groups_in_df_temp.drop_duplicates()
+        if len(apply_groups_in_df_temp) != len(apply_groups_in_df):
+            logging.warning('duplicate source names found. Duplicates were removed')
+    else:
+        apply_groups_in_df = apply_groups_in_df_temp
     apply_groups_out_df = parse_to_dataframe(apply_groups_out)
 
     divide_into_groups = []
@@ -344,6 +353,8 @@ def apply_func_wrapper(
             else:
 
                 dataarrays_group_in = []
+                dataarrays_group_in_cached = []
+
                 for idx_group_in, row in table_this_group_in.iterrows():
                     if table_this_group_in.index.names[0] is None:  # trivial case where no group_in selection is made
                         index_dataarray = [dict(zip(table_this_group_in.columns, row))[key] for key in
@@ -360,21 +371,40 @@ def apply_func_wrapper(
                         dataarrays_group_in.append(dataarrays[tuple(index_dataarray)])
                     else:
                         filename = os.path.dirname(row_of_dataarray.path_pickle) + '/' + row_of_dataarray.path
+                        # import pdb; pdb.set_trace()
+
+                        # import netCDF4 as nc4
+                        # ds = nc4.Dataset(filename)
+                        # var = ds.variables['bar']
+                        # print('complevel: %s', var.filters().get('complevel', False))
+
+
+                        #if ("nc_compressed" in row_of_dataarray) and (row_of_dataarray["nc_compressed"] == 'True'):
+                        if input_cache_to_ram == True:
+                            filename_work = tempfile.mktemp(suffix='.nc',dir='/tmp/')
+                            #os.system('ncks -L 0 '+filename+' '+filename_work)
+                            os.system('cp '+filename+' '+filename_work)
+                            cached = filename_work
+                        else:
+                            filename_work = filename
+                            cached = False
+
                         try:
-                            dataarrays_group_in.append( xr.open_dataarray(filename, engine=engine))
+                            dataarrays_group_in.append( xr.open_dataarray(filename_work, engine=engine))
                         except:
                             try:
-                                dataarrays_group_in.append( xr.open_dataarray(filename))
+                                dataarrays_group_in.append( xr.open_dataarray(filename_work))
                             except:
                                 try:
-                                    dataarrays_group_in.append(xr.open_dataset(filename, engine=engine)[row_of_dataarray.ncvariable])
+                                    dataarrays_group_in.append(xr.open_dataset(filename_work, engine=engine)[row_of_dataarray.ncvariable])
                                 except:
-                                    dataarrays_group_in.append(xr.open_dataset(filename)[row_of_dataarray.ncvariable])
+                                    dataarrays_group_in.append(xr.open_dataset(filename_work)[row_of_dataarray.ncvariable])
+                        dataarrays_group_in_cached.append(cached)
 
                     if ('linked' in row_of_dataarray.keys()) and (row_of_dataarray.linked == True):
                         logging.debug('linked dataarray detected. Overriding xarray attributes with the those supplemented in the pandas table')
                         for key in row_of_dataarray.keys():
-                            if key not in ['path','available','linked','ncvariable','path_pickle','linked']:
+                            if key not in ['path','available','linked','ncvariable','path_pickle','linked','nc_reduced','nc_compresed']:
                                 dataarrays_group_in[-1].attrs[key] = row_of_dataarray[key]
 
                 if force_recalculate and some_dataarrays_out_already_available:
@@ -403,8 +433,9 @@ def apply_func_wrapper(
                 elif mode in ['numpy_output_to_disk_in_chunks', 'numpy_output_to_disk_no_chunks']:
                     logging.info('starting apply_func')
                     if mode == 'numpy_output_to_disk_in_chunks':
+
                         filenames_out = xarray_function_wrapper(func, dataarrays_wrapper(*tuple(dataarrays_group_in)),
-                                xarrays_output_filenames=filenames_out_pattern, attributes=attributes_dataarrays_out,return_type='paths',delay=delay,**kwargs)
+                                xarrays_output_filenames=filenames_out_pattern, attributes=attributes_dataarrays_out,return_type='paths',delay=delay,nc_reduce=nc_reduce,**kwargs)
                     elif mode == 'numpy_output_to_disk_no_chunks':
                         temp_dataarrays = xarray_function_wrapper(func, dataarrays_wrapper(*tuple(dataarrays_group_in)),
                                                                   **kwargs)
@@ -456,6 +487,9 @@ def apply_func_wrapper(
                 for idataarray in reversed(range(len(dataarrays_group_in))):
                     dataarrays_group_in[idataarray].close()
                     del dataarrays_group_in[idataarray]
+                for dataarray_cached in dataarrays_group_in_cached:
+                    if dataarray_cached != False: 
+                        os.system('rm '+dataarray_cached)
 
                 # if update_pickle:
                 #     logging.info('update archive_out start')
@@ -498,6 +532,8 @@ class collection (object):
             add_archive_out_to_collection=False,
             update_pickle=True,
             file_pattern=None,
+            nc_reduce=False,
+            transpose_inner = True,
             **kwargs
     ):
 
@@ -520,6 +556,8 @@ class collection (object):
             dataarrays = dataarrays,
             archive_out=archive_out,
             update_pickle=update_pickle,
+            nc_reduce=nc_reduce,
+            transpose_inner=transpose_inner,
             **kwargs
         )
 
@@ -546,6 +584,19 @@ class archive (object):
 
 
         return xropen
+
+    def remove_orphans(self):
+        read_lib_dataarrays = self.lib_dataarrays.copy()
+        for idx,row in read_lib_dataarrays.iterrows():
+            orphan = os.path.isfile(self.get_path(idx)) == False
+            if orphan:
+                logging.warning(str(idx)+' ("'+self.get_path(idx)+'") does not exist. Removing from library file')
+                logging.warning('please test and check this procedure!')
+                import pdb; pdb.set_trace()
+        #self.remove(query = "available == False",dataarrays=False,reset_lib=True)
+                self.lib_dataarrays = self.lib_dataarrays.drop(idx)
+        self.update(force_overwrite_pickle =True)
+
 
     def get_path(self,index):
         path = os.path.dirname(self.lib_dataarrays.loc[tuple(index)].path_pickle) + '/' + self.lib_dataarrays.loc[tuple(index)].path
@@ -609,6 +660,38 @@ class archive (object):
         for index,lib_dataarray in enumerate(lib_dataarays_out.to_dict('records')):
             archive_out.add_dataarray_old(self.dataarrays[index])
 
+
+
+    def nc_reduce(self,query=None,compress=True):
+
+        if query is not None:
+            read_lib_dataarrays = self.lib_dataarrays.query(query).copy()
+        else:
+            read_lib_dataarrays = self.lib_dataarrays.copy()
+        for idx,row in read_lib_dataarrays.iterrows():
+            if (('nc_reduced' not in read_lib_dataarrays) or row['nc_reduced'] != "True") or ('nc_compressed' not in read_lib_dataarrays) or row['nc_compressed'] != "True":
+                filepath_as_cache = tempfile.mktemp(suffix='.nc',dir='/tmp/')
+                CMD ='cp '+self.get_path(idx) +' '+filepath_as_cache
+                logging.info('executing: '+CMD);os.system(CMD)
+                dict_row = dict(row)
+                if 'nc_reduce' in dict_row:
+                    dict_row.pop('nc_reduce') #work around early implementation
+                logging.info('trying to reduce: '+str(idx)+' ("'+self.get_path(idx)+'")')
+
+                #compress = (nc_compress if nc_compress is not None else True)
+                reduced_temporary_file = tempfile.mktemp(suffix='.nc',dir='/tmp/')
+                nc_reduce_fn(os.path.realpath(filepath_as_cache),reduced_temporary_file,ncvariable = (dict_row['ncvariable'] if 'ncvariable' in row else None),overwrite=True,nc_reduce=(row['nc_reduced'] != "True"),nc_compress=compress)
+                CMD ='rm '+filepath_as_cache
+                logging.info('executing: '+CMD);os.system(CMD)
+
+                dict_row['nc_compressed']=str(compress)
+                dict_row['nc_reduced']='True'
+                self.add_dataarray(reduced_temporary_file,destination_file=self.get_path(idx),method='copy_force_overwrite',variable=idx[0],source=idx[1],time=idx[2],space=idx[3],**dict_row)
+                CMD ='rm '+reduced_temporary_file
+                logging.info('executing: '+CMD);os.system(CMD)
+
+
+
     def remove(self,query=None,update_pickle = True,dataarrays=True,reset_lib=False):
 
         if (not dataarrays) and reset_lib:
@@ -622,7 +705,7 @@ class archive (object):
         for idx,row in read_lib_dataarrays.iterrows():
             if dataarrays == True:
                 if ('linked' not in row) or (row['linked'] == False):
-                    CMD ='rm '+os.path.dirname(os.path.realpath(row['path_pickle'])) + '/' + row['path']
+                    CMD ='rm '+os.path.dirname(os.path.realpath(row['path_pickle'])) + '/' + str(row['path'])
                     os.system(CMD)
                 # if 'available' not in self.lib_dataarrays.columns:
                 #     self.lib_dataarrays['available'] = ""
@@ -713,6 +796,7 @@ class archive (object):
     def add_dataarray(
             self,
             DataArray_or_filepath,
+            destination_file = None,
             skip_unavailable= False,
             release_dataarray_pointer=False,
             method = 'link',
@@ -721,6 +805,8 @@ class archive (object):
             sort_lib = True,
             update_lib = True,
             engine = None,
+            nc_reduce = False,
+            nc_compress = None,
             **kwargs,
     ):
         #DataArray = None
@@ -771,7 +857,7 @@ class archive (object):
                 ds.close()
                 del ds
 
-            dict_columns['path'] = os.path.relpath(os.path.realpath(filepath),os.path.dirname(os.path.realpath(self.path_pickle)))
+
             # kwargs['absolute_path'] = os.path.abspath(filepath)
             # kwargs['absolute_path_for_reading'] = os.path.abspath(filepath_for_reading)
             # kwargs['absolute_path_as_cache'] = (None if filepath_as_cache is None else os.path.abspath(filepath_as_cache))
@@ -874,24 +960,25 @@ class archive (object):
 
         if method in ['copy','copy_force_overwrite']:
             logging.info('Copying xarray as netcdf file to the internal library.')
-            destination_file = os.path.dirname(os.path.realpath(self.path_pickle)) + '/' + ''.join(np.array(list(
+            if destination_file == None:
+                destination_file = os.path.dirname(os.path.realpath(self.path_pickle)) + '/' + ''.join(np.array(list(
                 zip(self.file_pattern.split('"')[::2],
                     [{**dict_index, **dict_columns}[key] for key in self.file_pattern.split('"')[1::2]] + [
                         '']))).ravel())
-            if index in self.lib_dataarrays.index:
-                if (method == 'copy_force_overwrite'):
-                    # if (self.lib_dataarrays.loc[index].path is not None) and \
-                    # (os.path.realpath(destination_file) == os.path.realpath(self.lib_dataarrays.loc[index].path):
-                    if (self.lib_dataarrays.loc[index].path is not None):
-                        filename = os.path.realpath(os.path.dirname(self.path_pickle)) + '/' + self.lib_dataarrays.loc[ index].path
-                        logging.warning('overwriting existing index ' + str(index) + ': ' + filename)
-                        if os.path.isfile(filename):
-                            os.remove(filename)
-                        else:
-                            logging.warning("I could not track previous file in library. So I'm not deleting")
-                    self.lib_dataarrays.loc[index]  = None
-                else:
-                    raise IOError('index '+index+' already exists in library. Aborting. Please use copy_force_overwrite to override.')
+            # if index in self.lib_dataarrays.index:
+            #     if (method == 'copy_force_overwrite'):
+            #         # if (self.lib_dataarrays.loc[index].path is not None) and \
+            #         # (os.path.realpath(destination_file) == os.path.realpath(self.lib_dataarrays.loc[index].path):
+            #         if (self.lib_dataarrays.loc[index].path is not None):
+            #             filename = os.path.realpath(os.path.dirname(self.path_pickle)) + '/' + self.lib_dataarrays.loc[ index].path
+            #             logging.warning('overwriting existing index ' + str(index) + ': ' + filename)
+            #             if os.path.isfile(filename):
+            #                 os.remove(filename)
+            #             else:
+            #                 logging.warning("I could not track previous file in library. So I'm not deleting")
+            #         self.lib_dataarrays.loc[index]  = None
+            #     else:
+            #         raise IOError('index '+index+' already exists in library. Aborting. Please use copy_force_overwrite to override.')
 
             if os.path.isfile(destination_file):
                 if (method == 'copy_force_overwrite'):
@@ -900,13 +987,27 @@ class archive (object):
                     raise IOError('Intended destination filename '+destination_file+' already exists')
             if not os.path.isdir(os.path.dirname(destination_file)):
                 os.makedirs(os.path.dirname(destination_file))
-            if dict_columns['path'] is not None:
-                original_file = os.path.dirname(os.path.realpath(self.path_pickle))+'/'+dict_columns['path']
+            if filepath is not None:
+                original_file = filepath #os.path.dirname(os.path.realpath(self.path_pickle))+'/'+filedict_columns['path']
                 if os.path.realpath(original_file) == os.path.realpath(destination_file):
                     raise IOError('Cannot make a copy of the dataarray file, because the original and destination path are the same ('+original_file+'). Please use method=link file instead.')
 
-                CMD = 'cp '+original_file+ ' '+destination_file
-                logging.info('Executing: ' + CMD); os.system(CMD)
+                if (nc_reduce == True) and (('nc_reduced' not in dict_columns) or (dict_columns['nc_reduced'] != "True")):
+                    reduced_temporary_file = tempfile.mktemp(suffix='.nc',dir='/tmp/')
+                    logging.info('nc_reducing file: to '+reduced_temporary_file)
+                    #try:
+                    nc_reduce_fn(os.path.realpath(original_file),reduced_temporary_file,ncvariable = (kwargs['ncvariable'] if 'ncvariable' in kwargs else None),overwrite=True,nc_compress=nc_compress)
+                    CMD = 'mv '+reduced_temporary_file+ ' '+destination_file
+                    logging.info('executing: '+CMD); os.system(CMD)
+                    dict_columns['nc_reduced'] = "True"
+                    dict_columns['nc_compressed'] = str(nc_compress)
+                    # except:
+                    #     logging.critical('nc_reduce failed. removing temporary file. So we just keep the original file without reducing.')
+                    #     os.system('rm '+reduced_temporary_file)
+                #         
+                else:
+                    CMD = 'cp '+original_file+ ' '+destination_file
+                    logging.info('Executing: ' + CMD); os.system(CMD)
             else:
                 DataArray.to_netcdf(destination_file)
             dict_columns['path'] = os.path.relpath(os.path.realpath(destination_file),os.path.dirname(os.path.realpath(self.path_pickle)))
@@ -922,12 +1023,12 @@ class archive (object):
 
             for key,value in {**dict_index, **dict_columns}.items():
 
-                if key not in ['ncvariable','path','path_pickle']:
-                    try:
+                if key not in ['ncvariable','path','path_pickle','linked','nc_reduced','absolute_path_as_cache']:# we also exclude linked and nc_reduced, because they are booleans and they give errors
                         logging.info('setting attribute '+key+' to '+str(value))
-                        ncvar.setncattr(key, value)
-                    except:
-                        import pdb; pdb.set_trace()
+                        try:
+                            ncvar.setncattr(key, value)
+                        except:
+                            ncvar.setncattr(key, str(value))
 
             ncfile.close()
             if 'ncvariable' in dict_columns.keys():
@@ -937,8 +1038,10 @@ class archive (object):
             dict_columns['linked'] = False
         elif method == 'add':
             dict_columns['linked'] = False
+            dict_columns['path'] = os.path.relpath(os.path.realpath(filepath),os.path.dirname(os.path.realpath(self.path_pickle)))
         elif method == 'link':
             dict_columns['linked'] = True
+            dict_columns['path'] = os.path.relpath(os.path.realpath(filepath),os.path.dirname(os.path.realpath(self.path_pickle)))
         else:
             raise ValueError('Add_dataarray method "{method}" not implemented.')
 
@@ -1008,7 +1111,6 @@ class archive (object):
 
             # ncvariable: variable as seen on disk
             # variable (= DataArray.name): variable as considered in the library
-            ncvariable = None # netcdf variable as seen on disk, not necessarily in the library
             if ('ncvariable' not in kwargs.keys()) or ((type(kwargs['ncvariable']).__name__ == 'float') and np.isnan(kwargs['ncvariable'])):
                 if 'variable' in kwargs.keys():
                     ncvariable = kwargs['variable']
@@ -1418,7 +1520,6 @@ class archive (object):
 #             # not_all_arrays_available_in_this_group = group_columns.loc[apply_merge_out_index][groupby].isnull().any().any()
 #             #       dataarrays_for_func = []
 #
-#             import pdb;pdb.set_trace()
 #             for index_group,columns in group_columns_out.loc[apply_merge_out_index].iterrows():
 #                 index_array_dict =   {**dict(columns),**dict(zip(apply_merge_out_index.names,index_group))}#**dict(zip(apply_merge_index.names,index_group))} **dict(zip(groupby,index)),
 #                 index_array_tuple_ordered =  tuple([index_array_dict[key] for key in self.lib_dataarrays.index.names])
@@ -1515,6 +1616,8 @@ class archive (object):
             archive_out = None,
             update_pickle = True,
             force_recalculate=False,
+            nc_reduce=False,
+            transpose_inner=True,
             *args,
             **kwargs):
         #apply_groups_in = {'variable':['aridity'],'source':[None]}
@@ -1550,6 +1653,7 @@ class archive (object):
             archive_out = archive_out,
             update_pickle=update_pickle,
             force_recalculate=force_recalculate,
+            nc_reduce = nc_reduce,
             **kwargs,
         )
 
