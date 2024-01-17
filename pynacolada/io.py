@@ -8,7 +8,7 @@ import glob
 from .io_gsod import GSOD as gsod
 import logging
 
-def get_argparse_from_function(function):
+def get_argparse_from_function(function,allow_abbrev=False):
 
     import argparse
     import inspect
@@ -31,6 +31,7 @@ def get_argparse_from_function(function):
 
     logging.debug('Setting parser for function arguments')
     parser = argparse.ArgumentParser(function.__doc__)
+    parser.__dict__['allow_abbrev'] = allow_abbrev
     for parkey,parvalue in inspect.signature(function).parameters.items():
         if parkey not in ['args','kwargs']:
             arguments[parkey] = {}

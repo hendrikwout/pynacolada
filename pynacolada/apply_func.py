@@ -5,6 +5,7 @@ from argparse import Namespace
 import tempfile
 import os
 import netCDF4 as nc4
+from scipy.io import netcdf_file
 from itertools import product
 import numpy as np
 from time import sleep
@@ -30,7 +31,7 @@ def nc_reduce_fn(fn_input,fn_output,ncvariable=None,overwrite=False,nc_reduce=Tr
    if ncvariable is not None:
        xr_work = xr.open_dataset(fn_input)[ncvariable]
    else:
-       xr_work = xr.open_dataarray(fn_input)
+      xr_work = xr.open_dataarray(fn_input)
    xr_name = xr_work.name
    xr_attrs = dict(xr_work.attrs)
    xr_work.close()
@@ -46,6 +47,8 @@ def nc_reduce_fn(fn_input,fn_output,ncvariable=None,overwrite=False,nc_reduce=Tr
                'max':xr_attrs['physical_range'][1]
                }
                )
+       elif xr_name.startswith('rh'):
+               scale_configuration[xr_name].update({'output_dtype_bits': 16,'min':0,'max':1500})
        elif xr_name in ['hfls','hfss']:
                scale_configuration[xr_name].update({'output_dtype_bits': 16,'min':-750,'max':1500})
        elif (('units' in xr_attrs) and (xr_attrs['units'] in ['K','Kelvin'])):
@@ -56,8 +59,6 @@ def nc_reduce_fn(fn_input,fn_output,ncvariable=None,overwrite=False,nc_reduce=Tr
                scale_configuration[xr_name].update({'output_dtype_bits': 16,'min':(273.15-100.),'max':(273.15+100.)})
        elif (('units' in xr_attrs) and (xr_attrs['units'] in ['degC',])):
            scale_configuration[xr_name].update({'output_dtype_bits': 16,'min':(-100.),'max':(100.)})
-       elif (('units' in xr_attrs) and (xr_attrs['units'] == 'W m-2')):
-           scale_configuration[xr_name].update({'output_dtype_bits': 16,'min':0,'max':3000.})
        elif (('units' in xr_attrs) and (xr_attrs['units'] in ["kg m-2"])):
            if xr_name == 'mrsos':
               scale_configuration[xr_name].update({'output_dtype_bits': 16,'min':0,'max':125})
@@ -65,10 +66,12 @@ def nc_reduce_fn(fn_input,fn_output,ncvariable=None,overwrite=False,nc_reduce=Tr
            if xr_name == 'hurs':
               scale_configuration[xr_name].update({'output_dtype_bits': 16,'min':0,'max':150})
 
-       elif (('units' in xr_attrs) and (xr_attrs['units'] in ["W m-2"])):
-           if xr_name == 'rsds':
+       elif (('units' in xr_attrs) and (xr_attrs['units'] in ["W m**-2","W m-2"])):
+           if xr_name in ['rsds','msdwswrf']:
               scale_configuration[xr_name].update({'output_dtype_bits': 16,'min':-1,'max':750})
-       elif (('units' in xr_attrs) and (xr_attrs['units'] in ["kg m-2 s-1"])):
+           else:
+              scale_configuration[xr_name].update({'output_dtype_bits': 16,'min':0,'max':3000.})
+       elif (('units' in xr_attrs) and (xr_attrs['units'] in ["kg m**-2 s**-1","kg m-2 s-1"])):
            if xr_name == 'pr':
               scale_configuration[xr_name].update({'output_dtype_bits': 16,'min':0,'max':0.0025})
        elif (('units' in xr_attrs) and (xr_attrs['units'] in ['m s**-1','m s-1'])):
@@ -78,8 +81,8 @@ def nc_reduce_fn(fn_input,fn_output,ncvariable=None,overwrite=False,nc_reduce=Tr
               scale_configuration[xr_name].update({'output_dtype_bits': 16,'min':0,'max':1.0/10**4})
        elif (('units' in xr_attrs) and (xr_attrs['units'] == 'kg m**-2 s**-1')):
            scale_configuration[xr_name].update({'output_dtype_bits': 16,'min':0,'max':1./10**1})
-       elif (('units' in xr_attrs) and (xr_attrs['units'] == 'kg m-2 s-1')):
-           scale_configuration[xr_name].update({'output_dtype_bits': 16,'min':0,'max':1./10**1})
+       # elif (('units' in xr_attrs) and (xr_attrs['units'] == 'kg m-2 s-1')):
+       #     scale_configuration[xr_name].update({'output_dtype_bits': 16,'min':0,'max':1./10**1})
        elif (('units' in xr_attrs) and (xr_attrs['units'] == 'mm s**-1')):
            scale_configuration[xr_name].update({'output_dtype_bits': 16,'min':0,'max':1./10**1})
        elif (('units' in xr_attrs) and (xr_attrs['units'] == 'mm day**-1')):
@@ -161,7 +164,7 @@ def get_dimensions_attributes(coords,time_id=None,space_id=None):#,prepend={},ap
         else:
             dimensions_attributes['time'] = 'irregular'
             logging.warning('No time dimension found')
-        if time_id != None:
+        if ((time_id != None) and (dimensions_attributes['time'] is not None)):
             dimensions_attributes['time'] = time_id + '_'+ dimensions_attributes['time']
 
 
@@ -187,12 +190,14 @@ def get_dimensions_attributes(coords,time_id=None,space_id=None):#,prepend={},ap
     spacing = {}
     for dim,coord in coords.items():
         if (dim != 'time') and (coord is not None):# space_coordinates:
-            #import pdb; pdb.set_trace()
-            spacing_temp = (coords[dim].values[1] - coord[dim].values[0])
-            if not np.any(
-                    coords[dim][1:].values != (coords[dim].values[:-1] + spacing_temp)):
-                spacing[dim] = str(coords[dim][0].values) + ',' + str(
-                    coords[dim][-1].values) + ',' + str(spacing_temp)
+            if len(coords[dim]) > 1:
+                spacing_temp = (coords[dim].values[1] - coord[dim].values[0])
+                if not np.any(
+                        coords[dim][1:].values != (coords[dim].values[:-1] + spacing_temp)):
+                    spacing[dim] = str(coords[dim][0].values) + ',' + str(
+                        coords[dim][-1].values) + ',' + str(spacing_temp)
+                else:
+                    spacing[dim] = 'irregular'
             else:
                 spacing[dim] = 'irregular'
             # else:
@@ -208,6 +213,32 @@ def get_dimensions_attributes(coords,time_id=None,space_id=None):#,prepend={},ap
         space_label = space_id+'_'+space_label
 
     dimensions_attributes['space'] = space_label
+
+    easting = None
+    northing = None
+    if 'latitude' in spacing:
+        northing = 'latitude'
+    elif 'lat' in spacing:
+        northing = 'lat'
+    if 'longitude' in spacing:
+        easting = 'longitude'
+    elif 'lon' in spacing:
+        easting = 'lon'
+    logging.debug('adding crs grid mapping definition according to grid')
+    if (northing in ['latitude','lat']) and (easting in ['longitude','lon']):
+          grid_mapping_attributes = {
+                  'grid_mapping':'crs',
+                  'crs_grid_mapping_name': northing+'_'+easting,
+                  'crs_long_name': 'CRS definition',
+                  'crs_longitude_of_prime_meridian': 0.0,
+                  'crs_semi_major_axis': 6378137.0,
+                  'crs_inverse_flattening': 298.257223563,
+                  'crs_spatial_ref': 'GEOGCS["WGS 84",DATUM["WGS_1984",SPHEROID["WGS 84",6378137,298.257223563,AUTHORITY["EPSG","7030"]],AUTHORITY["EPSG","6326"]],PRIMEM["Greenwich",0],UNIT["degree",0.0174532925199433],AUTHORITY["EPSG","4326"]]',
+                  'crs_GeoTransform': spacing[easting].split(',')[0]+ ' '+spacing[easting].split(',')[-1] +' '+spacing[northing].split(',')[0]+ ' '+spacing[northing].split(',')[-1]
+          }
+          dimensions_attributes.update(grid_mapping_attributes)
+
+
 
     return dimensions_attributes
 
@@ -446,6 +477,7 @@ def chunk_task(func,
     else:
         pass_dims_not_found = {}
 
+
     logging.debug('applying function to chunks')
     chunks_out = func(*chunks_in, *args_func,**pass_dims_not_found,**kwargs_func)
     logging.debug('done applying')
@@ -522,10 +554,12 @@ def apply_func(
         xarrays_in,
         dims_apply_names = [],
         xarrays_output_filenames = False,
-        attributes = None,
+        attributes_dataarrays_in_for_out = None,
+        attributes_dataarrays_out = None,
         maximum_memory_size_per_proc_bytes = 2 * 10 ** 8 ,
         output_dimensions=None,
         xarrays_output_dimensions = None,
+        output_dimensions_order = None,
         tempfile_dir=False,
         return_type='xarrays',
         ignore_memory_limit = False,
@@ -533,7 +567,7 @@ def apply_func(
         pass_missing_output_coordinates = False,
         profile_overlap = 'square',
         nprocs = 1,
-        delay = 10,
+        delay = 4,
         nc_reduce = False,
         nc_compress = None,
         transpose_inner = True,
@@ -644,6 +678,21 @@ def apply_func(
     for output_dimensions_orig in output_dimensions.keys():
         output_dimensions_new[output_dimensions_orig] = output_dimensions[output_dimensions_orig]
     output_dimensions = sort_dict_by_keys(output_dimensions_new, list(output_dimensions.keys()))
+
+
+    if output_dimensions_order is not None:
+        output_dimensions_keys_new_order = list(output_dimensions.keys())
+        for dim,pos in output_dimensions_order.items():
+            output_dimensions_keys_new_order.pop(dim)
+            output_dimensions_keys_new_order.insert(pos,output_dimensions_keys_new_order[pos])
+            output_dimensions_keys_new_order[pos] = dim
+        output_dimensions_new_order = {}
+        for key in output_dimensions_key_new_order:
+            output_dimensions_new_order[key] = output_dimensions[key]
+        output_dimensions = output_dimensions_new_order
+
+
+            
 
 
         # for ixarray_output,xarray_output_dimensions in xarrays_output_dimensions:
@@ -1159,7 +1208,8 @@ def apply_func(
                    logging.debug('propagate attributes from xarray chunk function output')
                    attributes_out['variable']  = chunk_out_xarray_ordered.name
                    for attrkey,attrvalue in chunk_out_xarray_ordered.attrs.items():
-                       attributes_out[attrkey] = attrvalue
+                       if attrkey != 'variable':
+                           attributes_out[attrkey] = attrvalue
 
                    logging.debug('update attributes derived from possible new coordinate system')
                    # xarray_out = xr.open_dataarray(xarrays_output_filenames_work)
@@ -1170,30 +1220,29 @@ def apply_func(
                            space_id = (attributes_out['space_id'] if 'space_id' in attributes_out.keys() else None)
                            )
 
-                   # #  ???????????
-                   # for dim in dims_apply_names:
-                   #     # if dimensions_attributes[dim] is None:
-                   #     #     import pdb; pdb.set_trace()
-                   #     #     if dim not in attributes_out.keys():
-                   #     #         dimensions_attributes[dim] = 'None'
-
-                   #     #??????
-                   #         if ((dim in xarrays_out[ichunk_out].dims) and not identical_xarrays(xarrays_out[ichunk_out].coords[dim],xarrays_output_dims_final[ichunk_out][dim])) and \
-                   #                 (dim in dimensions_attributes.keys()):
-                   #             attributes_out[dim] = dimensions_attributes[dim]
-
-
-                   # if ('latitude' in dims_apply_names) or ('longitude' in dims_apply_names):
-                   #     if (( 'latitude' in xarrays_in[0].dims) and (not identical_xarrays(xarrays_output_dims_final[ichunk_out]['latitude'],xarrays_in[0][dim]))) and \
-                   #        (( 'longitude' in xarrays_in[0].dims) and ( not identical_xarrays(xarrays_output_dims_final[ichunk_out]['longitude'], xarrays_in[0][dim]))) and \
-                   #        ('space' in dimensions_attributes.keys()):
-                   #         attributes_out['space'] = dimensions_attributes['space']
-                   # #  ???????????
-
                    logging.debug('adding attributes through apply_func input argument "attributes"')
-                   if attributes != None:
-                       logging.debug('assigning extra attributes...')
-                       for attrkey, attrvalue in attributes[ichunk_out].items():
+
+
+                   if (attributes_dataarrays_out != None) and (len(attributes_dataarrays_out) > ichunk_out):
+                       logging.debug('assigning extra defined attributes...')
+                       for attrkey, attrvalue in attributes_dataarrays_out[ichunk_out].items():
+                           if type(attrvalue) == type(lambda x: x):
+                               values_input = []
+                               for xarray_in in xarrays_in:
+                                   if key in xarray_in.attrs.keys():
+                                       values_input.append(xarray_in.attrs[key])
+                                   else:
+                                       values_input.append(None)
+                               attr_value_out = attrvalue(values_input)
+                           else:
+                               attr_value_out= attrvalue
+                           attributes_out[attrkey] = attr_value_out
+                           logging.debug('ichunk_out ' + str(ichunk_out) + ' - ' + attrkey + ' - ' + str(attrvalue) + ' - ' +
+                                        str(attributes_out[attrkey]))
+
+                   if (attributes_dataarrays_in_for_out != None) and (len(attributes_dataarrays_in_for_out) > ichunk_out):
+                       logging.debug('assigning extra attributes from input...')
+                       for attrkey, attrvalue in attributes_dataarrays_in_for_out[ichunk_out].items():
                            if type(attrvalue) == type(lambda x: x):
                                values_input = []
                                for xarray_in in xarrays_in:
@@ -1256,7 +1305,7 @@ def apply_func(
                        for attrkey,attrvalue in attributes.items():
                            if ((type(attrvalue) == str) and ( attrvalue == '')) :
                                logging.warning('Excluding attribute "'+attrkey+'" that has empty value. Apparently, this gives problems when writing to the netcdf later on.')
-                           elif (type(attrvalue) is not str):
+                           elif (type(attrvalue) not in [str,float]):
                                logging.warning(
                                    'Excluding attribute "' + attrkey + '" that is not a string.')
                            else:
@@ -1265,6 +1314,8 @@ def apply_func(
 
 
                    attributes_out = fix_dict_for_ncattributes(attributes_out)
+
+
 
                    if 'variable' in attributes_out.keys():
                        chunk_out_xarray_ordered.name = attributes_out['variable']
@@ -1323,15 +1374,29 @@ def apply_func(
                        if os.path.isfile(fnout):
                            raise FileExistsError('output file ' + fnout + ' exists. Aborting... ')
                        # os.system('rm ' + fnout)
-                       xrtemp.to_netcdf(fnout)
+                       xrtemp.to_netcdf(fnout )
                        logging.info('creating netcdf file '+fnout)
-                       ncouts.append(nc4.Dataset(fnout, 'a'))
-                       ncouts[ichunk_out].createVariable(chunk_out_xarray_ordered.name, "f", tuple(ncout_dims),fill_value=0.)
+                       ncouts.append(nc4.Dataset(fnout, 'a' ))
+
+                       if 'grid_mapping' in attributes_out:
+                           grid_mapping_type = attributes_out['grid_mapping']
+                           ncouts[ichunk_out].createVariable(grid_mapping_type,'S1')
+                           logging.info('creating '+grid_mapping_type+' dummy char variable for storing grid_mapping attributes, which seems to be the format behaviour by, eg., qgis')
+
+
+                       if any_overlap:
+                        ncouts[ichunk_out].createVariable(chunk_out_xarray_ordered.name, "f", tuple(ncout_dims),fill_value=0.)
+                       else:
+                        ncouts[ichunk_out].createVariable(chunk_out_xarray_ordered.name, "f", tuple(ncout_dims),fill_value=nc4.default_fillvals['f4'])
                        for attrkey,attrvalue in attributes_out.items():
-                           logging.info('writing netcdf attribute '+attrkey+' = '+str(attrvalue))
-                           ncouts[ichunk_out].variables[ncouts_variable[-1]].setncattr(attrkey,attrvalue)
-                       if any_overlap == True:
-                           ncouts[ichunk_out].close()
+                           if ('grid_mapping' in attributes_out) and attrkey.startswith(grid_mapping_type+'_'):
+                                logging.info('write '+grid_mapping_type+' attribute '+attrkey+': '+str(attrvalue)+' in separate dummy char variable, which seems to be the format behaviour by eg., qgis')
+                                ncouts[ichunk_out].variables[grid_mapping_type].setncattr(attrkey[(len(grid_mapping_type)+1):],attrvalue)
+                           else:
+                            logging.info('writing netcdf attribute '+attrkey+' = '+str(attrvalue))
+                            ncouts[ichunk_out].variables[ncouts_variable[-1]].setncattr(attrkey,attrvalue)
+                       #if any_overlap == True:
+                       ncouts[ichunk_out].close()
 
                        #xarrays_out.append(xr.open_dataarray(fnout))
                        logging.info('finished initializing netcdf file '+str(ichunk_out))
@@ -1346,10 +1411,32 @@ def apply_func(
                    xrtemp.close()
                # try:
 
-               if type(ncouts[ichunk_out]) == nc4.Dataset:
+               if type(ncouts[ichunk_out]) in[ nc4.Dataset,netcdf_file]:
+                   ncouts[ichunk_out] = nc4.Dataset(xarrays_output_filenames_work[ichunk_out],'a' )
+
+
+                   #ncouts[ichunk_out] = netcdf_file(xarrays_output_filenames_work[ichunk_out],'a')
+
+                   #  import numpy as np
+                   #  
+                   #  f = netcdf_file('simple.nc', 'w')
+                   #  
+                   #  f.history = 'Created for a test'
+                   #  
+                   #  f.createDimension('time', 10)
+                   #  
+                   #  time = f.createVariable('time', 'i', ('time',))
+                   #  
+                   #  time[:] = np.arange(10)
+                   #  
+                   #  time.units = 'days since 2008-01-01'
+                   #  
+                   #  f.close()
+
+
+
                    if any_overlap == True:
                        logging.debug('acquiring previous values for consolidating chunk overlapping values')
-                       ncouts[ichunk_out] = nc4.Dataset(xarrays_output_filenames_work[ichunk_out],'a')
                        recap = ncouts[ichunk_out].variables[ncouts_variable[ichunk_out]][indexing_for_output_array].filled(fill_value=0)
                        logging.debug('done acquiring')
 
@@ -1361,7 +1448,10 @@ def apply_func(
                            recap + np.array( chunk_out_xarray_ordered.values, dtype='float32') * overlap_weights
                    else:
                        logging.debug('writing data to netcdf file for chunk '+str(ichunk_out))
-                       ncouts[ichunk_out].variables[ncouts_variable[ichunk_out]][indexing_for_output_array] = np.array( chunk_out_xarray_ordered.values, dtype='float32')
+
+                       indexing_for_output_array_tuple = tuple([list(indexing) for indexing in indexing_for_output_array])
+                       
+                       ncouts[ichunk_out].variables[ncouts_variable[ichunk_out]][indexing_for_output_array_tuple] = np.array( chunk_out_xarray_ordered.values, dtype='float32')
                        logging.debug('done writing data' )
 
                    for coordname,coord in chunk_out_xarray_ordered.coords.items():
@@ -1373,8 +1463,8 @@ def apply_func(
 
                    if first_chunks:
                        logging.info('finished writing first chunk')
-                   if any_overlap == True:
-                       ncouts[ichunk_out].close()
+                   #if any_overlap == True:
+                   ncouts[ichunk_out].close()
                elif type(ncouts[ichunk_out]) is xr.DataArray:
                    recap = ncouts[ichunk_out][indexing_for_output_array]
                    ncouts[ichunk_out][indexing_for_output_array] = recap + np.array( chunk_out_xarray_ordered.values, dtype='float32') * overlap_weights
@@ -1412,12 +1502,18 @@ def apply_func(
 
     xrouts = []
     for incout in range(len(ncouts)):
-        if type(ncouts[incout]) == nc4.Dataset:
+        if type(ncouts[incout]) in [nc4.Dataset,netcdf_file]:
 
-            logging.warning('workaround with _FillValue to enable overlapping values')
-            if any_overlap == True:
-                ncouts[incout] = nc4.Dataset(xarrays_output_filenames_work[incout],'a')
-            ncouts[incout][ncouts_variable[incout]].delncattr('_FillValue')
+            #if any_overlap == True:
+            ncouts[incout] = nc4.Dataset(xarrays_output_filenames_work[incout],'a' )
+            if any_overlap:
+                logging.warning('workaround with _FillValue to enable overlapping values')
+                ncouts[incout][ncouts_variable[incout]].delncattr('_FillValue')
+
+            if ('missing_value' not in ncouts[incout][ncouts_variable[incout]].ncattrs()) and  \
+                    ('FillValue' in  ncouts[incout][ncouts_variable[incout]].ncattrs()):
+                FillValue = ncouts[incout][ncouts_variable[incout]].getncattr('_FillValue')
+                ncouts[incout][ncouts_variable[incout]].setncattr('missing_value',FillValue)
             ncouts[incout].close()
 
 
@@ -1436,13 +1532,11 @@ def apply_func(
                 os.system(CMD)
                 compress = (nc_compress if nc_compress is not None else True)
                 #try:
-                nc_reduce_fn(xarrays_output_filenames_work[incout]+'_todeflate.nc',xarrays_output_filenames_work[incout],nc_compress=compress)
+                nc_reduce_fn(xarrays_output_filenames_work[incout]+'_todeflate.nc',xarrays_output_filenames_work[incout],ncvariable=ncouts_variable[incout],nc_compress=compress)
                 #except:
                 #    logging.critical('nc_reduce failed. removing temporary file. So we just keep the original file without reducing.')
                 CMD = 'rm '+xarrays_output_filenames_work[incout]+'_todeflate.nc'
                 logging.info('executing: '+CMD); os.system(CMD)
-                
-
                 nc_reduced = "True"
                 nc_compressed = str(compress)
             
@@ -1454,7 +1548,7 @@ def apply_func(
                 nc_compressed = "False"
 
 
-            ncout_temp = nc4.Dataset(xarrays_output_filenames_real[incout],'a')
+            ncout_temp = nc4.Dataset(xarrays_output_filenames_real[incout],'a' )
             ncout_temp[ncouts_variable[incout]].setncattr('nc_reduced',str(nc_reduced))
             ncout_temp[ncouts_variable[incout]].setncattr('nc_compressed',str(nc_compressed))
             ncout_temp.close()
@@ -1462,7 +1556,18 @@ def apply_func(
             delay_random = delay * (1+random.random())
             logging.info('delaying after file write for '+str(delay_random)+' seconds')
             sleep(delay_random)
-            xrouts.append(xr.open_dataarray(xarrays_output_filenames_real[incout]))
+            ds = xr.open_dataset(xarrays_output_filenames_real[incout])
+            DataArray = ds[ncouts_variable[incout]]
+            def parse_grid_mapping(ds,DataArray):
+                if 'grid_mapping' in DataArray.attrs:
+                    grid_mapping_type = DataArray.attrs['grid_mapping']
+                    logging.debug('grid_mapping ('+grid_mapping_type+') detected. Reading grid_mapping type from separate character variable, which appears the standard according to qgis')
+                    for crsattr in ds[grid_mapping_type].attrs:
+                        logging.debug('reading '+crsattr+' ('+str(ds[grid_mapping_type].attrs[crsattr])+') and add it as '+grid_mapping_type+'_'+crsattr+' to the regular xarray attributes')
+                        DataArray.attrs[grid_mapping_type+'_'+crsattr] =  ds[grid_mapping_type].attrs[crsattr]
+            parse_grid_mapping(ds,DataArray)
+            xrouts.append(DataArray)
+            ds.close()
         elif type(ncouts[incout]) == xr.DataArray:
             xrouts.append(ncouts[incout])
 

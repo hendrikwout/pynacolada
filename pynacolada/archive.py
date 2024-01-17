@@ -13,6 +13,14 @@ import tempfile
 from . import apply_func, nc_reduce_fn
 import netCDF4 as nc4
 
+def parse_grid_mapping(ds,DataArray):
+    if 'grid_mapping' in DataArray.attrs:
+        grid_mapping_type = DataArray.attrs['grid_mapping']
+        logging.debug('grid_mapping ('+grid_mapping_type+') detected. Reading grid_mapping type from separate character variable, which appears the standard according to qgis')
+        for crsattr in ds[grid_mapping_type].attrs:
+            logging.debug('reading '+crsattr+' ('+str(ds[grid_mapping_type].attrs[crsattr])+') and add it as '+grid_mapping_type+'_'+crsattr+' to the regular xarray attributes')
+            DataArray.attrs[grid_mapping_type+'_'+crsattr] =  ds[grid_mapping_type].attrs[crsattr]
+
 def parse_to_dataframe(list_or_dict_or_dataframe):
     if type(list_or_dict_or_dataframe) == pd.core.frame.DataFrame:
         return list_or_dict_or_dataframe
@@ -218,35 +226,45 @@ def apply_func_wrapper(
             # building attributes of output dataarrays
             ifile = 0
             attributes_dataarrays_out = []
+            attributes_dataarrays_in_for_out = []
             filenames_out_pattern = []
             dataarrays_out_already_available = []
+
+            
+            # for idx_group_in, row in enumerate(table_this_group_in.reset_index().to_dict('records')):
+            #     attributes_dataarray_in = dict(row)
+            #     attributes_dataarray_in = {key:attributes_dataarray_in[key] for key in attributes_dataarray_in.keys() if key not in [ 'path', 'available', 'linked', 'path_pickle']}
+
+            #     attributes_dataarrays_in.append(attributes_dataarray_in)
+
             for idx_group_out, row in enumerate(table_this_group_out.to_dict('records')):
-                attributes_dataarrays_out.append({})
+                attributes_dataarrays_in_for_out.append({})
 
                 logging.info('start determining attributes of output files')
 
-                if inherit_attributes:
-                    if table_this_group_in.index.names[0] is None:  # trivial case where no group_in selection is made
-                        attributes_in = \
-                            dict(zip(table_this_group_in.columns,
-                                     table_this_group_in.iloc[min(ifile, len(table_this_group_in) - 1)]))
+                if table_this_group_in.index.names[0] is None:  # trivial case where no group_in selection is made
+                    attributes_in = \
+                        dict(zip(table_this_group_in.columns,
+                                 table_this_group_in.iloc[min(ifile, len(table_this_group_in) - 1)]))
 
-                    else:
-                        attributes_in = \
-                            {
-                                **dict(zip(table_this_group_in.index.names,
-                                           table_this_group_in.iloc[min(ifile, len(table_this_group_in) - 1)].name)),
-                                **dict(zip(table_this_group_in.columns,
-                                           table_this_group_in.iloc[min(ifile, len(table_this_group_in) - 1)]))
-                            }
+                else:
+                    attributes_in = \
+                        {
+                            **dict(zip(table_this_group_in.index.names,
+                                       table_this_group_in.iloc[min(ifile, len(table_this_group_in) - 1)].name)),
+                            **dict(zip(table_this_group_in.columns,
+                                       table_this_group_in.iloc[min(ifile, len(table_this_group_in) - 1)]))
+                        }
 
-                    for key, value in attributes_in.items():
-                        if (key not in attributes_dataarrays_out[ifile]) and \
-                                ((inherit_attributes == True) or (key in inherit_attributes)) and \
-                                (key not in ['absolute_path_as_cache', 'absolute_path_for_reading', 'absolute_path',
-                                             'path','available','path_pickle']):
-                            attributes_dataarrays_out[ifile][key] = value
+                for key, value in attributes_in.items():
 
+                    if (key not in attributes_dataarrays_in_for_out[ifile]) and \
+                            (not ((inherit_attributes == False) or (   (type(inherit_attributes) == list)    and  (    key not in inherit_attributes)))) and \
+                            (key not in ['absolute_path_as_cache', 'absolute_path_for_reading', 'absolute_path',
+                                         'path','available','path_pickle']):
+                        attributes_dataarrays_in_for_out[ifile][key] = value
+
+                attributes_dataarrays_out.append({})
                 for key in row.keys():
                     attributes_dataarrays_out[ifile][key] = row[key]
 
@@ -257,11 +275,11 @@ def apply_func_wrapper(
                     if key in table_this_group_out.columns:
                         attributes_dataarrays_out[ifile][key] = row[key]
                     elif key in table_this_group_in.index.names:
-                        attributes_dataarrays_out[ifile][key] = \
+                        attributes_dataarrays_in_for_out[ifile][key] = \
                             table_this_group_in.iloc[min(ifile, len(table_this_group_in) - 1)].name[
                                 table_this_group_in.index.names.index(key)]
                     else:
-                        attributes_dataarrays_out[ifile][key] = \
+                        attributes_dataarrays_in_for_out[ifile][key] = \
                             table_this_group_in.iloc[min(ifile, len(table_this_group_in) - 1)][key]
 
                     # for key in self.lib_dataarrays.columns:
@@ -281,7 +299,7 @@ def apply_func_wrapper(
 
                     attributes_space_dict_out = {}
                     if attributes_dataarrays_out[ifile]['space'] is not None:
-                        for space_part in attributes_dataarrays_out[ifile]['space'].split('_'):
+                        for space_part in attributes_dataarrays_in_for_out[ifile]['space'].split('_'):
                             if ':' not in space_part:
                                 space_key,space_value = space_part, None
                             else:
@@ -312,14 +330,20 @@ def apply_func_wrapper(
                         else:
                             dict_index_space.append(key+':'+str(value))
 
-                    attributes_dataarrays_out[ifile]['space'] = '_'.join(dict_index_space)
+                    attributes_dataarrays_in_for_out[ifile]['space'] = '_'.join(dict_index_space)
 
                         # DataArray.attrs['space'] = dict_index_space
+
+                attributes_dataarrays_all = []
+                for iattrs,attrs_dataarray_in_for_out in enumerate(attributes_dataarrays_in_for_out):
+                    attributes_dataarrays_all.append(attrs_dataarray_in_for_out.copy())
+                    for key,value in attributes_dataarrays_out[iattrs].items():
+                        attributes_dataarrays_all[iattrs][key] = value
 
                 index_keys = ['variable','source','time','space']
                 index_out = []
                 for key in index_keys:
-                    index_out.append(attributes_dataarrays_out[ifile][key])
+                    index_out.append(attributes_dataarrays_all[ifile][key])
 
                 logging.info('end determining attributes of output files')
 
@@ -366,6 +390,7 @@ def apply_func_wrapper(
 
                     row_of_dataarray = lib_dataarrays.loc[tuple(index_dataarray)]
 
+
                     logging.debug('opening dataarray for: '+str(row_of_dataarray))
                     if tuple(index_dataarray) in dataarrays.keys():
                         dataarrays_group_in.append(dataarrays[tuple(index_dataarray)])
@@ -384,6 +409,9 @@ def apply_func_wrapper(
                             filename_work = tempfile.mktemp(suffix='.nc',dir='/tmp/')
                             #os.system('ncks -L 0 '+filename+' '+filename_work)
                             os.system('cp '+filename+' '+filename_work)
+                            #from nc_reduce import restore
+                            #restore(filename, filename_work)
+                            
                             cached = filename_work
                         else:
                             filename_work = filename
@@ -401,11 +429,13 @@ def apply_func_wrapper(
                                     dataarrays_group_in.append(xr.open_dataset(filename_work)[row_of_dataarray.ncvariable])
                         dataarrays_group_in_cached.append(cached)
 
-                    if ('linked' in row_of_dataarray.keys()) and (row_of_dataarray.linked == True):
-                        logging.debug('linked dataarray detected. Overriding xarray attributes with the those supplemented in the pandas table')
-                        for key in row_of_dataarray.keys():
-                            if key not in ['path','available','linked','ncvariable','path_pickle','linked','nc_reduced','nc_compresed']:
-                                dataarrays_group_in[-1].attrs[key] = row_of_dataarray[key]
+                    attributes_from_table = {**dict(zip(['variable','source','time','space'],index_dataarray,)),**dict(row)}
+
+                    logging.debug('linked dataarray detected. Overriding xarray attributes with the those supplemented in the pandas table')
+                    for key in attributes_from_table.keys():
+                        if key not in ['path','available','linked','ncvariable','path_pickle','linked','nc_reduced','nc_compresed']:
+                            dataarrays_group_in[-1].attrs[key] = attributes_from_table[key]
+
 
                 if force_recalculate and some_dataarrays_out_already_available:
                     logging.info('some output dataarrays were available but force_recalulate is set True, so I force recaculation'
@@ -435,7 +465,12 @@ def apply_func_wrapper(
                     if mode == 'numpy_output_to_disk_in_chunks':
 
                         filenames_out = xarray_function_wrapper(func, dataarrays_wrapper(*tuple(dataarrays_group_in)),
-                                xarrays_output_filenames=filenames_out_pattern, attributes=attributes_dataarrays_out,return_type='paths',delay=delay,nc_reduce=nc_reduce,**kwargs)
+                                xarrays_output_filenames=filenames_out_pattern,
+                                attributes_dataarrays_in_for_out=attributes_dataarrays_in_for_out,  #inherit of attributes of the input files to the output files 
+                                attributes_dataarrays_out=attributes_dataarrays_out, # attribute dataarrays that should override whatever happens by the apply_func
+                                return_type='paths',
+                                delay=delay,
+                                nc_reduce=nc_reduce,**kwargs)
                     elif mode == 'numpy_output_to_disk_no_chunks':
                         temp_dataarrays = xarray_function_wrapper(func, dataarrays_wrapper(*tuple(dataarrays_group_in)),
                                                                   **kwargs)
@@ -592,7 +627,6 @@ class archive (object):
             if orphan:
                 logging.warning(str(idx)+' ("'+self.get_path(idx)+'") does not exist. Removing from library file')
                 logging.warning('please test and check this procedure!')
-                import pdb; pdb.set_trace()
         #self.remove(query = "available == False",dataarrays=False,reset_lib=True)
                 self.lib_dataarrays = self.lib_dataarrays.drop(idx)
         self.update(force_overwrite_pickle =True)
@@ -844,16 +878,33 @@ class archive (object):
                     try:
                         ds = xr.open_dataset(filepath_for_reading,engine=engine)
                         DataArray = ds[kwargs['variable']]
+                        parse_grid_mapping(ds,DataArray)
                         ds.close()
                         del ds
                         #kwargs['ncvariable'] = ncvariable
                     except:
                         DataArray = xr.open_dataarray(filepath_for_reading,engine=engine)
                 else:
-                    DataArray = xr.open_dataarray(filepath_for_reading,engine=engine)
+                    ds = xr.open_dataset(filepath_for_reading,engine=engine)
+                    variables = list(ds.variables)
+                    for var in ['crs']+list(ds.coords):
+                         if var in variables:
+                             variables.pop(variables.index(var))
+                    if len(variables) == 1:
+                        DataArray = ds[variables[0]]
+                        parse_grid_mapping(ds,DataArray)
+                    else:
+                        import pdb; pdb.set_trace()
+                        raise ValueError('multiple dataset variables detected. It should have only one')
+                    ds.close()
+                    del ds
+                    #kwargs['ncvariable'] = ncvariable
+
+
             else:
                 ds = xr.open_dataset(filepath_for_reading,engine=engine)
                 DataArray = ds[kwargs['ncvariable']]
+                parse_grid_mapping(ds,DataArray)
                 ds.close()
                 del ds
 
@@ -936,9 +987,27 @@ class archive (object):
                         spacing[coordinate] = 'irregular'
                 else:
                     logging.warning('unknown dimension found that we will not be tracked in lib_dataarrays: ' + str(coordinate))
+
             dict_index_space = [key+':'+str(value) for key,value in spacing.items()]
             dict_index_space ='_'.join(dict_index_space)
             dict_index['space'] = dict_index_space
+
+
+            logging.debug('adding crs grid mapping definition according to grid')
+            if 'grid_mapping' not in dict_index:
+                if ('latitude' in spacing) and ('longitude' in spacing):
+                      grid_mapping_attributes = {
+                              'grid_mapping':'crs',
+                              'crs_grid_mapping_name': 'latitude_longitude',
+                              'crs_long_name': 'CRS definition',
+                              'crs_longitude_of_prime_meridian': 0.0,
+                              'crs_semi_major_axis': 6378137.0,
+                              'crs_inverse_flattening': 298.257223563,
+                              'crs_spatial_ref': 'GEOGCS["WGS 84",DATUM["WGS_1984",SPHEROID["WGS 84",6378137,298.257223563,AUTHORITY["EPSG","7030"]],AUTHORITY["EPSG","6326"]],PRIMEM["Greenwich",0],UNIT["degree",0.0174532925199433],AUTHORITY["EPSG","4326"]]',
+                              'crs_GeoTransform': spacing['longitude'].split(',')[0]+ ' '+spacing['longitude'].split(',')[2] +' '+spacing['latitude'].split(',')[0]+ ' '+spacing['latitude'].split(',')[2]
+                      }
+                      dict_index.update(grid_mapping_attributes)
+                  
             #DataArray.attrs['space'] = dict_index_space
 
         # # not sure why we need to track coordinates
@@ -1021,9 +1090,23 @@ class archive (object):
             else:
                 ncvar = ncfile['__xarray_dataarray_variable__']
 
+            if 'grid_mapping' in dict_columns:
+                grid_mapping_type = dict_columns['grid_mapping']
+                if grid_mapping_type not in ncfile.variables:
+                    ncfile.createVariable(grid_mapping_type,'S1')
+                    logging.info('creating '+grid_mapping_type+' dummy char variable for storing grid_mapping attributes, which seems to be the format behaviour by, eg., qgis')
+
+
             for key,value in {**dict_index, **dict_columns}.items():
 
                 if key not in ['ncvariable','path','path_pickle','linked','nc_reduced','absolute_path_as_cache']:# we also exclude linked and nc_reduced, because they are booleans and they give errors
+
+                    if ('grid_mapping' in dict_columns) and key.startswith(grid_mapping_type+'_'):
+                        logging.info('write '+grid_mapping_type+' attribute '+key+': '+str(value)+' in separate dummy char variable, which seems to be the format behaviour by eg., qgis')
+                        ncfile.variables[grid_mapping_type].setncattr(key[(len(grid_mapping_type)+1):],value)
+
+                    else:
+
                         logging.info('setting attribute '+key+' to '+str(value))
                         try:
                             ncvar.setncattr(key, value)
