@@ -14,9 +14,9 @@ from . import apply_func, nc_reduce_fn
 import netCDF4 as nc4
 
 def parse_grid_mapping(ds,DataArray):
-    if 'grid_mapping' in DataArray.attrs:
+    if ('grid_mapping' in DataArray.attrs) and (DataArray.attrs['grid_mapping'] not in [None, np.nan]) and not ((type(DataArray.attrs['grid_mapping']) in (float,np.float64)) and np.isnan(DataArray.attrs['grid_mapping'])):
         grid_mapping_type = DataArray.attrs['grid_mapping']
-        logging.debug('grid_mapping ('+grid_mapping_type+') detected. Reading grid_mapping type from separate character variable, which appears the standard according to qgis')
+        logging.debug('grid_mapping ('+str(grid_mapping_type)+') detected. Reading grid_mapping type from separate character variable, which appears the standard according to qgis')
         for crsattr in ds[grid_mapping_type].attrs:
             logging.debug('reading '+crsattr+' ('+str(ds[grid_mapping_type].attrs[crsattr])+') and add it as '+grid_mapping_type+'_'+crsattr+' to the regular xarray attributes')
             DataArray.attrs[grid_mapping_type+'_'+crsattr] =  ds[grid_mapping_type].attrs[crsattr]
@@ -994,7 +994,7 @@ class archive (object):
 
 
             logging.debug('adding crs grid mapping definition according to grid')
-            if 'grid_mapping' not in dict_index:
+            if not (('grid_mapping' in dict_index) and (dic_index['grid_mapping'] not in [None, np.nan]) and not ((type(dict_index['grid_mapping']) in (float,np.float64)) and np.isnan(dict_index['grid_mapping']))):
                 if ('latitude' in spacing) and ('longitude' in spacing):
                       grid_mapping_attributes = {
                               'grid_mapping':'crs',
