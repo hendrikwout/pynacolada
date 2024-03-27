@@ -23,15 +23,15 @@ class GSOD(object):
         selection : dict, keys: 'ctry', 'station_name', 'state'
         e.g. {'ctry': 'UK'}, {'state': 'IA'}, {'station_name': 'STANTON'}
         '''
+        print('Wait! Downloading isd-history.csv file from NOAA servers...')
+        #url =  'http://www1.ncdc.noaa.gov/pub/data/noaa/isd-history.csv'
+        url = 'ftp://ftp.ncdc.noaa.gov/pub/data/noaa/isd-history.csv'
+        ''' HTTP Error 503: Service Unavailable
+        # error message at work despite service
+        # working properly
+        '''
+        #url = 'https://s3.amazonaws.com/aws-gsod/isd-history.csv'
         try:
-            print('Wait! Downloading isd-history.csv file from NOAA servers...')
-            #url =  'http://www1.ncdc.noaa.gov/pub/data/noaa/isd-history.csv'
-            url = 'ftp://ftp.ncdc.noaa.gov/pub/data/noaa/isd-history.csv'
-            ''' HTTP Error 503: Service Unavailable
-            # error message at work despite service
-            # working properly
-            '''
-            #url = 'https://s3.amazonaws.com/aws-gsod/isd-history.csv'
             df_mapping = {'USAF' : str,
                             'WBAN' : str,
                             'STATION NAME' : str,
@@ -44,9 +44,7 @@ class GSOD(object):
                             'BEGIN' : str,
                           'END' : str}
             date_parser = ['BEGIN', 'END']
-            isd_hist = pd.read_csv(url,
-                                    dtype=df_mapping,
-                                    parse_dates=date_parser)
+            isd_hist = pd.read_csv(url, dtype=df_mapping, parse_dates=date_parser)
             print('Download complete!')
             
             # Rename 'STATION NAME' to 'STATION_NAME'
@@ -57,7 +55,7 @@ class GSOD(object):
             
             # Get rid of useless columns
             isd_hist = isd_hist.drop(['USAF', 'WBAN', 'ICAO', 'ELEV(M)'], axis=1)
-         
+            
             # Headers to lower case
             isd_hist.columns = isd_hist.columns.str.lower()
             
@@ -80,6 +78,9 @@ class GSOD(object):
             
         except Exception as e:
             print(e)
+            return pd.DataFrame(columns=['date','prcp'])
+        # except Exception as e:
+        #     print(e)
 
     @staticmethod
     def getData(station=None, start=dt.datetime.now().year, end=dt.datetime.now().year, cache=None, force_check = False, force_update=False, **kwargs):
@@ -229,7 +230,8 @@ class GSOD(object):
                big_df = pd.concat([big_df, df])
 
                print('station: {}\year {}\tDone!'.format(str(station), str(year)))
-            except:
-                print('year '+str(year)+ 'failed!')
+            except Exception as e:
+               print(e)
+               print('year '+str(year)+ 'failed!')
 
         return big_df

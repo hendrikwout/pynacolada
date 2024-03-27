@@ -72,15 +72,13 @@ def nc_reduce_fn(fn_input,fn_output,ncvariable=None,overwrite=False,nc_reduce=Tr
            else:
               scale_configuration[xr_name].update({'output_dtype_bits': 16,'min':0,'max':3000.})
        elif (('units' in xr_attrs) and (xr_attrs['units'] in ["kg m**-2 s**-1","kg m-2 s-1"])):
-           if xr_name == 'pr':
+           if xr_name in ['pr','mtpr']:
               scale_configuration[xr_name].update({'output_dtype_bits': 16,'min':0,'max':0.0025})
        elif (('units' in xr_attrs) and (xr_attrs['units'] in ['m s**-1','m s-1'])):
            if xr_name == 'sfcWind':
               scale_configuration[xr_name].update({'output_dtype_bits': 16,'min':0,'max':100})
            elif xr_name in ['pr','tprate']:
               scale_configuration[xr_name].update({'output_dtype_bits': 16,'min':0,'max':1.0/10**4})
-       elif (('units' in xr_attrs) and (xr_attrs['units'] == 'kg m**-2 s**-1')):
-           scale_configuration[xr_name].update({'output_dtype_bits': 16,'min':0,'max':1./10**1})
        # elif (('units' in xr_attrs) and (xr_attrs['units'] == 'kg m-2 s-1')):
        #     scale_configuration[xr_name].update({'output_dtype_bits': 16,'min':0,'max':1./10**1})
        elif (('units' in xr_attrs) and (xr_attrs['units'] == 'mm s**-1')):
@@ -99,6 +97,8 @@ def nc_reduce_fn(fn_input,fn_output,ncvariable=None,overwrite=False,nc_reduce=Tr
        if ('min' not in scale_configuration[xr_name]) or ('max' not in scale_configuration[xr_name]):
            import pdb; pdb.set_trace()
            raise ValueError("Sorry, I don't know how I can byte-reduce this type of variable")
+
+
 
    if (overwrite == True) and (os.path.isfile(fn_output)):
         logging.info('remove overwriting '+fn_output)
@@ -209,7 +209,7 @@ def get_dimensions_attributes(coords,time_id=None,space_id=None):#,prepend={},ap
         space_label = None
         #space_label = '_no_space_'
 
-    if space_id != None:
+    if (space_id not in [ None,np.nan]) and not ( (type(space_id) in (float,np.float64)) and (np.isnan(space_id))) :
         space_label = space_id+'_'+space_label
 
     dimensions_attributes['space'] = space_label
@@ -1378,10 +1378,11 @@ def apply_func(
                        logging.info('creating netcdf file '+fnout)
                        ncouts.append(nc4.Dataset(fnout, 'a' ))
 
-                       if 'grid_mapping' in attributes_out:
+                       grid_mapping_type = None
+                       if ('grid_mapping' in attributes_out) and (attributes_out['grid_mapping'] not in [None,np.nan]) and not ((type(attributes_out['grid_mapping']) in (float,np.float64)) and np.isnan(attributes_out['grid_mapping'])):
                            grid_mapping_type = attributes_out['grid_mapping']
                            ncouts[ichunk_out].createVariable(grid_mapping_type,'S1')
-                           logging.info('creating '+grid_mapping_type+' dummy char variable for storing grid_mapping attributes, which seems to be the format behaviour by, eg., qgis')
+                           logging.info('creating '+str(grid_mapping_type)+' dummy char variable for storing grid_mapping attributes, which seems to be the format behaviour by, eg., qgis')
 
 
                        if any_overlap:
@@ -1389,9 +1390,9 @@ def apply_func(
                        else:
                         ncouts[ichunk_out].createVariable(chunk_out_xarray_ordered.name, "f", tuple(ncout_dims),fill_value=nc4.default_fillvals['f4'])
                        for attrkey,attrvalue in attributes_out.items():
-                           if ('grid_mapping' in attributes_out) and attrkey.startswith(grid_mapping_type+'_'):
-                                logging.info('write '+grid_mapping_type+' attribute '+attrkey+': '+str(attrvalue)+' in separate dummy char variable, which seems to be the format behaviour by eg., qgis')
-                                ncouts[ichunk_out].variables[grid_mapping_type].setncattr(attrkey[(len(grid_mapping_type)+1):],attrvalue)
+                           if (grid_mapping_type is not None) and (attrkey.startswith(grid_mapping_type+'_')):
+                                   logging.info('write '+str(grid_mapping_type)+' attribute '+attrkey+': '+str(attrvalue)+' in separate dummy char variable, which seems to be the format behaviour by eg., qgis')
+                                   ncouts[ichunk_out].variables[grid_mapping_type].setncattr(attrkey[(len(grid_mapping_type)+1):],attrvalue)
                            else:
                             logging.info('writing netcdf attribute '+attrkey+' = '+str(attrvalue))
                             ncouts[ichunk_out].variables[ncouts_variable[-1]].setncattr(attrkey,attrvalue)
@@ -1559,12 +1560,12 @@ def apply_func(
             ds = xr.open_dataset(xarrays_output_filenames_real[incout])
             DataArray = ds[ncouts_variable[incout]]
             def parse_grid_mapping(ds,DataArray):
-                if 'grid_mapping' in DataArray.attrs:
+                if ('grid_mapping' in DataArray.attrs) and (DataArray.attrs['grid_mapping'] not in [None, np.nan]) and not ((type(DataArray.attrs['grid_mapping']) in (float,np.float64)) and np.isnan(DataArray.attrs['grid_mapping'])):
                     grid_mapping_type = DataArray.attrs['grid_mapping']
-                    logging.debug('grid_mapping ('+grid_mapping_type+') detected. Reading grid_mapping type from separate character variable, which appears the standard according to qgis')
+                    logging.debug('grid_mapping ('+str(grid_mapping_type)+') detected. Reading grid_mapping type from separate character variable, which appears the standard according to qgis')
                     for crsattr in ds[grid_mapping_type].attrs:
-                        logging.debug('reading '+crsattr+' ('+str(ds[grid_mapping_type].attrs[crsattr])+') and add it as '+grid_mapping_type+'_'+crsattr+' to the regular xarray attributes')
-                        DataArray.attrs[grid_mapping_type+'_'+crsattr] =  ds[grid_mapping_type].attrs[crsattr]
+                        logging.debug('reading '+str(crsattr)+' ('+str(ds[grid_mapping_type].attrs[crsattr])+') and add it as '+str(grid_mapping_type)+'_'+str(crsattr)+' to the regular xarray attributes')
+                        DataArray.attrs[str(grid_mapping_type)+'_'+str(crsattr)] =  ds[grid_mapping_type].attrs[str(crsattr)]
             parse_grid_mapping(ds,DataArray)
             xrouts.append(DataArray)
             ds.close()
