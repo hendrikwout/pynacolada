@@ -47,7 +47,7 @@ def nc_reduce_fn(fn_input,fn_output,ncvariable=None,overwrite=False,nc_reduce=Tr
                'max':xr_attrs['physical_range'][1]
                }
                )
-       elif xr_name.startswith('rh'):
+       elif xr_name.startswith('rh') or xr_name.startswith('RH'):
                scale_configuration[xr_name].update({'output_dtype_bits': 16,'min':0,'max':1500})
        elif xr_name in ['hfls','hfss']:
                scale_configuration[xr_name].update({'output_dtype_bits': 16,'min':-750,'max':1500})
@@ -75,7 +75,9 @@ def nc_reduce_fn(fn_input,fn_output,ncvariable=None,overwrite=False,nc_reduce=Tr
            if xr_name in ['pr','mtpr']:
               scale_configuration[xr_name].update({'output_dtype_bits': 16,'min':0,'max':0.0025})
        elif (('units' in xr_attrs) and (xr_attrs['units'] in ['m s**-1','m s-1'])):
-           if xr_name == 'sfcWind':
+           if xr_name in ['u10','v10']:
+              scale_configuration[xr_name].update({'output_dtype_bits': 16,'min':-100,'max':100})
+           elif xr_name in ['uv10','sfcWind']:
               scale_configuration[xr_name].update({'output_dtype_bits': 16,'min':0,'max':100})
            elif xr_name in ['pr','tprate']:
               scale_configuration[xr_name].update({'output_dtype_bits': 16,'min':0,'max':1.0/10**4})
