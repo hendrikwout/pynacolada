@@ -192,18 +192,22 @@ def get_dimensions_attributes(coords,time_id=None,space_id=None):#,prepend={},ap
     spacing = {}
     for dim,coord in coords.items():
         if (dim != 'time') and (coord is not None):# space_coordinates:
-            if len(coords[dim]) > 1:
-                spacing_temp = (coords[dim].values[1] - coord[dim].values[0])
-                if not np.any(
-                        coords[dim][1:].values != (coords[dim].values[:-1] + spacing_temp)):
-                    spacing[dim] = str(coords[dim][0].values) + ',' + str(
-                        coords[dim][-1].values) + ',' + str(spacing_temp)
+            if str(coord.values.dtype).startswith('<U'):
+               spacing[dim] = '' 
+            else:
+
+                if len(coords[dim]) > 1:
+                    spacing_temp = (coords[dim].values[1] - coord[dim].values[0])
+                    if not np.any(
+                            coords[dim][1:].values != (coords[dim].values[:-1] + spacing_temp)):
+                        spacing[dim] = str(coords[dim][0].values) + ',' + str(
+                            coords[dim][-1].values) + ',' + str(spacing_temp)
+                    else:
+                        spacing[dim] = 'irregular'
                 else:
                     spacing[dim] = 'irregular'
-            else:
-                spacing[dim] = 'irregular'
-            # else:
-            #     logging.warning('unknown dimension found that we will not be tracked in lib_dataarrays: ' + str(dim))
+                # else:
+                #     logging.warning('unknown dimension found that we will not be tracked in lib_dataarrays: ' + str(dim))
     dict_index_space = [key + ':' + str(value) for key, value in spacing.items()]
     if len(dict_index_space) != 0:
         space_label = '_'.join(dict_index_space)
@@ -1268,17 +1272,25 @@ def apply_func(
                        if ((key not in attributes_out) or (attributes_out[key] == None)):
                                attributes_out[key] = dimensions_attributes[key]
 
-                   logging.debug('building output for chunk number '+str(ichunk_out) )
+                   logging.debug('building output file for chunk number '+str(ichunk_out) )
                    xrtemp = xr.Dataset()
                    #for ichunk_out in range(len(xarrays_output_dimensions)):
+
+                   # we write out the intended output coordinates on one go
                    for dimname, coords in xarrays_output_dims_final[ichunk_out].items():
                        if coords is not None:
                            xrtemp[dimname] = coords
 
+                   # for the remaining coordinate output variables, we initialize them here, and we fill them up after the grid data writing
                    for coordinates_key, coordinates in chunk_out_xarray_ordered.coords.items():
                        if coordinates_key not in xrtemp.dims:
                            xrtemp.coords[coordinates_key] = \
-                               xr.DataArray(np.zeros( [len(xarrays_output_dims_final[ichunk_out][dim]) for dim in coordinates.dims]),dims=coordinates.dims)
+                               xr.DataArray(
+                                       np.zeros( 
+                                           [len(xarrays_output_dims_final[ichunk_out][dim]) for dim in coordinates.dims],
+                                           dtype=chunk_out_xarray_ordered[coordinates_key].values.dtype),
+                                       dims=coordinates.dims
+                                       )
 
                    ncout_dims = list()
                    ncout_shapes = list()
@@ -1417,27 +1429,6 @@ def apply_func(
                if type(ncouts[ichunk_out]) in[ nc4.Dataset,netcdf_file]:
                    ncouts[ichunk_out] = nc4.Dataset(xarrays_output_filenames_work[ichunk_out],'a' )
 
-
-                   #ncouts[ichunk_out] = netcdf_file(xarrays_output_filenames_work[ichunk_out],'a')
-
-                   #  import numpy as np
-                   #  
-                   #  f = netcdf_file('simple.nc', 'w')
-                   #  
-                   #  f.history = 'Created for a test'
-                   #  
-                   #  f.createDimension('time', 10)
-                   #  
-                   #  time = f.createVariable('time', 'i', ('time',))
-                   #  
-                   #  time[:] = np.arange(10)
-                   #  
-                   #  time.units = 'days since 2008-01-01'
-                   #  
-                   #  f.close()
-
-
-
                    if any_overlap == True:
                        logging.debug('acquiring previous values for consolidating chunk overlapping values')
                        recap = ncouts[ichunk_out].variables[ncouts_variable[ichunk_out]][indexing_for_output_array].filled(fill_value=0)
@@ -1461,7 +1452,13 @@ def apply_func(
                        if coordname not in  chunk_out_xarray_ordered.dims:
                            indexing_for_output_array_coord = [indexing_for_output_array[chunk_out_xarray_ordered.dims.index(dim)] for dim in coord.dims]
                            if len(indexing_for_output_array_coord) > 0:
-                               ncouts[ichunk_out].variables[coordname][indexing_for_output_array_coord] = coord.values
+                               if str(coord.values.dtype).startswith('<U'):
+                                   tempvals = ncouts[ichunk_out].variables[coordname][indexing_for_output_array_coord]
+                                   for ival,value in enumerate(coord.values):
+                                       tempvals[ival] = value
+                                   ncouts[ichunk_out].variables[coordname][indexing_for_output_array_coord] = tempvals
+                               else:
+                                   ncouts[ichunk_out].variables[coordname][indexing_for_output_array_coord] = coord.values
                        
 
                    if first_chunks:
@@ -1518,7 +1515,6 @@ def apply_func(
                 FillValue = ncouts[incout][ncouts_variable[incout]].getncattr('_FillValue')
                 ncouts[incout][ncouts_variable[incout]].setncattr('missing_value',FillValue)
             ncouts[incout].close()
-
 
             if not os.path.isdir(os.path.dirname(xarrays_output_filenames_real[incout])):
                 CMD = 'mkdir -p '+os.path.dirname(xarrays_output_filenames_real[incout])
