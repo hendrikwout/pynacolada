@@ -192,10 +192,9 @@ def get_dimensions_attributes(coords,time_id=None,space_id=None):#,prepend={},ap
     spacing = {}
     for dim,coord in coords.items():
         if (dim != 'time') and (coord is not None):# space_coordinates:
-            if str(coord.values.dtype).startswith('<U'):
+            if str(coord.values.dtype).startswith('<U') or str(coord.values.dtype) in ['object']:
                spacing[dim] = '' 
             else:
-
                 if len(coords[dim]) > 1:
                     spacing_temp = (coords[dim].values[1] - coord[dim].values[0])
                     if not np.any(
@@ -1408,8 +1407,8 @@ def apply_func(
                                    logging.info('write '+str(grid_mapping_type)+' attribute '+attrkey+': '+str(attrvalue)+' in separate dummy char variable, which seems to be the format behaviour by eg., qgis')
                                    ncouts[ichunk_out].variables[grid_mapping_type].setncattr(attrkey[(len(grid_mapping_type)+1):],attrvalue)
                            else:
-                            logging.info('writing netcdf attribute '+attrkey+' = '+str(attrvalue))
-                            ncouts[ichunk_out].variables[ncouts_variable[-1]].setncattr(attrkey,attrvalue)
+                               logging.info('writing netcdf attribute '+attrkey+' = '+str(attrvalue))
+                               ncouts[ichunk_out].variables[ncouts_variable[-1]].setncattr(attrkey,attrvalue)
                        #if any_overlap == True:
                        ncouts[ichunk_out].close()
 

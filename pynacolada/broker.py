@@ -86,7 +86,7 @@ class broker (object):
             for key, item in list(request_parent.items()):
                 if type(item) is type(lambda x: x):
                     del request_parent[key]
-                if key in ['archive', 'process']:
+                if key in ['archive', 'process','inherit']:
                     del request_parent[key]
 
             if 'process' in broker_requires:
@@ -264,7 +264,7 @@ class broker (object):
                         self.requires.append(return_requires)
                         # if debug ==True:
                         #     import pdb; pdb.set_trace()
-                        for key in ['root','process', 'executing_subprocess', 'stderr', 'stdout','process_arguments']:
+                        for key in ['root','process', 'executing_subprocess', 'stderr', 'stdout','process_arguments','inherit']:
                             if key in broker_requires.keys():
                                 self.requires[-1][key] = broker_requires[key]
                     self.requires[ibroker_requires]['disable'] = True
@@ -320,7 +320,8 @@ class broker (object):
 
                 icount = 0
                 for ibroker_requires,broker_requires in enumerate(self.requires):
-                    if ('disable' not in self.requires[ibroker_requires].keys()):
+                    if ('disable' not in self.requires[ibroker_requires].keys()) and \
+                     not (('inherit' in self.requires[ibroker_requires].keys()) and (self.requires[ibroker_requires]['inherit'] == False)):
                         for key in self.requires[ibroker_requires].keys():
                             if key not in [
                                 'process',
@@ -330,7 +331,8 @@ class broker (object):
                                 'stdout',
                                 'executing_subprocess',
                                 'return_from_history',
-                                'disable']:
+                                'disable',
+                                'inherit']:
 
                                 if (len(self.provides) >= (icount+1)) and (key not in self.provides[icount].keys()):
                                     self.provides[icount][key] = self.requires[ibroker_requires][key]
