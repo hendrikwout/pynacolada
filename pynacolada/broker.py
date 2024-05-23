@@ -78,7 +78,7 @@ class broker (object):
                 dump = yaml.dump(history_dict,Dumper=yaml_Dumper)
                 history_file.write(dump)
 
-    def retrieve_input(self,debug=False):
+    def retrieve_input(self,unique_archive_paths=True,query_return_dict=False,debug=False):
         logging.info('--- BEGIN Collecting or generating coarse input data -- ')
         for ibroker_requires, broker_requires in enumerate(self.requires):
 
@@ -402,14 +402,30 @@ class broker (object):
         # if debug == True:
         #     import pdb; pdb.set_trace()
 
+        archive_collection = []
         archive_collection_paths = []
+
+
         for broker_requires in self.requires:
             if ('archive' in broker_requires.keys()):
                 full_path = os.path.realpath(broker_requires['root'] + '/' + broker_requires['archive'])
-                if (full_path not in archive_collection_paths):
+                if ((full_path not in archive_collection_paths)) or (unique_archive_paths == False):
                     archive_collection_paths.append(full_path)
+                    if query_return_dict:
+                        if unique_archive_paths == True:
+                            raise ValueError(' for option query_return_dict, please turn on unique_archive_paths')
+                        return_dict = broker_requires.copy()
+                        for key in ['process_arguments','archive','root','process']:
+                            return_dict.pop(key)
+                    else:
+                        return_dict = None
 
-        self.parent_collection = collection([archive(full_path,debug=debug) for full_path in archive_collection_paths])
+                    archive_collection.append(archive(full_path,query_dict=return_dict,debug=debug))
+
+
+        
+
+        self.parent_collection = collection(archive_collection)#[archive(full_path,debug=debug) for full_path in archive_collection_paths])
         delay_random = self.delay * (1+random.random())
         logging.info('delaying after input retrieve for '+str(delay_random)+' seconds')
         sleep(delay_random)

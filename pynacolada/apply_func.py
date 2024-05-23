@@ -1,4 +1,5 @@
 import dask.array as da
+import copy
 from functools import partial
 from multiprocessing.pool import Pool
 from argparse import Namespace
@@ -581,6 +582,21 @@ def apply_func(
 ):
 
     global barposition
+
+
+    if xarrays_output_dimensions is not None:
+        xarrays_output_dimensions_here = copy.deepcopy(xarrays_output_dimensions)
+    else:
+        xarrays_output_dimensions_here = None
+
+    if output_dimensions is not None:
+        output_dimensions_here = copy.deepcopy(output_dimensions)
+    else:
+        output_dimensions_here = None
+
+    # del xarrays_output_dimensions
+    # del output_dimensions
+
     barposition = barposition+1
     #maximum_memory_size_bytes_per_proc = int(maximum_memory_size_bytes/nprocs)
 
@@ -621,21 +637,21 @@ def apply_func(
     #     output_dimensions_sort_keys = []
 
     logging.debug('adding missing output dimensions from specified xarrays_coordinates_output')
-    if xarrays_output_dimensions is not None:
+    if xarrays_output_dimensions_here is not None:
         output_dimensions_new = {}
-        for dimdict in xarrays_output_dimensions:
+        for dimdict in xarrays_output_dimensions_here:
             for dimname in dimdict.keys():
                  if dimname not in output_dimensions_new.keys():
                      logging.debug('adding missing output_dimensions from xarrays_output_dimensions for '+dimname+': ')#+dimdict[dimname])
                      output_dimensions_new[dimname] = dimdict[dimname]
         logging.debug('overriding values and order of previous output_dimensions.')
 
-        if output_dimensions is None:
-            output_dimensions = dict()
+        if output_dimensions_here is None:
+            output_dimensions_here = dict()
 
-        for output_dimensions_orig in output_dimensions.keys():
-            output_dimensions_new[output_dimensions_orig] = output_dimensions[output_dimensions_orig]
-        output_dimensions = sort_dict_by_keys(output_dimensions_new,list(output_dimensions.keys()))
+        for output_dimensions_orig in output_dimensions_here.keys():
+            output_dimensions_new[output_dimensions_orig] = output_dimensions_here[output_dimensions_orig]
+        output_dimensions_here = sort_dict_by_keys(output_dimensions_new,list(output_dimensions_here.keys()))
 
     output_dimensions_new = {}
 
@@ -646,12 +662,12 @@ def apply_func(
                     logging.debug('adding apply dimensions from input xarray to the default output_dimensions ' + dimname)
                     output_dimensions_new[dimname] = {'coords': xarray[dimname]}
 
-    if output_dimensions is None:
-        output_dimensions = {}
+    if output_dimensions_here is None:
+        output_dimensions_here = {}
 
-    for output_dimensions_orig in output_dimensions.keys():
-        output_dimensions_new[output_dimensions_orig] = output_dimensions[output_dimensions_orig]
-    output_dimensions = sort_dict_by_keys(output_dimensions_new, list(output_dimensions.keys()))
+    for output_dimensions_orig in output_dimensions_here.keys():
+        output_dimensions_new[output_dimensions_orig] = output_dimensions_here[output_dimensions_orig]
+    output_dimensions_here = sort_dict_by_keys(output_dimensions_new, list(output_dimensions_here.keys()))
 
     output_dimensions_new = {}
     for dimname,coordinates in dims_no_apply.items():
@@ -660,12 +676,12 @@ def apply_func(
             logging.debug('adding no apply dimensions to the default output_dimensions '+dimname)
             output_dimensions_new[dimname] = {'coords':coordinates}
 
-    if output_dimensions is None:
-        output_dimensions = {}
+    if output_dimensions_here is None:
+        output_dimensions_here = {}
 
-    for output_dimensions_orig in output_dimensions.keys():
-        output_dimensions_new[output_dimensions_orig] = output_dimensions[output_dimensions_orig]
-    output_dimensions = sort_dict_by_keys(output_dimensions_new, list(output_dimensions.keys()))
+    for output_dimensions_orig in output_dimensions_here.keys():
+        output_dimensions_new[output_dimensions_orig] = output_dimensions_here[output_dimensions_orig]
+    output_dimensions_here = sort_dict_by_keys(output_dimensions_new, list(output_dimensions_here.keys()))
 
     # for dimname in dims_apply_names:
     #     if dimname not in output_dimensions:
@@ -673,20 +689,20 @@ def apply_func(
 
     output_dimensions_new = {}
     for dimname in dims_apply_names:
-        if dimname not in output_dimensions.keys():
+        if dimname not in output_dimensions_here.keys():
             logging.debug('adding no apply dimensions to the default output_dimensions '+dimname)
             output_dimensions_new[dimname] = {'coords':None}
 
-    if output_dimensions is None:
-        output_dimensions = {}
+    if output_dimensions_here is None:
+        output_dimensions_here = {}
 
-    for output_dimensions_orig in output_dimensions.keys():
-        output_dimensions_new[output_dimensions_orig] = output_dimensions[output_dimensions_orig]
-    output_dimensions = sort_dict_by_keys(output_dimensions_new, list(output_dimensions.keys()))
+    for output_dimensions_orig in output_dimensions_here.keys():
+        output_dimensions_new[output_dimensions_orig] = output_dimensions_here[output_dimensions_orig]
+    output_dimensions_here = sort_dict_by_keys(output_dimensions_new, list(output_dimensions_here.keys()))
 
 
     if output_dimensions_order is not None:
-        output_dimensions_keys_new_order = list(output_dimensions.keys())
+        output_dimensions_keys_new_order = list(output_dimensions_here.keys())
         for dim,pos in output_dimensions_order.items():
             output_dimensions_keys_new_order.pop(dim)
             output_dimensions_keys_new_order.insert(pos,output_dimensions_keys_new_order[pos])
@@ -694,7 +710,7 @@ def apply_func(
         output_dimensions_new_order = {}
         for key in output_dimensions_key_new_order:
             output_dimensions_new_order[key] = output_dimensions[key]
-        output_dimensions = output_dimensions_new_order
+        output_dimensions_here = output_dimensions_new_order
 
 
             
@@ -711,20 +727,20 @@ def apply_func(
     number_of_chunks_apply = 1
     number_of_chunks_apply_dims = {}
     any_overlap = False
-    for dimname,dimattr in output_dimensions.items():
+    for dimname,dimattr in output_dimensions_here.items():
 
-        if (output_dimensions[dimname] != None) and ('chunksize' in output_dimensions[dimname]):
-            if 'overlap' in output_dimensions[dimname]:
+        if (output_dimensions_here[dimname] != None) and ('chunksize' in output_dimensions_here[dimname]):
+            if 'overlap' in output_dimensions_here[dimname]:
                 any_overlap = True
                 number_of_chunks_apply_dims_dimname = int(
-                    np.ceil(len(output_dimensions[dimname]['coords']) / (
-                            output_dimensions[dimname]['chunksize'] - output_dimensions[dimname]['overlap'])))
+                    np.ceil(len(output_dimensions_here[dimname]['coords']) / (
+                            output_dimensions_here[dimname]['chunksize'] - output_dimensions_here[dimname]['overlap'])))
             else:
                 number_of_chunks_apply_dims_dimname = int(
-                    np.ceil(len(output_dimensions[dimname]['coords']) / output_dimensions[dimname]['chunksize']))
+                    np.ceil(len(output_dimensions_here[dimname]['coords']) / output_dimensions_here[dimname]['chunksize']))
             if number_of_chunks_apply_dims_dimname > 1:
                 number_of_chunks_apply_dims[dimname] = number_of_chunks_apply_dims_dimname
-                number_of_chunks_apply *= number_of_chunks_apply_dims[dimname] #np.ceil(len(output_dimensions[dimname]['coords'])/output_dimensions[dimname]['chunksize'])
+                number_of_chunks_apply *= number_of_chunks_apply_dims[dimname] #np.ceil(len(output_dimensions_here[dimname]['coords'])/output_dimensions_here[dimname]['chunksize'])
 
     number_of_chunks_apply = int(number_of_chunks_apply)
 
@@ -740,37 +756,44 @@ def apply_func(
 
 
     # for dimname,coordinates in dims_no_apply.items():
-    #     if dimname not in output_dimensions.keys():
-    #         logging.info('adding no apply dimensions to the default output_dimensions '+dimname+': '+coordinates)
-    #         output_dimensions[dimname] = {'coords':coordinates}
+    #     if dimname not in output_dimensions_here.keys():
+    #         logging.info('adding no apply dimensions to the default output_dimensions_here '+dimname+': '+coordinates)
+    #         output_dimensions_here[dimname] = {'coords':coordinates}
 
     if xarrays_output_filenames == None:
         xarrays_output_filenames = tempfile.mktemp(suffix='.nc', dir='/tmp/' )
 
-    if xarrays_output_dimensions is None:
+    if xarrays_output_dimensions_here is None:
         if (xarrays_output_filenames == None) or (xarrays_output_filenames == False) or (type(xarrays_output_filenames) == str):
             logging.debug('by default, we assume only one xarray output.')
-            xarrays_output_dimensions = [output_dimensions]
+            xarrays_output_dimensions_here = [output_dimensions_here]
 
         elif type(xarrays_output_filenames) in (list,tuple):
-            xarrays_output_dimensions = list()
-            while (len(xarrays_output_dimensions) < len(xarrays_output_filenames) ):
-                logging.info('No coordinates output xarrays are set manually, so we guess them from the output_dimensions.'
+            xarrays_output_dimensions_here = list()
+            while (len(xarrays_output_dimensions_here) < len(xarrays_output_filenames) ):
+                logging.info('No coordinates output xarrays are set manually, so we guess them from the output_dimensions_here.'
                              'We do this here already so that we can take it into account in the memory size and optimal chunking.')
-                xarrays_output_dimensions.append(output_dimensions)
+                xarrays_output_dimensions_here.append(output_dimensions_here)
         else:
             raise ValueError('xarrays_output_filenames should be string or list.')
+    else:
+        for ixarray in range(len(xarrays_output_dimensions_here)):
+            for key,value in output_dimensions_here.items():
+                if key not in xarrays_output_dimensions_here[ixarray].keys():
+                    xarrays_output_dimensions_here[ixarray][key] = value
+                    xarrays_output_dimensions_here[ixarray] = sort_dict_by_keys(xarrays_output_dimensions_here[ixarray],list(output_dimensions_here.keys()))
 
-    if (xarrays_output_filenames != False) and (xarrays_output_filenames != None) and (type(xarrays_output_filenames) != str) and (len(xarrays_output_filenames) != len(xarrays_output_dimensions)):
+
+    if (xarrays_output_filenames != False) and (xarrays_output_filenames != None) and (type(xarrays_output_filenames) != str) and (len(xarrays_output_filenames) != len(xarrays_output_dimensions_here)):
         raise IOError('number of output files are not the same as the number of expected output xarrays')
 
-    output_dims = { key : (output_dimensions[key]['coords'] ) for key in output_dimensions.keys()}
+    output_dims = { key : (output_dimensions_here[key]['coords'] ) for key in output_dimensions_here.keys()}
     output_dims_final = {}
 
     xarrays_output_dims = []
-    for ixarray_out,xarray_output_dimensions in enumerate(xarrays_output_dimensions):
+    for ixarray_out,xarray_output_dimensions_here in enumerate(xarrays_output_dimensions_here):
         xarrays_output_dims.append(
-            {key: (xarray_output_dimensions[key]['coords'] ) for key in xarray_output_dimensions.keys()}
+            {key: (xarray_output_dimensions_here[key]['coords'] ) for key in xarray_output_dimensions_here.keys()}
         )
 
     def get_fake_xarrays_out(xarrays_output_dims):
@@ -861,9 +884,9 @@ def apply_func(
         return xarrays_shapes, xarrays_shapes_chunks
 
     xarrays_in_shapes, xarrays_in_shapes_chunks = get_xarrays_shapes(
-        xarrays_in, dims_apply_names, dims_no_apply, output_dimensions,number_of_chunks_apply_dims)
+        xarrays_in, dims_apply_names, dims_no_apply, output_dimensions_here,number_of_chunks_apply_dims)
     xarrays_out_shapes, xarrays_out_shapes_chunks = get_xarrays_shapes(
-        xarrays_out, dims_apply_names, dims_no_apply, output_dimensions,number_of_chunks_apply_dims)
+        xarrays_out, dims_apply_names, dims_no_apply, output_dimensions_here,number_of_chunks_apply_dims)
 
     logging.debug('xarrays shapes for '+str(dims_no_apply.keys()) +' + '+str(dims_apply_names)+' : ')
     logging.debug('  -> original xarrays in: '+str(xarrays_in_shapes))
@@ -1004,13 +1027,13 @@ def apply_func(
        if nprocs > 1:
            pool = Pool()
            iterate_func = pool.map(partial(chunk_task, func,
-                      chunks_number_no_apply, dims_apply_names, number_of_chunks_apply_dims, output_dimensions,
+                      chunks_number_no_apply, dims_apply_names, number_of_chunks_apply_dims, output_dimensions_here,
                       dims_no_apply_lengths, chunk_sizes_no_apply, xarrays_in, xarrays_in_shapes_chunks, 
                       dims_all,dims_no_apply,pass_missing_output_coordinates,transpose_inner,
                       args_func,kwargs_func), tuple(index_no_apply_group))
        else:
            iterate_func = [chunk_task(func,
-                      chunks_number_no_apply, dims_apply_names, number_of_chunks_apply_dims, output_dimensions,
+                      chunks_number_no_apply, dims_apply_names, number_of_chunks_apply_dims, output_dimensions_here,
                       dims_no_apply_lengths, chunk_sizes_no_apply, xarrays_in, xarrays_in_shapes_chunks, 
                       dims_all,dims_no_apply,pass_missing_output_coordinates,transpose_inner,
                       args_func,kwargs_func,index_no_apply_group[0],)]
@@ -1032,11 +1055,11 @@ def apply_func(
                        if dimname in chunk_out_xarray.dims:
                            # (output_dimensions[dimname] != None) and
                            if (dimname in dims_apply_names):
-                               if (dimname in output_dimensions) and \
-                                       ('chunksize' in list(output_dimensions[dimname].keys())):
+                               if (dimname in output_dimensions_here) and \
+                                       ('chunksize' in list(output_dimensions_here[dimname].keys())):
                                    if not identical_xarrays(
                                        chunk_out_xarray.coords[dimname],
-                                       output_dimensions[dimname]['coords'][chunk_start[dims_all.index(dimname)]:chunk_end[dims_all.index(dimname)]]
+                                       output_dimensions_here[dimname]['coords'][chunk_start[dims_all.index(dimname)]:chunk_end[dims_all.index(dimname)]]
                                        ):
                                        raise ValueError('output dimensions are not identical to input. We may get into trouble!!!')
                                    xarrays_output_dims_final[ichunk_out][dimname] = xarrays_output_dims[ichunk_out][dimname]
@@ -1088,14 +1111,14 @@ def apply_func(
 
 
            xarrays_out_final_shapes,xarrays_out_final_shapes_chunks = get_xarrays_shapes(
-               xarrays_out_final,dims_apply_names,dims_no_apply,output_dimensions,number_of_chunks_apply_dims,
+               xarrays_out_final,dims_apply_names,dims_no_apply,output_dimensions_here,number_of_chunks_apply_dims,
            )
 
            xarrays_out_selection_chunk = get_xarrays_selection_chunk(
                xarrays_out_final,
                xarrays_out_final_shapes_chunks,
                dims_all,
-               output_dimensions,
+               output_dimensions_here,
                dims_apply_names,
                number_of_chunks_apply_dims,
                dims_no_apply,
@@ -1136,7 +1159,7 @@ def apply_func(
 
                logging.debug('xarray selection of chunk output '+str(ichunk_out)+': ' + str(xarrays_out_selection_chunk[ichunk_out]))
 
-               xarrays_out_selection_chunk_ordered = sort_dict_by_keys(xarrays_out_selection_chunk[ichunk_out],list(xarrays_output_dimensions[ichunk_out].keys()))
+               xarrays_out_selection_chunk_ordered = sort_dict_by_keys(xarrays_out_selection_chunk[ichunk_out],list(xarrays_output_dimensions_here[ichunk_out].keys()))
                #if type(chunk_out) == type(np.array([])):
                # if type(chunk_out) != xr.core.dataarray.DataArray:
                #     chunk_out_coordinates = {}
@@ -1166,35 +1189,35 @@ def apply_func(
                for dim,selection_chunk_out in xarrays_out_selection_chunk_ordered.items():
                    # overlap_weights_dim = np.ones((len(xarrays_out_selection_chunk_ordered[dim],)))
                    #reshape(list(range(idim-1))+overlap_weights.shape[idim])
-                   if ('overlap' in output_dimensions[dim]) and (dim in number_of_chunks_apply_dims.keys()):
+                   if ('overlap' in output_dimensions_here[dim]) and (dim in number_of_chunks_apply_dims.keys()):
 
                        if profile_overlap == 'triangle':
                            if xarrays_out_selection_chunk_ordered[dim][0] == 0:
-                               left = np.ones(output_dimensions[dim]['overlap'])
+                               left = np.ones(output_dimensions_here[dim]['overlap'])
                            else:
-                               left = np.arange(0.,output_dimensions[dim]['overlap'],1.)/output_dimensions[dim]['overlap']
+                               left = np.arange(0.,output_dimensions_here[dim]['overlap'],1.)/output_dimensions_here[dim]['overlap']
 
-                           middle = np.ones((max(0,(len(xarrays_out_selection_chunk_ordered[dim]) - 2 * output_dimensions[dim]['overlap']),)))
+                           middle = np.ones((max(0,(len(xarrays_out_selection_chunk_ordered[dim]) - 2 * output_dimensions_here[dim]['overlap']),)))
 
-                           if xarrays_out_selection_chunk_ordered[dim][-1] == (len(output_dimensions[dim]['coords']) - 1):
+                           if xarrays_out_selection_chunk_ordered[dim][-1] == (len(output_dimensions_here[dim]['coords']) - 1):
 
                                #at the right border of the dimension, we do just the remaning, hence -len(left)-len(middle)
-                               right = np.ones(min(output_dimensions[dim]['overlap'] , max(0,len(xarrays_out_selection_chunk_ordered[dim])-len(left)-len(middle))))
+                               right = np.ones(min(output_dimensions_here[dim]['overlap'] , max(0,len(xarrays_out_selection_chunk_ordered[dim])-len(left)-len(middle))))
                            else:
-                               right = np.arange(min(output_dimensions[dim]['overlap'] , max(0,len(xarrays_out_selection_chunk_ordered[dim])-len(left)-len(middle))),0,-1)/output_dimensions[dim]['overlap']
+                               right = np.arange(min(output_dimensions_here[dim]['overlap'] , max(0,len(xarrays_out_selection_chunk_ordered[dim])-len(left)-len(middle))),0,-1)/output_dimensions_here[dim]['overlap']
                        elif profile_overlap == 'square':
                            if xarrays_out_selection_chunk_ordered[dim][0] == 0:
-                               left = np.ones(output_dimensions[dim]['overlap'])
+                               left = np.ones(output_dimensions_here[dim]['overlap'])
                            else:
-                               leftleft = int(output_dimensions[dim]['overlap']/2)
-                               leftright = output_dimensions[dim]['overlap'] - leftleft
+                               leftleft = int(output_dimensions_here[dim]['overlap']/2)
+                               leftright = output_dimensions_here[dim]['overlap'] - leftleft
                                left = np.concatenate([np.zeros(leftleft),np.ones(leftright)])
 
-                           middle = np.ones(output_dimensions[dim]['chunksize'] - 2 * output_dimensions[dim]['overlap'])
+                           middle = np.ones(output_dimensions_here[dim]['chunksize'] - 2 * output_dimensions_here[dim]['overlap'])
 
-                           # right = np.arange(min(output_dimensions[dim]['overlap'] , max(0,len(xarrays_out_selection_chunk_ordered[dim])-len(left)-len(middle))),0,-1)/output_dimensions[dim]['overlap']
-                           leftright = int(output_dimensions[dim]['overlap']/2)
-                           rightright = output_dimensions[dim]['overlap'] - leftright
+                           # right = np.arange(min(output_dimensions_here[dim]['overlap'] , max(0,len(xarrays_out_selection_chunk_ordered[dim])-len(left)-len(middle))),0,-1)/output_dimensions_here[dim]['overlap']
+                           leftright = int(output_dimensions_here[dim]['overlap']/2)
+                           rightright = output_dimensions_here[dim]['overlap'] - leftright
                            right = np.concatenate([np.ones(leftright),np.zeros(rightright)])
                        else:
                            raise ValueError ('Profile overlap '+ str(profile)+ 'not implemented')
@@ -1273,7 +1296,7 @@ def apply_func(
 
                    logging.debug('building output file for chunk number '+str(ichunk_out) )
                    xrtemp = xr.Dataset()
-                   #for ichunk_out in range(len(xarrays_output_dimensions)):
+                   #for ichunk_out in range(len(xarrays_output_dimensions_here)):
 
                    # we write out the intended output coordinates on one go
                    for dimname, coords in xarrays_output_dims_final[ichunk_out].items():
@@ -1569,7 +1592,7 @@ def apply_func(
         elif type(ncouts[incout]) == xr.DataArray:
             xrouts.append(ncouts[incout])
 
-    del xarrays_output_dimensions
+    del xarrays_output_dimensions_here
     if return_type == 'xarrays':
         return tuple(xrouts)
     else:
