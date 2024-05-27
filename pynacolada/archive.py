@@ -682,24 +682,24 @@ class archive (object):
             self.lib_dataarrays = pd.read_pickle(path_pickle)
             self.set_path_pickle(path_pickle)
 
-        if query_dict is not None:
+            if query_dict is not None:
 
-            def dict_query(df1,method='match',**filter_v):
-                index_names = df1.index.names
-                df1_reset = df1.reset_index()
-                filter_v_reduced = {key: value for key,value in filter_v.items() if key in df1_reset.columns}
+                def dict_query(df1,method='match',**filter_v):
+                    index_names = df1.index.names
+                    df1_reset = df1.reset_index()
+                    filter_v_reduced = {key: value for key,value in filter_v.items() if key in df1_reset.columns}
 
-                if method == 'match':
-                    return df1_reset.loc[(df1_reset[list(filter_v_reduced)] == pd.Series(filter_v_reduced)).all(axis=1)].set_index(index_names)
-                elif method == 'isin':
+                    if method == 'match':
+                        return df1_reset.loc[(df1_reset[list(filter_v_reduced)] == pd.Series(filter_v_reduced)).all(axis=1)].set_index(index_names)
+                    elif method == 'isin':
 
-                    query = ' & '.join([key+'.isin('+str(value.split(','))+')' for key,value in filter_v_reduced.items()])
-                    if query != '' :
-                        return df1_reset.query(query,engine='python').set_index(index_names),filter_v_reduced
-                    else: 
-                        return df1_reset.set_index(index_names),filter_v_reduced
+                        query = ' & '.join([key+'.isin('+str(value.split(','))+')' for key,value in filter_v_reduced.items()])
+                        if query != '' :
+                            return df1_reset.query(query,engine='python').set_index(index_names),filter_v_reduced
+                        else: 
+                            return df1_reset.set_index(index_names),filter_v_reduced
 
-            self.lib_dataarrays = dict_query(self.lib_dataarrays,method='isin',**query_dict)[0]
+                self.lib_dataarrays = dict_query(self.lib_dataarrays,method='isin',**query_dict)[0]
 
 
 
