@@ -3,6 +3,7 @@ import os
 import pandas as pd
 import xarray as xr
 import numpy as np
+import numpy as np
 import datetime as dt
 import itertools
 import yaml
@@ -10,16 +11,8 @@ import logging
 import sys
 from tqdm import tqdm
 import tempfile
-from . import apply_func, nc_reduce_fn
+from . import apply_func_old
 import netCDF4 as nc4
-
-def parse_grid_mapping(ds,DataArray):
-    if ('grid_mapping' in DataArray.attrs) and (DataArray.attrs['grid_mapping'] not in [None, np.nan]) and not ((type(DataArray.attrs['grid_mapping']) in (float,np.float64)) and np.isnan(DataArray.attrs['grid_mapping'])):
-        grid_mapping_type = DataArray.attrs['grid_mapping']
-        logging.debug('grid_mapping ('+str(grid_mapping_type)+') detected. Reading grid_mapping type from separate character variable, which appears the standard according to qgis')
-        for crsattr in ds[grid_mapping_type].attrs:
-            logging.debug('reading '+crsattr+' ('+str(ds[grid_mapping_type].attrs[crsattr])+') and add it as '+grid_mapping_type+'_'+crsattr+' to the regular xarray attributes')
-            DataArray.attrs[grid_mapping_type+'_'+crsattr] =  ds[grid_mapping_type].attrs[crsattr]
 
 def parse_to_dataframe(list_or_dict_or_dataframe):
     if type(list_or_dict_or_dataframe) == pd.core.frame.DataFrame:
@@ -55,15 +48,11 @@ def apply_func_wrapper(
     query=None,
     extra_attributes={},
     post_apply=None,
-    force_recalculate=False,
-    engine=None,
+    initialize_array=None,
+    copy_coordinates=False,
     update_pickle=True,
-    delay = 10,
-    nc_reduce=False,
-    input_cache_to_ram=True,
-    drop_duplicates_in_group = True,
+    force_recalculate=False,
     #lib_dataarrays = self.lib_dataarrays
-
     **kwargs,
 ):
 
@@ -76,13 +65,7 @@ def apply_func_wrapper(
 
     output:
     """
-    apply_groups_in_df_temp = parse_to_dataframe(apply_groups_in)
-    if drop_duplicates_in_group:
-        apply_groups_in_df = apply_groups_in_df_temp.drop_duplicates()
-        if len(apply_groups_in_df_temp) != len(apply_groups_in_df):
-            logging.warning('duplicate source names found. Duplicates were removed')
-    else:
-        apply_groups_in_df = apply_groups_in_df_temp
+    apply_groups_in_df = parse_to_dataframe(apply_groups_in)
     apply_groups_out_df = parse_to_dataframe(apply_groups_out)
 
     divide_into_groups = []
@@ -110,8 +93,8 @@ def apply_func_wrapper(
         divide_into_groups = ['dummy_group']
         read_lib_dataarrays['dummy_group'] = ""
     groups_in_loop = read_lib_dataarrays.reset_index().groupby(divide_into_groups)
-    logging.info('Looping over data array input groups: '+ str([groupkeyvalues[0] for groupkeyvalues in groups_in_loop]) )
-    for idx, group in tqdm(groups_in_loop,position=0):
+    print('Looping over data array input groups: ', list(groups_in_loop))
+    for idx, group in tqdm(groups_in_loop):
 
         def always_tuple(idx):
             if type(idx) is not tuple:
@@ -176,7 +159,6 @@ def apply_func_wrapper(
         #
         # all_input_available_in_this_group = not (group_indexed_for_apply_groups_in.index != apply_groups_in_index).any()
         #
-
         if all_input_available_in_this_group:
 
             if len(apply_this_group_in_df) == 0:
@@ -204,17 +186,37 @@ def apply_func_wrapper(
             apply_groups_out_df_this_group = apply_groups_out_df.copy()
 
             logging.info('converting label functions where necessary')
-            table_this_group_out = apply_groups_out_df_this_group.copy()
             for idx_group_out, row in enumerate(apply_groups_out_df.to_dict('records')):
                 for key, value in row.items():
                     if type(apply_groups_out_df_this_group.loc[idx_group_out, key]).__name__ == 'function':
-                        table_this_group_out.loc[idx_group_out, key] = apply_groups_out_df_this_group.loc[
+                        apply_groups_out_df_this_group.loc[idx_group_out, key] = apply_groups_out_df.loc[
                             idx_group_out, key](*tuple(table_this_group_in.reset_index()[[key]].values[:, 0]))
-                    # elif table_this_group_out.loc[idx_group_out,key] is None:
+                    # elif apply_groups_out_df_this_group.loc[idx_group_out,key] is None:
                     #     raise ValueError('Not supported yet')
                     else:
-                        table_this_group_out.loc[idx_group_out, key] = apply_groups_out_df.loc[idx_group_out, key]
+                        apply_groups_out_df_this_group.loc[idx_group_out, key] = apply_groups_out_df.loc[idx_group_out, key]
+            table_this_group_out = apply_groups_out_df_this_group
 
+            dataarrays_group_in = []
+            for idx_group_in, row in table_this_group_in.iterrows():
+                if table_this_group_in.index.names[0] is None:  # trivial case where no group_in selection is made
+                    index_dataarray = [dict(zip(table_this_group_in.columns, row))[key] for key in
+                                       lib_dataarrays.index.names]
+                else:
+                    index_dataarray = [{**dict(zip(table_this_group_in.index.names, idx_group_in)),
+                                        **dict(zip(table_this_group_in.columns, row))}[key] for key in
+                                       lib_dataarrays.index.names]
+
+                # index_dataarray = [{**dict(zip(table_this_group_in.index.names,idx_group_in)),**dict(zip(table_this_group_in.columns,row))}[key] for key in self.lib_dataarrays.index.names]
+
+                row_of_dataarray = lib_dataarrays.loc[tuple(index_dataarray)]
+
+                if tuple(index_dataarray) in dataarrays.keys():
+                    dataarrays_group_in.append(dataarrays[tuple(index_dataarray)])
+                else:
+                    import pdb; pdb.set_trace()
+                    dataarrays_group_in.append(xr.open_dataarray(row_of_dataarray.absolute_path))
+                    os.path.dirname(os.path.realpath(archive_out.path_pickle))+'/'+row_of_dataarray.path
 
             # ??????
             # for dataarray in dataarrays_group_in:
@@ -226,61 +228,48 @@ def apply_func_wrapper(
             # building attributes of output dataarrays
             ifile = 0
             attributes_dataarrays_out = []
-            attributes_dataarrays_in_for_out = []
-            filenames_out_pattern = []
+            filenames_out = []
             dataarrays_out_already_available = []
-
-            
-            # for idx_group_in, row in enumerate(table_this_group_in.reset_index().to_dict('records')):
-            #     attributes_dataarray_in = dict(row)
-            #     attributes_dataarray_in = {key:attributes_dataarray_in[key] for key in attributes_dataarray_in.keys() if key not in [ 'path', 'available', 'linked', 'path_pickle']}
-
-            #     attributes_dataarrays_in.append(attributes_dataarray_in)
-
             for idx_group_out, row in enumerate(table_this_group_out.to_dict('records')):
-                attributes_dataarrays_in_for_out.append({})
+                attributes_dataarrays_out.append({})
 
                 logging.info('start determining attributes of output files')
 
-                if table_this_group_in.index.names[0] is None:  # trivial case where no group_in selection is made
-                    attributes_in = \
-                        dict(zip(table_this_group_in.columns,
-                                 table_this_group_in.iloc[min(ifile, len(table_this_group_in) - 1)]))
+                if inherit_attributes:
+                    if table_this_group_in.index.names[0] is None:  # trivial case where no group_in selection is made
+                        attributes_in = \
+                            dict(zip(table_this_group_in.columns,
+                                     table_this_group_in.iloc[min(ifile, len(dataarrays_group_in) - 1)]))
 
-                else:
-                    attributes_in = \
-                        {
-                            **dict(zip(table_this_group_in.index.names,
-                                       table_this_group_in.iloc[min(ifile, len(table_this_group_in) - 1)].name)),
-                            **dict(zip(table_this_group_in.columns,
-                                       table_this_group_in.iloc[min(ifile, len(table_this_group_in) - 1)]))
-                        }
+                    else:
+                        attributes_in = \
+                            {
+                                **dict(zip(table_this_group_in.index.names,
+                                           table_this_group_in.iloc[min(ifile, len(dataarrays_group_in) - 1)].name)),
+                                **dict(zip(table_this_group_in.columns,
+                                           table_this_group_in.iloc[min(ifile, len(dataarrays_group_in) - 1)]))
+                            }
 
-                for key, value in attributes_in.items():
-
-                    if (key not in attributes_dataarrays_in_for_out[ifile]) and \
-                            (not ((inherit_attributes == False) or (   (type(inherit_attributes) == list)    and  (    key not in inherit_attributes)))) and \
-                            (key not in ['absolute_path_as_cache', 'absolute_path_for_reading', 'absolute_path',
-                                         'path','available','path_pickle']):
-                        attributes_dataarrays_in_for_out[ifile][key] = value
-
-                attributes_dataarrays_out.append({})
-                for key in row.keys():
-                    attributes_dataarrays_out[ifile][key] = row[key]
-
-
+                    for key, value in attributes_in.items():
+                        if (key not in attributes_dataarrays_out[ifile]) and \
+                                ((inherit_attributes == True) or (key in inherit_attributes)) and \
+                                (key not in ['absolute_path_as_cache', 'absolute_path_for_reading', 'absolute_path',
+                                             'path','available']):
+                            attributes_dataarrays_out[ifile][key] = value
 
                 # !!
                 for key in lib_dataarrays.index.names:
                     if key in table_this_group_out.columns:
                         attributes_dataarrays_out[ifile][key] = row[key]
                     elif key in table_this_group_in.index.names:
-                        attributes_dataarrays_in_for_out[ifile][key] = \
-                            table_this_group_in.iloc[min(ifile, len(table_this_group_in) - 1)].name[
+                        attributes_dataarrays_out[ifile][key] = \
+                            table_this_group_in.iloc[min(ifile, len(dataarrays_group_in) - 1)].name[
                                 table_this_group_in.index.names.index(key)]
                     else:
-                        attributes_dataarrays_in_for_out[ifile][key] = \
-                            table_this_group_in.iloc[min(ifile, len(table_this_group_in) - 1)][key]
+                        attributes_dataarrays_out[ifile][key] = \
+                            table_this_group_in.iloc[min(ifile, len(dataarrays_group_in) - 1)][key]
+                for key in row.keys():
+                    attributes_dataarrays_out[ifile][key] = row[key]
 
                     # for key in self.lib_dataarrays.columns:
                     #     if key == 'provider':
@@ -299,7 +288,7 @@ def apply_func_wrapper(
 
                     attributes_space_dict_out = {}
                     if attributes_dataarrays_out[ifile]['space'] is not None:
-                        for space_part in attributes_dataarrays_in_for_out[ifile]['space'].split('_'):
+                        for space_part in attributes_dataarrays_out[ifile]['space'].split('_'):
                             if ':' not in space_part:
                                 space_key,space_value = space_part, None
                             else:
@@ -311,7 +300,7 @@ def apply_func_wrapper(
                     space_coordinates = list(output_dims.keys())
                     for key in lib_dataarrays.index.names:
                         if key in space_coordinates:
-                            space_coordinates.remove(key)
+                            space_coordinates.remove_old(key)
 
                     for coordinate in space_coordinates:
                         spacing_temp = (output_dims[coordinate][1] - output_dims[coordinate][0])
@@ -330,117 +319,46 @@ def apply_func_wrapper(
                         else:
                             dict_index_space.append(key+':'+str(value))
 
-                    attributes_dataarrays_in_for_out[ifile]['space'] = '_'.join(dict_index_space)
+                    attributes_dataarrays_out[ifile]['space'] = '_'.join(dict_index_space)
 
                         # DataArray.attrs['space'] = dict_index_space
-
-                attributes_dataarrays_all = []
-                for iattrs,attrs_dataarray_in_for_out in enumerate(attributes_dataarrays_in_for_out):
-                    attributes_dataarrays_all.append(attrs_dataarray_in_for_out.copy())
-                    for key,value in attributes_dataarrays_out[iattrs].items():
-                        attributes_dataarrays_all[iattrs][key] = value
 
                 index_keys = ['variable','source','time','space']
                 index_out = []
                 for key in index_keys:
-                    index_out.append(attributes_dataarrays_all[ifile][key])
+                    index_out.append(attributes_dataarrays_out[ifile][key])
 
                 logging.info('end determining attributes of output files')
 
                 logging.info('check current intended array is already available in the output')
-                dataarrays_out_already_available.append(
-                        (len(archive_out.lib_dataarrays) > 0) and
-                        (tuple(index_out) in archive_out.lib_dataarrays.index)
-                )
+                dataarrays_out_already_available.append(tuple(index_out) in archive_out.lib_dataarrays.index)
 
                 logging.info('Start determining output filenames')
                 if mode in ['numpy_output_to_disk_in_chunks', 'numpy_output_to_disk_no_chunks']:
                     if (archive_out.file_pattern is None):
                         raise ValueError("I don't know how to write the data file to disk. Please set to file_pattern")
 
-                    # filename_out = os.path.dirname(archive_out.path_pickle) + '/' + ''.join(np.array(list(
-                    #     zip(archive_out.file_pattern.split('"')[::2],
-                    #         [attributes_dataarrays_out[ifile][key] for key in archive_out.file_pattern.split('"')[1::2]] + [
-                    #             '']))).ravel())
-
-                    filename_out_pattern = os.path.dirname(archive_out.path_pickle)+'/'+archive_out.file_pattern
-                    filenames_out_pattern.append(filename_out_pattern)
+                    filename_out = os.path.dirname(archive_out.path_pickle) + '/' + ''.join(np.array(list(
+                        zip(archive_out.file_pattern.split('"')[::2],
+                            [attributes_dataarrays_out[ifile][key] for key in archive_out.file_pattern.split('"')[1::2]] + [
+                                '']))).ravel())
+                    # index_out =
+                    # if archive_out.lib_dataarrays.index[df['absolute_path'] == filename].tolist() == index_out
+                    if (filename_out in archive_out.lib_dataarrays.absolute_path.unique()) and (not dataarrays_out_already_available[ifile]):
+                        raise ValueError(
+                            'filename ' + filename_out + ' already exists and not already managed/within the output archive. Consider revising the output file_pattern.')
+                    filenames_out.append(filename_out)
 
                 ifile += 1
                 logging.info('End determining output filenames')
             logging.info('check whether any array is available in the output. If yes, then do not calculate.')
             all_dataarrays_out_already_available = np.prod(dataarrays_out_already_available)
-            some_dataarrays_out_already_available = (np.sum(dataarrays_out_already_available) > 0)
-
             if all_dataarrays_out_already_available and not force_recalculate:
                 logging.info('All output data is already available in the output archive and force_recalculate is switched False. Skipping group "'+str(idx)+'"')
             else:
 
-                dataarrays_group_in = []
-                dataarrays_group_in_cached = []
-
-                for idx_group_in, row in table_this_group_in.iterrows():
-                    if table_this_group_in.index.names[0] is None:  # trivial case where no group_in selection is made
-                        index_dataarray = [dict(zip(table_this_group_in.columns, row))[key] for key in
-                                           lib_dataarrays.index.names]
-                    else:
-                        index_dataarray = [{**dict(zip(table_this_group_in.index.names, idx_group_in)),
-                                            **dict(zip(table_this_group_in.columns, row))}[key] for key in
-                                           lib_dataarrays.index.names]
-
-                    row_of_dataarray = lib_dataarrays.loc[tuple(index_dataarray)]
-
-
-                    logging.debug('opening dataarray for: '+str(row_of_dataarray))
-                    if tuple(index_dataarray) in dataarrays.keys():
-                        dataarrays_group_in.append(dataarrays[tuple(index_dataarray)])
-                    else:
-                        filename = os.path.dirname(row_of_dataarray.path_pickle) + '/' + row_of_dataarray.path
-                        # import pdb; pdb.set_trace()
-
-                        # import netCDF4 as nc4
-                        # ds = nc4.Dataset(filename)
-                        # var = ds.variables['bar']
-                        # print('complevel: %s', var.filters().get('complevel', False))
-
-
-                        #if ("nc_compressed" in row_of_dataarray) and (row_of_dataarray["nc_compressed"] == 'True'):
-                        if input_cache_to_ram == True:
-                            filename_work = tempfile.mktemp(suffix='.nc',dir='/tmp/')
-                            #os.system('ncks -L 0 '+filename+' '+filename_work)
-                            os.system('cp '+filename+' '+filename_work)
-                            #from nc_reduce import restore
-                            #restore(filename, filename_work)
-                            
-                            cached = filename_work
-                        else:
-                            filename_work = filename
-                            cached = False
-
-                        try:
-                            dataarrays_group_in.append( xr.open_dataarray(filename_work, engine=engine))
-                        except:
-                            try:
-                                dataarrays_group_in.append( xr.open_dataarray(filename_work))
-                            except:
-                                try:
-                                    dataarrays_group_in.append(xr.open_dataset(filename_work, engine=engine)[row_of_dataarray.ncvariable])
-                                except:
-                                    dataarrays_group_in.append(xr.open_dataset(filename_work)[row_of_dataarray.ncvariable])
-                        dataarrays_group_in_cached.append(cached)
-
-                    attributes_from_table = {**dict(zip(['variable','source','time','space'],index_dataarray,)),**dict(row)}
-
-                    logging.debug('linked dataarray detected. Overriding xarray attributes with the those supplemented in the pandas table')
-                    for key in attributes_from_table.keys():
-                        if key not in ['path','available','linked','ncvariable','path_pickle','linked','nc_reduced','nc_compresed']:
-                            dataarrays_group_in[-1].attrs[key] = attributes_from_table[key]
-
-
-                if force_recalculate and some_dataarrays_out_already_available:
-                    logging.info('some output dataarrays were available but force_recalulate is set True, so I force recaculation'
-                                 'and overwrite output files')
-                    kwargs['overwrite_output_filenames'] = True
+                if force_recalculate and all_dataarrays_out_already_available:
+                    logging.info('all output dataarrays were available but force_recalulate is set True, so I force recaculation')
 
                 if mode == 'xarray':
                     print('making a temporary dataarray copy to prevent data hanging around into memory afterwards')
@@ -463,14 +381,9 @@ def apply_func_wrapper(
                 elif mode in ['numpy_output_to_disk_in_chunks', 'numpy_output_to_disk_no_chunks']:
                     logging.info('starting apply_func')
                     if mode == 'numpy_output_to_disk_in_chunks':
-
-                        filenames_out = xarray_function_wrapper(func, dataarrays_wrapper(*tuple(dataarrays_group_in)),
-                                xarrays_output_filenames=filenames_out_pattern,
-                                attributes_dataarrays_in_for_out=attributes_dataarrays_in_for_out,  #inherit of attributes of the input files to the output files 
-                                attributes_dataarrays_out=attributes_dataarrays_out, # attribute dataarrays that should override whatever happens by the apply_func
-                                return_type='paths',
-                                delay=delay,
-                                nc_reduce=nc_reduce,**kwargs)
+                        xarray_function_wrapper(func, dataarrays_wrapper(*tuple(dataarrays_group_in)),
+                                                filenames_out=filenames_out, attributes=attributes_dataarrays_out, release=True,
+                                                initialize_array=initialize_array, copy_coordinates=copy_coordinates, **kwargs)
                     elif mode == 'numpy_output_to_disk_no_chunks':
                         temp_dataarrays = xarray_function_wrapper(func, dataarrays_wrapper(*tuple(dataarrays_group_in)),
                                                                   **kwargs)
@@ -497,7 +410,7 @@ def apply_func_wrapper(
                             for idataarray in range(len(temp_dataarrays)):
                                 for key, value in attributes_dataarrays_out[idataarray].items():
                                     if key not in ['variable', 'absolute_path_for_reading', 'absolute_path_as_cache',
-                                                   'absolute_path', 'path','path_pickle']:
+                                                   'absolute_path', 'path']:
                                         temp_dataarrays[idataarray].attrs[key] = value
                                     if key == 'variable':
                                         temp_dataarrays[idataarray].name = value
@@ -514,58 +427,30 @@ def apply_func_wrapper(
 
                     for ixr_out, filename_out in enumerate(filenames_out):
                         logging.info('add_dataarray start')
-
-                        archive_out.add_dataarray(filename_out,method='add')
+                        archive_out.add_dataarray_old(filename_out)
                         logging.info('add_dataarray end')
                 else:
                     ValueError('mode ' + mode + ' not implemented')
                 for idataarray in reversed(range(len(dataarrays_group_in))):
                     dataarrays_group_in[idataarray].close()
                     del dataarrays_group_in[idataarray]
-                for dataarray_cached in dataarrays_group_in_cached:
-                    if dataarray_cached != False: 
-                        os.system('rm '+dataarray_cached)
 
-                # if update_pickle:
-                #     logging.info('update archive_out start')
-                #     archive_out.update(force_overwrite_pickle =True)
-                #     logging.info('update archive_out end')
+                if update_pickle:
+                    logging.info('update archive_out start')
+                    archive_out.update(force_overwrite_pickle =True)
+                    logging.info('update archive_out end')
 
 
 class collection (object):
     def __init__(self,archives,*args,**kwargs):
         self.archives =  archives
 
-    def get_path(self,index):
-        path = os.path.dirname(self.get_lib_dataarrays().loc[tuple(index)].path_pickle) + '/' + self.get_lib_dataarrays().loc[tuple(index)].path
-        return path
-
-    def get_dataarray(self,index,engine=None):
-        path = self.get_path(index)
-        try:
-            xropen = xr.open_dataarray(path,engine=engine)
-        except:
-            xropen = xr.open_dataset(path,engine=engine)[self.get_lib_dataarrays().loc[tuple(index)].ncvariable]
-        if ('linked' in self.get_lib_dataarrays().columns) and (self.get_lib_dataarrays().loc[tuple(index)].linked == True):
-            logging.debug('linked dataarray detected. Overriding xarray attributes with the those supplemented in the pandas table')
-            for key in self.get_lib_dataarrays().loc[tuple(index)].keys():
-                if key not in ['path','available','linked','ncvariable','path_pickle','linked']:
-                    xropen.attrs[key] = self.get_lib_dataarrays().loc[tuple(index)][key]
-
-
-        return xropen
-
-    def get_lib_dataarrays(self,with_full_paths = False):
+    def get_lib_dataarrays(self):
         logging.info('Build common library from collection of archives')
         if len(self.archives) > 0:
             lib_dataarrays = pd.concat([archive.lib_dataarrays for archive in self.archives]).sort_index()
         else:
             lib_dataarrays = pd.DataFrame()
-
-
-        if with_full_paths == True:
-            lib_dataarrays['path_full'] = lib_dataarrays.apply(lambda row: ('/'.join(row['path_pickle'].split('/')[:-1])+'/'+row['path']),axis=1).values
-
         return lib_dataarrays
 
     def get_dataarrays(self):
@@ -576,31 +461,23 @@ class collection (object):
         logging.info('end build common dataarray pool from collection of archives')
         return dataarrays
 
-
-    
-
     def apply_func(
             self,
             func,
             archive_out = None,
             add_archive_out_to_collection=False,
             update_pickle=True,
-            file_pattern=None,
-            nc_reduce=False,
-            transpose_inner = True,
             **kwargs
     ):
 
         if type(archive_out) is str:
-            if file_pattern != None:
-                archive_out = archive(archive_out,file_pattern=file_pattern)
-            else:
-                archive_out = archive(archive_out)
+            archive_out = archive(archive_out)
             write_mode = 'create_new_archive'
         elif archive_out is not None: # type is considered an archive object
             write_mode = 'add_to_external_archive'
         else:
             write_mode = 'add_to_current_archive'
+
 
         lib_dataarrays = self.get_lib_dataarrays()
         dataarrays = self.get_dataarrays()
@@ -610,8 +487,6 @@ class collection (object):
             dataarrays = dataarrays,
             archive_out=archive_out,
             update_pickle=update_pickle,
-            nc_reduce=nc_reduce,
-            transpose_inner=transpose_inner,
             **kwargs
         )
 
@@ -623,45 +498,11 @@ class collection (object):
 
 
 class archive (object):
-    def get_dataarray(self,index,engine=None):
-        path = self.get_path(index)
-        try:
-            xropen = xr.open_dataarray(path,engine=engine)
-            dataarrays_group_in.append( xr.open_dataarray(filename, engine=engine))
-        except:
-            xropen = xr.open_dataset(path,engine=engine)[self.lib_dataarrays.loc[tuple(index)].ncvariable]
-        if ('linked' in self.lib_dataarrays.columns) and (self.lib_dataarrays.loc[tuple(index)].linked == True):
-            logging.debug('linked dataarray detected. Overriding xarray attributes with the those supplemented in the pandas table')
-            for key in self.lib_dataarrays.loc[tuple(index)].keys():
-                if key not in ['path','available','linked','ncvariable','path_pickle','linked']:
-                    xropen.attrs[key] = self.lib_dataarrays.loc[tuple(index)][key]
-
-
-        return xropen
-
-    def remove_orphans(self):
-        read_lib_dataarrays = self.lib_dataarrays.copy()
-        for idx,row in read_lib_dataarrays.iterrows():
-            orphan = os.path.isfile(self.get_path(idx)) == False
-            if orphan:
-                logging.warning(str(idx)+' ("'+self.get_path(idx)+'") does not exist. Removing from library file')
-                logging.warning('please test and check this procedure!')
-        #self.remove(query = "available == False",dataarrays=False,reset_lib=True)
-                self.lib_dataarrays = self.lib_dataarrays.drop(idx)
-        self.update(force_overwrite_pickle =True)
-
-
-    def get_path(self,index):
-        path = os.path.dirname(self.lib_dataarrays.loc[tuple(index)].path_pickle) + '/' + self.lib_dataarrays.loc[tuple(index)].path
-        return path
-
     def __init__(
             self,
             path_pickle=None,
             file_pattern='"variable"_"source"_"time"_"space".nc',
             reset = False,
-            debug = False,
-            query_dict = None,
             *args,
             **kwargs):
 
@@ -672,52 +513,24 @@ class archive (object):
             self.__dict__['set_'+key] = lambda value: self.__setattr__(key,value)
         print('Loading default settings')
         self.file_pattern = file_pattern
-        self.not_dataarray_attributes = ['ncvariable', 'path','path_pickle','linked','available','linked' ]
+        self.not_dataarray_attributes = ['ncvariable', 'path']
 
         self.dataarrays = {}
-        self.coordinates = {}
-
+        #self.coordinates = {}
 
         if os.path.isfile(path_pickle):
-            self.lib_dataarrays = pd.read_pickle(path_pickle)
-            self.set_path_pickle(path_pickle)
+            if reset == True:
+                self.remove(reset_lib=True)
+                os.system('rm '+path_pickle)
+                self.lib_dataarrays = pd.DataFrame(
+                    index=empty_multiindex(
+                        ['variable', 'source', 'time', 'space']
+                    ),
+                    columns=['path', 'available']).iloc[1:]
+            else:
+                self.lib_dataarrays = pd.read_pickle(path_pickle)
 
-            if query_dict is not None:
-
-                def dict_query(df1,method='match',**filter_v):
-                    index_names = df1.index.names
-                    df1_reset = df1.reset_index()
-                    filter_v_reduced = {key: value for key,value in filter_v.items() if key in df1_reset.columns}
-
-                    if method == 'match':
-                        return df1_reset.loc[(df1_reset[list(filter_v_reduced)] == pd.Series(filter_v_reduced)).all(axis=1)].set_index(index_names)
-                    elif method == 'isin':
-
-                        query = ' & '.join([key+'.isin('+str(value.split(','))+')' for key,value in filter_v_reduced.items()])
-                        if query != '' :
-                            return df1_reset.query(query,engine='python').set_index(index_names),filter_v_reduced
-                        else: 
-                            return df1_reset.set_index(index_names),filter_v_reduced
-
-                self.lib_dataarrays = dict_query(self.lib_dataarrays,method='isin',**query_dict)[0]
-
-
-
-
-
-        if reset == True:
-            self.remove(reset_lib=True)
-            os.system('rm '+path_pickle)
-
-        if not os.path.isfile(path_pickle):
-            self.lib_dataarrays = pd.DataFrame(
-                index=empty_multiindex(
-                    ['variable', 'source', 'time', 'space']
-                ),
-                columns=['path', 'available']).iloc[1:]
-            self.set_path_pickle(path_pickle)
-        if debug == True:
-            import pdb; pdb.set_trace()
+        self.set_path_pickle(path_pickle)
         # if path is not None:
         #     self.load(path,*args,**kwargs)
     def set_path_pickle(self,path_pickle):
@@ -737,38 +550,6 @@ class archive (object):
         for index,lib_dataarray in enumerate(lib_dataarays_out.to_dict('records')):
             archive_out.add_dataarray_old(self.dataarrays[index])
 
-
-
-    def nc_reduce(self,query=None,compress=True):
-
-        if query is not None:
-            read_lib_dataarrays = self.lib_dataarrays.query(query).copy()
-        else:
-            read_lib_dataarrays = self.lib_dataarrays.copy()
-        for idx,row in read_lib_dataarrays.iterrows():
-            if (('nc_reduced' not in read_lib_dataarrays) or row['nc_reduced'] != "True") or ('nc_compressed' not in read_lib_dataarrays) or row['nc_compressed'] != "True":
-                filepath_as_cache = tempfile.mktemp(suffix='.nc',dir='/tmp/')
-                CMD ='cp '+self.get_path(idx) +' '+filepath_as_cache
-                logging.info('executing: '+CMD);os.system(CMD)
-                dict_row = dict(row)
-                if 'nc_reduce' in dict_row:
-                    dict_row.pop('nc_reduce') #work around early implementation
-                logging.info('trying to reduce: '+str(idx)+' ("'+self.get_path(idx)+'")')
-
-                #compress = (nc_compress if nc_compress is not None else True)
-                reduced_temporary_file = tempfile.mktemp(suffix='.nc',dir='/tmp/')
-                nc_reduce_fn(os.path.realpath(filepath_as_cache),reduced_temporary_file,ncvariable = (dict_row['ncvariable'] if 'ncvariable' in row else None),overwrite=True,nc_reduce=(row['nc_reduced'] != "True"),nc_compress=compress)
-                CMD ='rm '+filepath_as_cache
-                logging.info('executing: '+CMD);os.system(CMD)
-
-                dict_row['nc_compressed']=str(compress)
-                dict_row['nc_reduced']='True'
-                self.add_dataarray(reduced_temporary_file,destination_file=self.get_path(idx),method='copy_force_overwrite',variable=idx[0],source=idx[1],time=idx[2],space=idx[3],**dict_row)
-                CMD ='rm '+reduced_temporary_file
-                logging.info('executing: '+CMD);os.system(CMD)
-
-
-
     def remove(self,query=None,update_pickle = True,dataarrays=True,reset_lib=False):
 
         if (not dataarrays) and reset_lib:
@@ -781,9 +562,8 @@ class archive (object):
             read_lib_dataarrays = self.lib_dataarrays.copy()
         for idx,row in read_lib_dataarrays.iterrows():
             if dataarrays == True:
-                if ('linked' not in row) or (row['linked'] == False):
-                    CMD ='rm '+os.path.dirname(os.path.realpath(row['path_pickle'])) + '/' + str(row['path'])
-                    os.system(CMD)
+                CMD ='rm '+os.path.dirname(os.path.realpath(self.path_pickle)) + '/' + row['path']
+                os.system(CMD)
                 # if 'available' not in self.lib_dataarrays.columns:
                 #     self.lib_dataarrays['available'] = ""
                 #     self.lib_dataarrays['available'] = True
@@ -793,6 +573,7 @@ class archive (object):
                     self.lib_dataarrays = self.lib_dataarrays.drop(idx)
                 else:
                     self.lib_dataarrays.loc[idx]['available'] = False
+            import pdb; pdb.set_trace()
         if update_pickle:
             self.update(force_overwrite_pickle =True)
 
@@ -823,17 +604,17 @@ class archive (object):
             self.update(force_overwrite_pickle =True)
 
     def remove_by_index(self,index,delete_on_disk=False,update_pickle=True):
-        #self.dataarrays[index].close()
-        #del self.dataarrays[index]
+        self.dataarrays[index].close()
+        del self.dataarrays[index]
         if delete_on_disk:
-            os.system('rm '+os.path.dirname(self.lib_dataarrays.loc[index].path_pickle)+'/'+self.lib_dataarrays.loc[index].path)
-        if ('absolute_path' in self.lib_dataarrays.columns) and (self.lib_dataarrays.loc[index].absolute_path_as_cache is not None):
-            print(self.lib_dataarrays.loc[index].absolute_path_as_cache)
+            os.system('rm '+self.lib_dataarrays.loc[index].absolute_path)
+        print(self.lib_dataarrays.loc[index].absolute_path_as_cache)
+        if (self.lib_dataarrays.loc[index].absolute_path_as_cache is not None):
             print(np.isnan(self.lib_dataarrays.loc[index].absolute_path_as_cache))
             print(np.isnan(self.lib_dataarrays.loc[index].absolute_path_as_cache) == True)
-            if (np.isnan(self.lib_dataarrays.loc[index].absolute_path_as_cache == False)) :
-                CMD = 'rm '+self.lib_dataarrays.loc[index].absolute_path_as_cache
-                print('removing cached file:',CMD)
+        if (self.lib_dataarrays.loc[index].absolute_path_as_cache is not None) and (np.isnan(self.lib_dataarrays.loc[index].absolute_path_as_cache == False)) :
+            CMD = 'rm '+self.lib_dataarrays.loc[index].absolute_path_as_cache
+            print('removing cached file:',CMD)
 
         self.lib_dataarrays.drop(index=index,inplace=True)
 
@@ -853,7 +634,7 @@ class archive (object):
 
     def add_from_dataset(self,Dataset_or_filepath,variables=None,**kwargs):
         if type(Dataset_or_filepath).__name__ == 'str':
-            Dataset = xr.open_dataset(Dataset_or_filepath,engine=engine)
+            Dataset = xr.open_dataset(Dataset_or_filepath)
             kwargs['absolute_path'] = os.path.abspath(Dataset_or_filepath)
             kwargs['absolute_for_reading'] = kwargs['absolute_path']
         else:
@@ -873,7 +654,6 @@ class archive (object):
     def add_dataarray(
             self,
             DataArray_or_filepath,
-            destination_file = None,
             skip_unavailable= False,
             release_dataarray_pointer=False,
             method = 'link',
@@ -881,9 +661,6 @@ class archive (object):
             reset_space=False,
             sort_lib = True,
             update_lib = True,
-            engine = None,
-            nc_reduce = False,
-            nc_compress = None,
             **kwargs,
     ):
         #DataArray = None
@@ -905,7 +682,9 @@ class archive (object):
             # variable (= DataArray.name): variable as considered in the library
             ncvariable = None # netcdf variable as seen on disk, not necessarily in the library
             if ('ncvariable' not in kwargs.keys()) or ((type(kwargs['ncvariable']).__name__ == 'float') and np.isnan(kwargs['ncvariable'])):
-                logging.info('Opening file:'+filepath_for_reading+ '(original file: '+filepath+')')
+
+
+                print('Opening file:',filepath_for_reading, '(original file: '+filepath+')')
                 if 'variable' in kwargs.keys():
                         # print('reading',filepath,ncvariable)
                     # try:
@@ -919,39 +698,22 @@ class archive (object):
                     # except:
 
                     try:
-                        ds = xr.open_dataset(filepath_for_reading,engine=engine)
+                        ds = xr.open_dataset(filepath_for_reading)
                         DataArray = ds[kwargs['variable']]
-                        parse_grid_mapping(ds,DataArray)
                         ds.close()
                         del ds
                         #kwargs['ncvariable'] = ncvariable
                     except:
-                        DataArray = xr.open_dataarray(filepath_for_reading,engine=engine)
+                        DataArray = xr.open_dataarray(filepath_for_reading)
                 else:
-                    ds = xr.open_dataset(filepath_for_reading,engine=engine)
-                    variables = list(ds.variables)
-                    for var in ['crs']+list(ds.coords):
-                         if var in variables:
-                             variables.pop(variables.index(var))
-                    if len(variables) == 1:
-                        DataArray = ds[variables[0]]
-                        parse_grid_mapping(ds,DataArray)
-                    else:
-                        import pdb; pdb.set_trace()
-                        raise ValueError('multiple dataset variables detected. It should have only one')
-                    ds.close()
-                    del ds
-                    #kwargs['ncvariable'] = ncvariable
-
-
+                    DataArray = xr.open_dataarray(filepath_for_reading)
             else:
-                ds = xr.open_dataset(filepath_for_reading,engine=engine)
+                ds = xr.open_dataset(filepath_for_reading)
                 DataArray = ds[kwargs['ncvariable']]
-                parse_grid_mapping(ds,DataArray)
                 ds.close()
                 del ds
 
-
+            dict_columns['path'] = os.path.relpath(filepath,os.path.dirname(os.path.realpath(self.path_pickle)))
             # kwargs['absolute_path'] = os.path.abspath(filepath)
             # kwargs['absolute_path_for_reading'] = os.path.abspath(filepath_for_reading)
             # kwargs['absolute_path_as_cache'] = (None if filepath_as_cache is None else os.path.abspath(filepath_as_cache))
@@ -980,7 +742,7 @@ class archive (object):
 
         if 'variable' not in dict_index.keys():
             dict_index['variable'] = dict_columns['ncvariable']
-        #TODO !!! merge this procedure with get_coordinates_attributes in apply_func.py
+
         logging.info('Creating attributes from dimension data.')
         if ('time' not in dict_index.keys()) or (dict_index['time'] is None) or (type(dict_index['time']).__name__ == 'float') and (  np.isnan(dict_index['time']).any()):
             print('Guessing time coordinate from DataArray')
@@ -1001,8 +763,7 @@ class archive (object):
                 dict_index['time'] = \
                     'daily_'+str(DataArray.time[0].values)[:10]+'_'+str(DataArray.time[-1].values)[:10]
             else:
-                dict_index['time'] = 'irregular'
-                logging.warning('Warning. No time dimension found')
+                raise ValueError('time dimension not implemented')
 
             #DataArray.attrs['time'] = dict_index['time']
 
@@ -1017,40 +778,17 @@ class archive (object):
             if key in space_coordinates:
                 space_coordinates.remove(key)
 
-
         if ('space' not in dict_index.keys()) or (dict_index['space'] is None) or reset_space:
-            space_coordinates_only = ['latitude','longitude']
             spacing = {}
             for coordinate in space_coordinates:
-                if coordinate in space_coordinates_only:
-                    spacing_temp = (DataArray[coordinate].values[1] - DataArray[coordinate].values[0])
-                    if not np.any(DataArray[coordinate][1:].values != (DataArray[coordinate].values[:-1] + spacing_temp)):
-                        spacing[coordinate] = str(DataArray[coordinate][0].values)+','+str(DataArray[coordinate][-1].values)+','+str(spacing_temp)
-                    else:
-                        spacing[coordinate] = 'irregular'
+                spacing_temp = (DataArray[coordinate].values[1] - DataArray[coordinate].values[0])
+                if not np.any(DataArray[coordinate][1:].values != (DataArray[coordinate].values[:-1] + spacing_temp)):
+                    spacing[coordinate] = str(DataArray[coordinate][0].values)+','+str(DataArray[coordinate][-1].values)+','+str(spacing_temp)
                 else:
-                    logging.warning('unknown dimension found that we will not be tracked in lib_dataarrays: ' + str(coordinate))
-
+                    spacing[coordinate] = 'irregular'
             dict_index_space = [key+':'+str(value) for key,value in spacing.items()]
             dict_index_space ='_'.join(dict_index_space)
             dict_index['space'] = dict_index_space
-
-
-            logging.debug('adding crs grid mapping definition according to grid')
-            if not (('grid_mapping' in dict_index) and (dic_index['grid_mapping'] not in [None, np.nan]) and not ((type(dict_index['grid_mapping']) in (float,np.float64)) and np.isnan(dict_index['grid_mapping']))):
-                if ('latitude' in spacing) and ('longitude' in spacing):
-                      grid_mapping_attributes = {
-                              'grid_mapping':'crs',
-                              'crs_grid_mapping_name': 'latitude_longitude',
-                              'crs_long_name': 'CRS definition',
-                              'crs_longitude_of_prime_meridian': 0.0,
-                              'crs_semi_major_axis': 6378137.0,
-                              'crs_inverse_flattening': 298.257223563,
-                              'crs_spatial_ref': 'GEOGCS["WGS 84",DATUM["WGS_1984",SPHEROID["WGS 84",6378137,298.257223563,AUTHORITY["EPSG","7030"]],AUTHORITY["EPSG","6326"]],PRIMEM["Greenwich",0],UNIT["degree",0.0174532925199433],AUTHORITY["EPSG","4326"]]',
-                              'crs_GeoTransform': spacing['longitude'].split(',')[0]+ ' '+spacing['longitude'].split(',')[2] +' '+spacing['latitude'].split(',')[0]+ ' '+spacing['latitude'].split(',')[2]
-                      }
-                      dict_index.update(grid_mapping_attributes)
-                  
             #DataArray.attrs['space'] = dict_index_space
 
         # # not sure why we need to track coordinates
@@ -1072,25 +810,23 @@ class archive (object):
 
         if method in ['copy','copy_force_overwrite']:
             logging.info('Copying xarray as netcdf file to the internal library.')
-            if destination_file == None:
-                destination_file = os.path.dirname(os.path.realpath(self.path_pickle)) + '/' + ''.join(np.array(list(
+            destination_file = os.path.dirname(os.path.realpath(self.path_pickle)) + '/' + ''.join(np.array(list(
                 zip(self.file_pattern.split('"')[::2],
                     [{**dict_index, **dict_columns}[key] for key in self.file_pattern.split('"')[1::2]] + [
                         '']))).ravel())
-            # if index in self.lib_dataarrays.index:
-            #     if (method == 'copy_force_overwrite'):
-            #         # if (self.lib_dataarrays.loc[index].path is not None) and \
-            #         # (os.path.realpath(destination_file) == os.path.realpath(self.lib_dataarrays.loc[index].path):
-            #         if (self.lib_dataarrays.loc[index].path is not None):
-            #             filename = os.path.realpath(os.path.dirname(self.path_pickle)) + '/' + self.lib_dataarrays.loc[ index].path
-            #             logging.warning('overwriting existing index ' + str(index) + ': ' + filename)
-            #             if os.path.isfile(filename):
-            #                 os.remove(filename)
-            #             else:
-            #                 logging.warning("I could not track previous file in library. So I'm not deleting")
-            #         self.lib_dataarrays.loc[index]  = None
-            #     else:
-            #         raise IOError('index '+index+' already exists in library. Aborting. Please use copy_force_overwrite to override.')
+            if index in self.lib_dataarrays.index:
+                if (method == 'copy_force_overwrite'):
+                    logging.warning('overwriting existing index '+str(index))
+                    # if (self.lib_dataarrays.loc[index].path is not None) and \
+                    # (os.path.realpath(destination_file) == os.path.realpath(self.lib_dataarrays.loc[index].path):
+                    if (self.lib_dataarrays.loc[index].path is not None):
+                        if os.path.isfile(self.lib_dataarrays.loc[index].path):
+                            os.remove(self.lib_dataarrays.loc[index].path)
+                        else:
+                            logging.warning("I could not track previous file in library. So I'm not deleting")
+                    self.lib_dataarrays.loc[index]  = None
+                else:
+                    raise IOError('index '+index+' already exists in library. Aborting. Please use copy_force_overwrite to override.')
 
             if os.path.isfile(destination_file):
                 if (method == 'copy_force_overwrite'):
@@ -1099,32 +835,16 @@ class archive (object):
                     raise IOError('Intended destination filename '+destination_file+' already exists')
             if not os.path.isdir(os.path.dirname(destination_file)):
                 os.makedirs(os.path.dirname(destination_file))
-            if filepath is not None:
-                original_file = filepath #os.path.dirname(os.path.realpath(self.path_pickle))+'/'+filedict_columns['path']
+            if dict_columns['path'] is not None:
+                original_file = os.path.dirname(os.path.realpath(self.path_pickle))+'/'+dict_columns['path']
                 if os.path.realpath(original_file) == os.path.realpath(destination_file):
                     raise IOError('Cannot make a copy of the dataarray file, because the original and destination path are the same ('+original_file+'). Please use method=link file instead.')
 
-                if (nc_reduce == True) and (('nc_reduced' not in dict_columns) or (dict_columns['nc_reduced'] != "True")):
-                    reduced_temporary_file = tempfile.mktemp(suffix='.nc',dir='/tmp/')
-                    logging.info('nc_reducing file: to '+reduced_temporary_file)
-                    #try:
-                    nc_reduce_fn(os.path.realpath(original_file),reduced_temporary_file,ncvariable = (kwargs['ncvariable'] if 'ncvariable' in kwargs else None),overwrite=True,nc_compress=nc_compress)
-                    CMD = 'mv '+reduced_temporary_file+ ' '+destination_file
-                    logging.info('executing: '+CMD); os.system(CMD)
-                    dict_columns['nc_reduced'] = "True"
-                    dict_columns['nc_compressed'] = str(nc_compress)
-                    # except:
-                    #     logging.critical('nc_reduce failed. removing temporary file. So we just keep the original file without reducing.')
-                    #     os.system('rm '+reduced_temporary_file)
-                #         
-                else:
-                    CMD = 'cp '+original_file+ ' '+destination_file
-                    logging.info('Executing: ' + CMD); os.system(CMD)
+                CMD = 'cp '+original_file+ ' '+destination_file
+                logging.info('Executing: ' + CMD); os.system(CMD)
             else:
                 DataArray.to_netcdf(destination_file)
-            dict_columns['path'] = os.path.relpath(os.path.realpath(destination_file),os.path.dirname(os.path.realpath(self.path_pickle)))
-
-            DataArray.close()
+            dict_columns['path'] = os.path.relpath(destination_file,os.path.dirname(os.path.realpath(self.path_pickle)))
 
             logging.info('We are copying, so attributes are updated to the new netcdf file.')
             ncfile = nc4.Dataset(os.path.dirname(os.path.realpath(self.path_pickle))+'/'+dict_columns['path'],'a')
@@ -1133,43 +853,16 @@ class archive (object):
             else:
                 ncvar = ncfile['__xarray_dataarray_variable__']
 
-            if 'grid_mapping' in dict_columns:
-                grid_mapping_type = dict_columns['grid_mapping']
-                if grid_mapping_type not in ncfile.variables:
-                    ncfile.createVariable(grid_mapping_type,'S1')
-                    logging.info('creating '+grid_mapping_type+' dummy char variable for storing grid_mapping attributes, which seems to be the format behaviour by, eg., qgis')
-
-
             for key,value in {**dict_index, **dict_columns}.items():
 
-                if key not in ['ncvariable','path','path_pickle','linked','nc_reduced','absolute_path_as_cache']:# we also exclude linked and nc_reduced, because they are booleans and they give errors
-
-                    if ('grid_mapping' in dict_columns) and key.startswith(grid_mapping_type+'_'):
-                        logging.info('write '+grid_mapping_type+' attribute '+key+': '+str(value)+' in separate dummy char variable, which seems to be the format behaviour by eg., qgis')
-                        ncfile.variables[grid_mapping_type].setncattr(key[(len(grid_mapping_type)+1):],value)
-
-                    else:
-
-                        logging.info('setting attribute '+key+' to '+str(value))
-                        try:
-                            ncvar.setncattr(key, value)
-                        except:
-                            ncvar.setncattr(key, str(value))
+                if key not in ['ncvariable','path']:
+                    try:
+                        logging.info('setting attribute '+key+' to '+value)
+                    except:
+                        import pdb; pdb.set_trace()
+                    ncvar.setncattr(key,value)
 
             ncfile.close()
-            if 'ncvariable' in dict_columns.keys():
-                DataArray =xr.open_dataset(os.path.dirname(os.path.realpath(self.path_pickle))+'/'+dict_columns['path'])[dict_columns['ncvariable']]
-            else:
-                DataArray = xr.open_dataarray(os.path.dirname(os.path.realpath(self.path_pickle)) + '/' + dict_columns['path'])
-            dict_columns['linked'] = False
-        elif method == 'add':
-            dict_columns['linked'] = False
-            dict_columns['path'] = os.path.relpath(os.path.realpath(filepath),os.path.dirname(os.path.realpath(self.path_pickle)))
-        elif method == 'link':
-            dict_columns['linked'] = True
-            dict_columns['path'] = os.path.relpath(os.path.realpath(filepath),os.path.dirname(os.path.realpath(self.path_pickle)))
-        else:
-            raise ValueError('Add_dataarray method "{method}" not implemented.')
 
         if 'path' in dict_columns.keys():
             DataArray.close()
@@ -1186,21 +879,13 @@ class archive (object):
                 self.lib_dataarrays.loc[index] = None
                 logging.debug('workaround index_names are forgotten when assigning first row')
                 self.lib_dataarrays.index.names = lib_dataarrays_index_names
-            self.lib_dataarrays.at[index,key] = value
+            self.lib_dataarrays[key].loc[index] = value
 
         if sort_lib == True:
             self.lib_dataarrays.sort_index(inplace=True)
 
         if update_lib == True:
-            # we don't write pickle location since this we enforce relative file structure. the column is only to work
-            # with collection of archives.
-            self.lib_dataarrays.drop(columns='path_pickle').to_pickle(self.path_pickle)
-
-
-        logging.info('writing  path_pickle on a row basis. This is required to be able to work with collections of archives')
-        self.lib_dataarrays.loc[index,'path_pickle'] = self.path_pickle
-
-        return self.lib_dataarrays.loc[index]
+            self.lib_dataarrays.to_pickle(self.path_pickle)
 
     def add_dataarray_old(
             self,
@@ -1210,7 +895,6 @@ class archive (object):
             cache_to_tempdir=False,
             cache_to_ram=False,
             reset_space=False,
-            engine=None,
             **kwargs,
     ):
         #DataArray = None
@@ -1224,7 +908,7 @@ class archive (object):
                 filepath_as_cache = tempfile.mktemp(prefix=os.path.basename(filepath)[:-3]+'_',suffix='.nc',dir=cache_to_tempdir)
                 CMD='cp '+filepath+' '+filepath_as_cache
 
-                logging.info('caching to temporary file: '+CMD)
+                print('caching to temporary file: ',CMD)
                 os.system(CMD)
                 filepath_for_reading = filepath_as_cache
             else:
@@ -1232,16 +916,17 @@ class archive (object):
                 filepath_for_reading = filepath
                 if cache_to_ram:
                     CMD='cat '+filepath_for_reading+' > /dev/null'
-                    logging.info('caching to ram: '+CMD)
+                    print('caching to ram:',CMD)
                     os.system(CMD)
 
             # ncvariable: variable as seen on disk
             # variable (= DataArray.name): variable as considered in the library
+            ncvariable = None # netcdf variable as seen on disk, not necessarily in the library
             if ('ncvariable' not in kwargs.keys()) or ((type(kwargs['ncvariable']).__name__ == 'float') and np.isnan(kwargs['ncvariable'])):
                 if 'variable' in kwargs.keys():
                     ncvariable = kwargs['variable']
 
-                logging.info('Opening file: '+filepath_for_reading+ ' (original file: '+filepath+')')
+                print('Opening file:',filepath_for_reading, '(original file: '+filepath+')')
                 if ncvariable is not None:
                     # print('reading',filepath,ncvariable)
                     # try:
@@ -1255,18 +940,18 @@ class archive (object):
                     # except:
                     try:
 
-                        ds = xr.open_dataset(filepath_for_reading,engine=engine)
+                        ds = xr.open_dataset(filepath_for_reading)
                         DataArray = ds[ncvariable]
                         ds.close()
                         del ds
                         #kwargs['ncvariable'] = ncvariable
                     except:
-                        DataArray = xr.open_dataarray(filepath_for_reading,engine=engine)
+                        DataArray = xr.open_dataarray(filepath_for_reading)
                 else:
-                    DataArray = xr.open_dataarray(filepath_for_reading,engine=engine)
+                    DataArray = xr.open_dataarray(filepath_for_reading)
                 kwargs['ncvariable'] = DataArray.name
             else:
-                ds = xr.open_dataset(filepath_for_reading,engine=engine)
+                ds = xr.open_dataset(filepath_for_reading)
                 DataArray = ds[kwargs['ncvariable']]
                 ds.close()
                 del ds
@@ -1323,7 +1008,7 @@ class archive (object):
                 else:
                     dict_columns[key] = kwargs[key]
             if ('time' not in dict_index.keys()) or (dict_index['time'] is None) or (type(dict_index['time']).__name__ == 'float') and (  np.isnan(dict_index['time']).any()):
-                logging.info('Guessing time coordinate from DataArray')
+                print('Guessing time coordinate from DataArray')
                 # is month type
 
                 #monthly spacing
@@ -1353,21 +1038,17 @@ class archive (object):
             # filter coordinates that are listed in the library index (these are not treated under space but separately, eg., 'time').
             space_coordinates = list(DataArray.dims)
             for key in self.lib_dataarrays.index.names:
-                if key in list(DataArray.dims):
-                    space_coordinates.remove(key)
-            space_coordinates_only = ['latitude','longitude']
+                if key in space_coordinates:
+                    space_coordinates.remove_old(key)
 
             if ('space' not in dict_index.keys()) or (dict_index['space'] is None) or reset_space:
                 spacing = {}
                 for coordinate in space_coordinates:
-                    if coordinate in space_coordinates_only:
-                        spacing_temp = (DataArray[coordinate].values[1] - DataArray[coordinate].values[0])
-                        if not np.any(DataArray[coordinate][1:].values != (DataArray[coordinate].values[:-1] + spacing_temp)):
-                            spacing[coordinate] = str(DataArray[coordinate][0].values)+','+str(DataArray[coordinate][-1].values)+','+str(spacing_temp)
-                        else:
-                            spacing[coordinate] = 'irregular'
+                    spacing_temp = (DataArray[coordinate].values[1] - DataArray[coordinate].values[0])
+                    if not np.any(DataArray[coordinate][1:].values != (DataArray[coordinate].values[:-1] + spacing_temp)):
+                        spacing[coordinate] = str(DataArray[coordinate][0].values)+','+str(DataArray[coordinate][-1].values)+','+str(spacing_temp)
                     else:
-                        logging.warning('unknown dimension found that we will not be tracked in lib_dataarrays: '+str(coordinate))
+                        spacing[coordinate] = 'irregular'
                 dict_index_space = [key+':'+str(value) for key,value in spacing.items()]
                 dict_index_space ='_'.join(dict_index_space)
                 dict_index['space'] = dict_index_space
@@ -1434,11 +1115,11 @@ class archive (object):
             self.lib_dataarrays.sort_index(inplace=True)
 
             if release_dataarray_pointer:
-                logging.info('closing '+str(index))
+                print('closing',index)
                 self.dataarrays[index].close()
                 if cache_to_tempdir:
                     CMD='rm '+filepath_as_cache
-                    logging.info('Released pointer, so removing cached file: '+CMD)
+                    print('Released pointer, so removing cached file: ',CMD)
                     os.system(CMD)
                 # del self.dataarrays[index]
                 #self.lib_dataarrays.loc[index,'dataarray_pointer'] = None
@@ -1506,7 +1187,7 @@ class archive (object):
             apply_merge_out_df = pd.DataFrame.from_dict([dict(zip(apply_merge_out.keys(),v)) for v in itertools.product(*apply_merge_out.values())])
 
         if len(apply_merge_out_df) == 0:
-            logging.info('creating automatic single output table')
+            print('creating automatic single output table')
             apply_merge_out_dict = {}
             for column in apply_merge_df.columns:
                 apply_merge_out_dict[column] = ['from__'+'__'.join(apply_merge_df[column].unique())]
@@ -1562,7 +1243,7 @@ class archive (object):
                       index_array_tuple_ordered =  tuple([index_array_dict[key] for key in self.lib_dataarrays.index.names])
 
                       if (self.mode == 'passive') and (not self.lib_dataarrays.loc[index]['absolute_path'].isnull().any() ):
-                          logging.critical('to be implemented')
+                          print('to be implemented')
                           import pdb; pdb.set_trace()
                       else:
                           dataarrays_for_func.append(self.dataarrays[index_array_tuple_ordered])
@@ -1646,6 +1327,7 @@ class archive (object):
 #             # not_all_arrays_available_in_this_group = group_columns.loc[apply_merge_out_index][groupby].isnull().any().any()
 #             #       dataarrays_for_func = []
 #
+#             import pdb;pdb.set_trace()
 #             for index_group,columns in group_columns_out.loc[apply_merge_out_index].iterrows():
 #                 index_array_dict =   {**dict(columns),**dict(zip(apply_merge_out_index.names,index_group))}#**dict(zip(apply_merge_index.names,index_group))} **dict(zip(groupby,index)),
 #                 index_array_tuple_ordered =  tuple([index_array_dict[key] for key in self.lib_dataarrays.index.names])
@@ -1742,8 +1424,6 @@ class archive (object):
             archive_out = None,
             update_pickle = True,
             force_recalculate=False,
-            nc_reduce=False,
-            transpose_inner=True,
             *args,
             **kwargs):
         #apply_groups_in = {'variable':['aridity'],'source':[None]}
@@ -1779,7 +1459,6 @@ class archive (object):
             archive_out = archive_out,
             update_pickle=update_pickle,
             force_recalculate=force_recalculate,
-            nc_reduce = nc_reduce,
             **kwargs,
         )
 
@@ -1815,7 +1494,7 @@ class archive (object):
             apply_merge_out_df = pd.DataFrame.from_dict([dict(zip(apply_merge_out.keys(),v)) for v in itertools.product(*apply_merge_out.values())])
 
         if len(apply_merge_out_df) == 0:
-            logging.info('creating automatic single output table')
+            print('creating automatic single output table')
             apply_merge_out_dict = {}
             for column in apply_merge_df.columns:
                 apply_merge_out_dict[column] = ['from__'+'__'.join(apply_merge_df[column].unique())]
@@ -1868,7 +1547,7 @@ class archive (object):
                       index_array_tuple_ordered =  tuple([index_array_dict[key] for key in self.lib_dataarrays.index.names])
 
                       if (self.mode == 'passive') and (not self.lib_dataarrays.loc[index]['absolute_path'].isnull().any() ):
-                          logging.critical('to be implemented')
+                          print('to be implemented')
                           import pdb; pdb.set_trace()
                       else:
                           dataarrays_for_func.append(self.dataarrays[index_array_tuple_ordered])
@@ -1913,7 +1592,7 @@ class archive (object):
                     temp_dataarrays = xarray_function_wrapper(func,dataarrays_wrapper(*tuple(dataarrays_for_func)),**kwargs)
 
                     if type(temp_dataarrays) != tuple:
-                        logging.info('this is a workaround in case we get a single dataarray instead of tuple of dataarrays from the wrapper function. This needs revision')
+                        print('this is a workaround in case we get a single dataarray instead of tuple of dataarrays from the wrapper function. This needs revision')
                         idataarray = 0
                         for key,value in attributes[idataarray].items():
                             if key not in self.not_dataarray_attributes:
@@ -2060,7 +1739,7 @@ class archive (object):
                     if 'path_pickle' not in self.__dict__.keys():
                         raise ValueError ('self.path_pickle is not set')
                     fnout = os.path.dirname(self.path_pickle)+'/'+''.join(np.array(list(zip(self.file_pattern.split('"')[::2],[{**dict(zip(self.lib_dataarrays.index.names,idx)),**columns}[key] for key in self.file_pattern.split('"')[1::2]]+['']))).ravel())
-                    logging.info("File pointer for "+idx+" is not known, so I'm dumping a new file under "+fnout)
+                    print("File pointer for ",idx," is not known, so I'm dumping a new file under ",fnout)
                     #fnout = self.lib_dataarrays.loc[idx]['absolute_path']
                     if (not force_overwrite_dataarrays) and (os.path.isfile(fnout)):
                         raise IOError(fnout+' exists. Use force_overwrite_dataarrays to overwrite file')
@@ -2087,7 +1766,7 @@ class archive (object):
                             self.dataarrays[idx].name = value
 
                     os.system('rm '+fnout)
-                    self.dataarrays[idx].to_netcdf(fnout);logging.info('file written to: '+fnout)
+                    self.dataarrays[idx].to_netcdf(fnout);print('file written to: '+fnout)
                     self.remove_by_index(idx,update_pickle=False)
                     self.add_dataarray_old(fnout)
                     #self.dataarrays[idx]
@@ -2102,18 +1781,22 @@ class archive (object):
                 #self.dataarrays[idx].attrs['path'] = self.lib_dataarrays.loc[idx]['path']
             else:
 
-                logging.info("Assuming variable for "+str(idx)+" exists in file "+str(columns['absolute_path']))
+                print("Assuming variable for ",idx," exists in file "+columns['absolute_path'])
                 if 'path' not in self.lib_dataarrays.columns:
                     self.lib_dataarrays['path'] = None
 
             if 'path_pickle' in self.__dict__.keys():
-                # if (('absolute_path' in columns) and (columns['absolute_path'] is not None) and (type(columns['absolute_path']) is str)):
-                #     if 'path' not in self.lib_dataarrays.columns:
-                #         self.lib_dataarrays['path'] = None
-                #     self.lib_dataarrays['path'].loc[idx] =  os.path.relpath(os.path.realpath(columns['absolute_path']),os.path.dirname(os.path.realpath(self.path_pickle)))
-                #     logging.info("relative file path to "+os.path.dirname(self.path_pickle)+" is "+self.lib_dataarrays['path'].loc[idx])
-                # #os.path.commonprefix([columns['absolute_path'],lib_dirname])
-                if ((columns['path'] is not None) and (type(columns['path']) is str)) and ('absolute_path_for_reading' in columns):
+                if ((columns['absolute_path'] is not None) and (type(columns['absolute_path']) is str)):
+                    if 'path' not in self.lib_dataarrays.columns:
+                        self.lib_dataarrays['path'] = None
+                    self.lib_dataarrays['path'].loc[idx] =  os.path.relpath(columns['absolute_path'],os.path.dirname(self.path_pickle))
+                    print("relative file path to "+os.path.dirname(self.path_pickle)+" is "+self.lib_dataarrays['path'].loc[idx])
+                #os.path.commonprefix([columns['absolute_path'],lib_dirname])
+                elif ((columns['path'] is not None) and (type(columns['path']) is str)):
+                    if 'absolute_path' not in self.lib_dataarrays.columns:
+                        self.lib_dataarrays['absolute_path'] = None
+                    self.lib_dataarrays['absolute_path'].loc[idx] =  os.path.dirname(self.path_pickle)+'/'+columns['path']
+
                     if ((columns['absolute_path_for_reading'] is None) or (type(columns['absolute_path_for_reading']) is not str)):
                         if 'absolute_path_for_reading' not in self.lib_dataarrays.columns:
                             self.lib_dataarrays['absolute_path_for_reading'] = None
@@ -2145,7 +1828,7 @@ class archive (object):
 
         if type(path).__name__ == 'list':
             # eg., -> files_wildcard = '*_*_*_*.nc'
-            logging.info('Guessing files from file list...(this procedure may need revision)')
+            print('Guessing files from file list...(this procedure may need revision)')
             #allkwargs = {**dict(zip(lib_dataarrays_temp.index.names, index)),**dict(dataarray),**kwargs}
             filenames = path
             for filename in filenames:
@@ -2202,12 +1885,12 @@ class archive (object):
         temp_path_pickle = lib_dirname+'/'+lib_basename
 
 
-        logging.info('apply settings according to yaml file and kwargs')
+        print('apply settings according to yaml file and kwargs')
         if path_settings is None:
             path_settings = temp_path_pickle+'.yaml'
         elif not os.path.isfile(path_settings):
             raise IOError('Settings file '+path_settings+ ' not found.')
-        logging.info(temp_path_pickle)
+        print(temp_path_pickle)
         if os.path.isfile(temp_path_pickle):
             self.path_pickle = temp_path_pickle
 
@@ -2219,7 +1902,7 @@ class archive (object):
 
 
         if os.path.isfile(path_settings):
-            logging.info('settings file found')
+            print('settings file found')
             with open(path_settings) as file:
                 for key,value in yaml.safe_load(file):
                     if key in self.settings_keys:
@@ -2237,7 +1920,7 @@ class archive (object):
         #     self.file_pattern = file_pattern
 
 
-        logging.info('reading the dataarrays from the pickle file')
+        print('reading the dataarrays from the pickle file')
 
         if type(query) == str:
             read_lib_dataarrays = pd.read_pickle(temp_path_pickle).query(query,engine='python')
@@ -2249,7 +1932,7 @@ class archive (object):
 
         for column in read_lib_dataarrays.columns:
             if column not in self.lib_dataarrays.columns:
-                logging.info('adding column '+column+' from the original set to avoid errors when the query result is empty and gets queried again')
+                print('adding column '+column+' from the original set to avoid errors when the query result is empty and gets queried again')
                 self.lib_dataarrays[column] = ""
 
         for index,columns in read_lib_dataarrays.iterrows():
@@ -2263,18 +1946,18 @@ class archive (object):
 
             if (absolute_path is not None) and (absolute_path not in self.lib_dataarrays.absolute_path):
                 #if index[0] == 'mslhf_0001':
-                logging.info('Opening file : '+absolute_path)
+                print('Opening file : '+absolute_path)
                 self.add_dataarray_old(absolute_path,skip_unavailable=skip_unavailable,release_dataarray_pointer =True,cache_to_tempdir=False,cache_to_ram=cache_to_ram,**({**dict(zip(read_lib_dataarrays.index.names,index)),**columns}),**extra_attributes)
 
         if add_file_pattern_matches and (self.file_pattern is not None):
             files_wildcard = lib_dirname+'/'+''.join(np.array(list(zip(self.file_pattern.split('"')[::2],['*']*len(self.file_pattern.split('"')[1::2])+['']))).ravel())
-            logging.info('file_pattern is '+self.file_pattern+' and add_file_pattern_matches == True, so scanning and adding files that match the wildcard: ',files_wildcard+' that are not in the library yet')
+            print('file_pattern is '+self.file_pattern+' and add_file_pattern_matches == True, so scanning and adding files that match the wildcard: ',files_wildcard+' that are not in the library yet')
             # eg., -> files_wildcard = '*_*_*_*.nc'
             filenames = glob.glob(files_wildcard)
             for filename in filenames:
                 if filename not in self.lib_dataarrays.absolute_path:
                     path = os.path.relpath(filename,os.path.dirname(temp_path_pickle))
-                    logging.info('Opening file : '+filename)
+                    print('Opening file : '+filename)
                     self.add_dataarray_old(filename,skip_unavailable=skip_unavailable, release_dataarray_pointer = True, cache_to_tempdir=False,path=path,cache_to_ram=cache_to_ram,reset_space=reset_space,**extra_attributes)
 
         # import pdb; pdb.set_trace()
@@ -2297,7 +1980,7 @@ class archive (object):
 
             if (absolute_path is not None) and (absolute_path not in self.lib_dataarrays.absolute_path):
                 #if index[0] == 'mslhf_0001':
-                logging.info('Opening file : '+absolute_path)
+                print('Opening file : '+absolute_path)
                 self.add_dataarray_old(absolute_path,skip_unavailable=skip_unavailable,release_dataarray_pointer =release_dataarray_pointer,cache_to_tempdir=cache_to_tempdir,cache_to_ram=cache_to_ram,reset_space=reset_space,**({**dict(zip(read_lib_dataarrays.index.names,idx)),**columns}),**extra_attributes)
 
 

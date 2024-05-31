@@ -30,8 +30,8 @@ import pynacolada as pcd
 input_file = '/home/woutersh/projects/KLIMPALA_SF/data/ancillary/GMTED2010/gmted2010_mean_30.nc'
 ds = xr.open_dataset( input_file,)['Band1'].rename({'lat':'latitude'}).rename({'lon':'longitude'})
 ds = ds.isel(
-    latitude  = ( (ds.latitude  > -5) & (ds.latitude  < 15)),
-    longitude = ( (ds.longitude > -10) & (ds.longitude < 15))
+    latitude  = ( (ds.latitude  > -5) & (ds.latitude  < 5)),
+    longitude = ( (ds.longitude > -10) & (ds.longitude < 5))
         )
 
 #input_file = '/projects/C3S_EUBiodiversity/data/case_klimpala/aggregation-30-years/indicators-annual/cropped_to_africa/bias_corrected/cmip5_daily/temperature-daily-mean_annual_mean_IPSL-CM5A-MR_rcp85_r1i1p1_bias-corrected_to_era5_id0daily_1950-01-01_2100-12-31_id0_aggregation-30-year-median_grid_of_IPSL-CM5A-MR_latitude:irregular_longitude:-42.5,65.0,2.5.nc'
@@ -42,6 +42,7 @@ xarrays = [ds2]
 # this also sets the order of (inner) output dimensions as expected by the function
 dims_apply_names = ['latitude','longitude']
 
+ignore_memory_limit = False
 
 # this also defines the order in which the output dimensions are being constructed, allowing for transposing the output on the fly.
 output_coordinates = { #input
@@ -389,9 +390,16 @@ for dimname,shape in dims_no_apply_lengths.items():
 
 logging.info('memory input size of chunks: '+ str(current_memory_size) +'/'+str(maximum_memory_size) +' = '+str(current_memory_size/int(maximum_memory_size)*100)+'% of maximum')
 if current_memory_size > maximum_memory_size:
-    logging.critical('critical. I cannot fix chunks into memory. Please consider using (smaller) chunksize '
-                 'for apply output dimensions')
 
+    logging.critical('expected memory usage exceeds predefined memory limit. \n'+\
+                          ' - expected memory usage: '+ str(current_memory_size)+ '\n' + \
+                          ' - limit of memory usage: '+ str(current_memory_size)+ '\n' + \
+                          ' - chunks_memory_sizes: '+str(chunks_memory_sizes)+ '\n'+ \
+                          ' - chunks_memory_sizes_dim'+str(chunks_memory_sizes)+ '\n'+ \
+                          'Please consider the usage of memory chunking along the apply_dimensions'
+                          )
+    if not ignore_memory_limit:
+        raise IOError('memory limit needs to be respected. Or turn on ignore_memory_linit')
 
 #import pdb; pdb.set_trace()
 

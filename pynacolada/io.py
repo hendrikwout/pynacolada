@@ -8,17 +8,18 @@ import glob
 from .io_gsod import GSOD as gsod
 import logging
 
-def get_argparse_from_function(function):
+def get_argparse_from_function(function,allow_abbrev=False):
 
     import argparse
     import inspect
 
+    # problem! if you have reset_archive_after then the reset_archive argument disappears
     arguments = {}
     help_dict = {}
     logging.debug('acquiring help information of arguments')
     for help_line in function.__doc__.split('\n'):
         key = help_line.split(':')[0].strip(' ')
-        if key is not '':
+        if key != '':
             if ':' in help_line:
                 value = ':'.join(help_line.split(':')[1:])
             else:
@@ -30,6 +31,7 @@ def get_argparse_from_function(function):
 
     logging.debug('Setting parser for function arguments')
     parser = argparse.ArgumentParser(function.__doc__)
+    parser.__dict__['allow_abbrev'] = allow_abbrev
     for parkey,parvalue in inspect.signature(function).parameters.items():
         if parkey not in ['args','kwargs']:
             arguments[parkey] = {}
